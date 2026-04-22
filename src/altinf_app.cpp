@@ -1,8 +1,10 @@
 #include "altinf_app.h"
 
+#include "auth/permission.h"
 #include "blog/blog_loader.h"
 #include "pages/blog_page.h"
 #include "pages/blog_post_page.h"
+#include "pages/login_page.h"
 #include "pages/main_page.h"
 #include "widgets/footer.h"
 #include "widgets/nav_bar.h"
@@ -11,19 +13,35 @@
 #include <Wt/WText.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <filesystem>
+#include <stdexcept>
 
 altinf_app::altinf_app(const Wt::WEnvironment& env):
   Wt::WApplication{env}
 {
 	setTitle("AltInf");
-	useStyleSheet(Wt::WLink{"css/altinf.css"});
+	useStyleSheet(Wt::WLink{"resources/css/altinf.css"});
 
-	const auto posts_dir = std::filesystem::path{appRoot()} / "posts";
+	const auto app_root = std::filesystem::path{appRoot()};
+
+	const auto db_path = (app_root / "altinf.db").string();
+	m_user_db          = std::make_unique<user_db>(db_path);
+
+	if(!m_user_db->has_users())
+	{
+		const char* const pw = std::getenv("ALTINF_ADMIN_PASSWORD");
+		if(!pw)
+			throw std::runtime_error{"ALTINF_ADMIN_PASSWORD must be set on first run"};
+		const auto all_perms = grant(grant(0ULL, permission::admin), permission::post_write);
+		m_user_db->create_user("admin", pw, all_perms);
+	}
+
+	const auto posts_dir = app_root / "posts";
 	m_posts              = blog_loader{posts_dir}.load();
 
 	root()->setStyleClass("site-root");
-	root()->addNew<nav_bar>();
+	m_nav     = root()->addNew<nav_bar>(m_session);
 	m_content = root()->addNew<Wt::WContainerWidget>();
 	m_content->setStyleClass("site-content");
 	root()->addNew<footer>();
@@ -51,13 +69,26 @@ void altinf_app::handle_path(const std::string& path)
 	{
 		const auto slug = path.substr(6);
 		const auto it   = std::find_if(m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) {
-			return p.slug == slug;
-		});
+      return p.slug == slug;
+    });
 
 		if(it != m_posts.end())
 			m_content->addNew<blog_post_page>(*it);
 		else
 			m_content->addNew<Wt::WText>("Post not found.", Wt::TextFormat::Plain);
+	}
+	else if(path == "/login")
+	{
+		m_content->addNew<login_page>(*m_user_db, m_session, [this] {
+			m_nav->update();
+			setInternalPath("/", true);
+		});
+	}
+	else if(path == "/logout")
+	{
+		m_session = session_data{};
+		m_nav->update();
+		setInternalPath("/", true);
 	}
 	else
 	{
