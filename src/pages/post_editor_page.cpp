@@ -172,6 +172,8 @@ void post_editor_page::save()
 	out << "---\n";
 	out << body;
 
+	out.flush();
+
 	m_on_save(slug);
 }
 

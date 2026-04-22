@@ -70,8 +70,8 @@ void altinf_app::handle_path(const std::string& path)
 	{
 		const auto slug = path.substr(6);
 		const auto it   = std::find_if(m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) {
-      return p.slug == slug;
-    });
+			return p.slug == slug;
+		});
 
 		if(it != m_posts.end())
 			m_content->addNew<blog_post_page>(*it, m_session);
@@ -90,17 +90,17 @@ void altinf_app::handle_path(const std::string& path)
 			setInternalPath("/blog/" + slug, true);
 		});
 	}
-	else if(path.size() > 13 && path.substr(0, 13) == "/admin/edit/")
+	else if(path.size() > 12 && path.substr(0, 12) == "/admin/edit/")
 	{
 		if(!has_permission(m_session.permissions, permission::post_write))
 		{
 			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
 			return;
 		}
-		const auto slug = path.substr(13);
+		const auto slug = path.substr(12);
 		const auto it   = std::find_if(m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) {
-      return p.slug == slug;
-    });
+			return p.slug == slug;
+		});
 		if(it == m_posts.end())
 		{
 			m_content->addNew<Wt::WText>("Post not found.", Wt::TextFormat::Plain);
