@@ -17,7 +17,7 @@ altinf_app::altinf_app(const Wt::WEnvironment& env):
   Wt::WApplication{env}
 {
 	setTitle("AltInf");
-	useStyleSheet(Wt::WLink{"resources/css/altinf.css"});
+	useStyleSheet(Wt::WLink{"css/altinf.css"});
 
 	const auto posts_dir = std::filesystem::path{appRoot()} / "posts";
 	m_posts              = blog_loader{posts_dir}.load();
@@ -51,8 +51,8 @@ void altinf_app::handle_path(const std::string& path)
 	{
 		const auto slug = path.substr(6);
 		const auto it   = std::find_if(m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) {
-      return p.slug == slug;
-    });
+			return p.slug == slug;
+		});
 
 		if(it != m_posts.end())
 			m_content->addNew<blog_post_page>(*it);
