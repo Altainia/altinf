@@ -13,13 +13,13 @@
 When working on a new feature:
 1. Create a branch: `git checkout -b feature/<short-description>`
 2. Commit automatically after each logical unit of work is complete (no waiting for the user to ask).
-3. Merge or leave for the user to review — do not delete the branch.
+3. Leave the branch for the user to review — do not merge or delete it unless the user asks.
 
 ### Bug branches
 When fixing a bug:
 1. Create a branch: `git checkout -b bug/<short-description>`
 2. Commit automatically once the fix is complete and verified.
-3. Leave the branch for the user to review — do not delete it.
+3. Leave the branch for the user to review — do not merge or delete it unless the user asks.
 
 ### Main branch
 Do not commit directly to `master`/`main` — always work through a feature or bug branch unless the user explicitly says otherwise.
