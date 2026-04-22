@@ -8,7 +8,7 @@
 #include <fstream>
 #include <sstream>
 
-blog_post_page::blog_post_page(const blog_post& post)
+blog_post_page::blog_post_page(const blog_post& post, const session_data& session)
 {
 	setStyleClass("page blog-post-page");
 
@@ -30,6 +30,13 @@ blog_post_page::blog_post_page(const blog_post& post)
 			  Wt::WLink{Wt::LinkType::InternalPath, "/blog"}, tag);
 			chip->setStyleClass("tag-chip");
 		}
+	}
+
+	if(has_permission(session.permissions, permission::post_write))
+	{
+		auto* edit_link = header->addNew<Wt::WAnchor>(
+		  Wt::WLink{Wt::LinkType::InternalPath, "/admin/edit/" + post.slug}, "Edit");
+		edit_link->setStyleClass("post-edit-link");
 	}
 
 	// Read markdown body (after frontmatter)

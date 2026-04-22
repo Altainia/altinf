@@ -6,6 +6,7 @@
 #include "pages/blog_post_page.h"
 #include "pages/login_page.h"
 #include "pages/main_page.h"
+#include "pages/post_editor_page.h"
 #include "widgets/footer.h"
 #include "widgets/nav_bar.h"
 
@@ -37,8 +38,8 @@ altinf_app::altinf_app(const Wt::WEnvironment& env):
 		m_user_db->create_user("admin", pw, all_perms);
 	}
 
-	const auto posts_dir = app_root / "posts";
-	m_posts              = blog_loader{posts_dir}.load();
+	m_posts_dir = app_root / "posts";
+	m_posts     = blog_loader{m_posts_dir}.load();
 
 	root()->setStyleClass("site-root");
 	m_nav     = root()->addNew<nav_bar>(m_session);
@@ -69,13 +70,46 @@ void altinf_app::handle_path(const std::string& path)
 	{
 		const auto slug = path.substr(6);
 		const auto it   = std::find_if(m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) {
-			return p.slug == slug;
-		});
+      return p.slug == slug;
+    });
 
 		if(it != m_posts.end())
-			m_content->addNew<blog_post_page>(*it);
+			m_content->addNew<blog_post_page>(*it, m_session);
 		else
 			m_content->addNew<Wt::WText>("Post not found.", Wt::TextFormat::Plain);
+	}
+	else if(path == "/admin/new")
+	{
+		if(!has_permission(m_session.permissions, permission::post_write))
+		{
+			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
+			return;
+		}
+		m_content->addNew<post_editor_page>(m_posts_dir, nullptr, [this](const std::string& slug) {
+			reload_posts();
+			setInternalPath("/blog/" + slug, true);
+		});
+	}
+	else if(path.size() > 13 && path.substr(0, 13) == "/admin/edit/")
+	{
+		if(!has_permission(m_session.permissions, permission::post_write))
+		{
+			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
+			return;
+		}
+		const auto slug = path.substr(13);
+		const auto it   = std::find_if(m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) {
+      return p.slug == slug;
+    });
+		if(it == m_posts.end())
+		{
+			m_content->addNew<Wt::WText>("Post not found.", Wt::TextFormat::Plain);
+			return;
+		}
+		m_content->addNew<post_editor_page>(m_posts_dir, &(*it), [this](const std::string& s) {
+			reload_posts();
+			setInternalPath("/blog/" + s, true);
+		});
 	}
 	else if(path == "/login")
 	{
@@ -94,4 +128,9 @@ void altinf_app::handle_path(const std::string& path)
 	{
 		m_content->addNew<Wt::WText>("Page not found.", Wt::TextFormat::Plain);
 	}
+}
+
+void altinf_app::reload_posts()
+{
+	m_posts = blog_loader{m_posts_dir}.load();
 }
