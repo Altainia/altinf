@@ -4,7 +4,9 @@
 #include <Wt/WDate.h>
 #include <Wt/WLink.h>
 #include <Wt/WPushButton.h>
+#include <Wt/WStackedWidget.h>
 #include <Wt/WText.h>
+#include <cmark.h>
 
 #include <algorithm>
 #include <cctype>
@@ -38,8 +40,36 @@ post_editor_page::post_editor_page(const std::filesystem::path&          posts_d
 	m_tags->setPlaceholderText("Tags (comma-separated)");
 	m_tags->setStyleClass("editor-field");
 
-	m_body = form->addNew<Wt::WTextArea>();
+	auto* tab_bar = form->addNew<Wt::WContainerWidget>();
+	tab_bar->setStyleClass("editor-tab-bar");
+	auto* write_tab   = tab_bar->addNew<Wt::WPushButton>("Write");
+	auto* preview_tab = tab_bar->addNew<Wt::WPushButton>("Preview");
+	write_tab->setStyleClass("editor-tab editor-tab-active");
+	preview_tab->setStyleClass("editor-tab");
+
+	m_stack = form->addNew<Wt::WStackedWidget>();
+	m_body  = m_stack->addNew<Wt::WTextArea>();
 	m_body->setStyleClass("editor-textarea");
+	m_preview = m_stack->addNew<Wt::WContainerWidget>();
+	m_preview->setStyleClass("editor-preview post-content");
+	m_stack->setCurrentIndex(0);
+
+	write_tab->clicked().connect([this, write_tab, preview_tab] {
+		m_stack->setCurrentIndex(0);
+		write_tab->setStyleClass("editor-tab editor-tab-active");
+		preview_tab->setStyleClass("editor-tab");
+	});
+
+	preview_tab->clicked().connect([this, write_tab, preview_tab] {
+		const auto  md   = m_body->text().toUTF8();
+		char* const html = cmark_markdown_to_html(md.c_str(), md.size(), CMARK_OPT_DEFAULT);
+		m_preview->clear();
+		m_preview->addNew<Wt::WText>(std::string{html}, Wt::TextFormat::UnsafeXHTML);
+		free(html);
+		m_stack->setCurrentIndex(1);
+		preview_tab->setStyleClass("editor-tab editor-tab-active");
+		write_tab->setStyleClass("editor-tab");
+	});
 
 	m_status = form->addNew<Wt::WText>();
 	m_status->setStyleClass("editor-status");

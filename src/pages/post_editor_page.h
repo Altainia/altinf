@@ -4,6 +4,7 @@
 
 #include <Wt/WContainerWidget.h>
 #include <Wt/WLineEdit.h>
+#include <Wt/WStackedWidget.h>
 #include <Wt/WText.h>
 #include <Wt/WTextArea.h>
 
@@ -24,10 +25,12 @@ private:
 	std::filesystem::path            m_posts_dir;
 	const blog_post*                 m_existing{nullptr};
 	std::function<void(std::string)> m_on_save;
+	Wt::WStackedWidget*              m_stack{nullptr};
 	Wt::WLineEdit*                   m_title{nullptr};
 	Wt::WLineEdit*                   m_date{nullptr};
 	Wt::WLineEdit*                   m_tags{nullptr};
 	Wt::WTextArea*                   m_body{nullptr};
+	Wt::WContainerWidget*            m_preview{nullptr};
 	Wt::WText*                       m_status{nullptr};
 
 	void               save();

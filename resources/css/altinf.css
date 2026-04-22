@@ -283,21 +283,54 @@ a:hover { color: var(--color-accent-h); text-decoration: underline; }
 
 .editor-field:focus { outline: none; border-color: var(--color-accent); }
 
+.editor-tab-bar { display: flex; gap: 0; margin-bottom: -1px; }
+
+.editor-tab {
+  padding:       0.35rem 0.9rem;
+  background:    transparent;
+  color:         var(--color-muted);
+  border:        1px solid var(--color-border);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  font-size:     0.85rem;
+  font-family:   var(--font-sans);
+  cursor:        pointer;
+  transition:    color 0.15s, background 0.15s;
+}
+
+.editor-tab + .editor-tab { margin-left: 2px; }
+
+.editor-tab:hover { color: var(--color-text); }
+
+.editor-tab-active {
+  background: var(--color-bg);
+  color:      var(--color-text);
+  border-color: var(--color-accent);
+}
+
 .editor-textarea {
   width:         100%;
   min-height:    420px;
   padding:       0.75rem;
   background:    var(--color-bg);
   color:         var(--color-text);
-  border:        1px solid var(--color-border);
-  border-radius: var(--radius);
+  border:        1px solid var(--color-accent);
+  border-radius: 0 var(--radius) var(--radius) var(--radius);
   font-family:   var(--font-mono);
   font-size:     0.88rem;
   line-height:   1.6;
   resize:        vertical;
 }
 
-.editor-textarea:focus { outline: none; border-color: var(--color-accent); }
+.editor-textarea:focus { outline: none; }
+
+.editor-preview {
+  min-height:    420px;
+  padding:       0.75rem;
+  background:    var(--color-bg);
+  border:        1px solid var(--color-accent);
+  border-radius: 0 var(--radius) var(--radius) var(--radius);
+}
 
 .editor-btn-row { display: flex; gap: 0.75rem; }
 
