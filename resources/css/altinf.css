@@ -1,0 +1,192 @@
+/* ---------- Custom properties ---------- */
+:root {
+  --color-bg:       #0f0f0f;
+  --color-surface:  #1a1a1a;
+  --color-border:   #2e2e2e;
+  --color-text:     #d4d4d4;
+  --color-muted:    #6b6b6b;
+  --color-accent:   #7aa2d4;
+  --color-accent-h: #9fbfe8;
+
+  --font-sans: 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Fira Code', 'Cascadia Code', monospace;
+
+  --max-width: 720px;
+  --radius:    4px;
+}
+
+/* ---------- Reset / base ---------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--color-bg);
+  color:      var(--color-text);
+  font-family: var(--font-sans);
+  font-size:  16px;
+  line-height: 1.65;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+a:hover { color: var(--color-accent-h); text-decoration: underline; }
+
+/* ---------- Layout ---------- */
+.site-root {
+  display:        flex;
+  flex-direction: column;
+  min-height:     100vh;
+}
+
+.site-content {
+  flex:       1;
+  max-width:  var(--max-width);
+  width:      100%;
+  margin:     0 auto;
+  padding:    2rem 1.5rem;
+}
+
+/* ---------- Nav bar ---------- */
+.nav-bar {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         0.75rem 1.5rem;
+  background:      var(--color-surface);
+  border-bottom:   1px solid var(--color-border);
+}
+
+.nav-brand {
+  font-size:   1.25rem;
+  font-weight: 700;
+  color:       var(--color-text) !important;
+  text-decoration: none !important;
+  letter-spacing: 0.03em;
+}
+
+.nav-links { display: flex; gap: 1.25rem; }
+
+.nav-link {
+  color:       var(--color-muted);
+  font-size:   0.9rem;
+  font-weight: 500;
+  transition:  color 0.15s;
+}
+
+.nav-link:hover { color: var(--color-text); text-decoration: none; }
+
+/* ---------- Footer ---------- */
+.site-footer {
+  padding:       0.75rem 1.5rem;
+  text-align:    center;
+  font-size:     0.8rem;
+  color:         var(--color-muted);
+  border-top:    1px solid var(--color-border);
+  background:    var(--color-surface);
+}
+
+/* ---------- Main page ---------- */
+.main-page h1 { font-size: 2.5rem; margin-bottom: 1rem; }
+.main-page p  { color: var(--color-muted); max-width: 560px; }
+
+/* ---------- Blog page ---------- */
+.blog-page h1 {
+  font-size:     2rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.5rem;
+}
+
+.post-list { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.post-item {
+  padding:       1rem;
+  background:    var(--color-surface);
+  border:        1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.post-title {
+  font-size:   1.1rem;
+  font-weight: 600;
+}
+
+.post-date {
+  font-size:   0.82rem;
+  color:       var(--color-muted);
+  margin-left: 0.5rem;
+}
+
+/* ---------- Tag chips ---------- */
+.tag-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+
+.tag-chip {
+  display:       inline-block;
+  padding:       0.15rem 0.55rem;
+  font-size:     0.75rem;
+  background:    var(--color-bg);
+  color:         var(--color-accent);
+  border:        1px solid var(--color-accent);
+  border-radius: 999px;
+  cursor:        pointer;
+  transition:    background 0.15s, color 0.15s;
+  font-family:   var(--font-sans);
+}
+
+.tag-chip:hover,
+.tag-chip:focus {
+  background: var(--color-accent);
+  color:      var(--color-bg);
+  text-decoration: none;
+}
+
+.clear-chip {
+  border-color: var(--color-muted);
+  color:        var(--color-muted);
+}
+
+.clear-chip:hover { background: var(--color-muted); color: var(--color-bg); }
+
+.filter-bar {
+  display:       flex;
+  align-items:   center;
+  gap:           0.75rem;
+  margin-bottom: 1rem;
+  font-size:     0.85rem;
+  color:         var(--color-muted);
+}
+
+/* ---------- Blog post page ---------- */
+.post-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.post-header h1 { font-size: 2rem; margin-bottom: 0.4rem; }
+
+.post-content {
+  max-width:   var(--max-width);
+  line-height: 1.8;
+}
+
+.post-content h1,
+.post-content h2,
+.post-content h3 {
+  margin: 1.5rem 0 0.6rem;
+  line-height: 1.3;
+}
+
+.post-content p        { margin-bottom: 1rem; }
+.post-content pre      { background: var(--color-surface); padding: 1rem; border-radius: var(--radius); overflow-x: auto; margin-bottom: 1rem; }
+.post-content code     { font-family: var(--font-mono); font-size: 0.88em; }
+.post-content blockquote {
+  border-left: 3px solid var(--color-accent);
+  padding-left: 1rem;
+  color: var(--color-muted);
+  margin-bottom: 1rem;
+}
+.post-content ul,
+.post-content ol { padding-left: 1.5rem; margin-bottom: 1rem; }

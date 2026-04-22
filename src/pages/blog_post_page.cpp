@@ -1,0 +1,67 @@
+#include "blog_post_page.h"
+
+#include <Wt/WAnchor.h>
+#include <Wt/WLink.h>
+#include <Wt/WText.h>
+#include <cmark.h>
+
+#include <fstream>
+#include <sstream>
+
+blog_post_page::blog_post_page(const blog_post& post)
+{
+	setStyleClass("page blog-post-page");
+
+	auto* header = addNew<Wt::WContainerWidget>();
+	header->setStyleClass("post-header");
+
+	header->addNew<Wt::WText>("<h1>" + post.title + "</h1>", Wt::TextFormat::UnsafeXHTML);
+	header->addNew<Wt::WText>("<span class=\"post-date\">" + post.date + "</span>",
+	                          Wt::TextFormat::UnsafeXHTML);
+
+	if(!post.tags.empty())
+	{
+		auto* tag_row = header->addNew<Wt::WContainerWidget>();
+		tag_row->setStyleClass("tag-row");
+
+		for(const auto& tag: post.tags)
+		{
+			auto* chip = tag_row->addNew<Wt::WAnchor>(
+			  Wt::WLink{Wt::LinkType::InternalPath, "/blog"}, tag);
+			chip->setStyleClass("tag-chip");
+		}
+	}
+
+	// Read markdown body (after frontmatter)
+	std::ifstream file{post.filepath};
+	std::string   line;
+	bool          in_frontmatter   = false;
+	bool          past_frontmatter = false;
+	std::string   body;
+
+	while(std::getline(file, line))
+	{
+		if(!past_frontmatter)
+		{
+			if(line == "---" && !in_frontmatter)
+			{
+				in_frontmatter = true;
+				continue;
+			}
+			if(line == "---" && in_frontmatter)
+			{
+				past_frontmatter = true;
+				continue;
+			}
+			if(in_frontmatter)
+				continue;
+		}
+		body += line + "\n";
+	}
+
+	char* const html    = cmark_markdown_to_html(body.c_str(), body.size(), CMARK_OPT_DEFAULT);
+	auto*       content = addNew<Wt::WContainerWidget>();
+	content->setStyleClass("post-content");
+	content->addNew<Wt::WText>(html, Wt::TextFormat::UnsafeXHTML);
+	free(html);
+}
