@@ -34,6 +34,5 @@ private:
 	Wt::WText*                       m_status{nullptr};
 
 	void               save();
-	std::string        make_slug(const std::string& title) const;
 	static std::string read_body(const blog_post& post);
 };
