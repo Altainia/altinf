@@ -4,6 +4,8 @@
 #include "blog/blog_loader.h"
 #include "pages/blog_page.h"
 #include "pages/blog_post_page.h"
+#include "pages/link_editor_page.h"
+#include "pages/links_page.h"
 #include "pages/login_page.h"
 #include "pages/main_page.h"
 #include "pages/post_editor_page.h"
@@ -41,6 +43,9 @@ altinf_app::altinf_app(const Wt::WEnvironment& env):
 	m_posts_dir = app_root / "posts";
 	m_posts     = blog_loader{m_posts_dir}.load();
 
+	m_link_db = std::make_unique<link_db>(db_path);
+	m_links   = m_link_db->load_all();
+
 	root()->setStyleClass("site-root");
 	m_nav     = root()->addNew<nav_bar>(m_session);
 	m_content = root()->addNew<Wt::WContainerWidget>();
@@ -70,8 +75,8 @@ void altinf_app::handle_path(const std::string& path)
 	{
 		const auto slug = path.substr(6);
 		const auto it   = std::find_if(m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) {
-			return p.slug == slug;
-		});
+      return p.slug == slug;
+    });
 
 		if(it != m_posts.end())
 			m_content->addNew<blog_post_page>(*it, m_session);
@@ -99,8 +104,8 @@ void altinf_app::handle_path(const std::string& path)
 		}
 		const auto slug = path.substr(12);
 		const auto it   = std::find_if(m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) {
-			return p.slug == slug;
-		});
+      return p.slug == slug;
+    });
 		if(it == m_posts.end())
 		{
 			m_content->addNew<Wt::WText>("Post not found.", Wt::TextFormat::Plain);
@@ -109,6 +114,56 @@ void altinf_app::handle_path(const std::string& path)
 		m_content->addNew<post_editor_page>(m_posts_dir, &(*it), [this](const std::string& s) {
 			reload_posts();
 			setInternalPath("/blog/" + s, true);
+		});
+	}
+	else if(path == "/links")
+	{
+		auto on_delete = [this](long long id) {
+			m_link_db->remove(id);
+			reload_links();
+			handle_path("/links");
+		};
+		m_content->addNew<links_page>(m_links, m_session, std::move(on_delete));
+	}
+	else if(path == "/admin/links/new")
+	{
+		if(!has_permission(m_session.permissions, permission::post_write))
+		{
+			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
+			return;
+		}
+		m_content->addNew<link_editor_page>(m_link_db.get(), nullptr, [this] {
+			reload_links();
+			handle_path("/links");
+		});
+	}
+	else if(path.size() > 18 && path.substr(0, 18) == "/admin/links/edit/")
+	{
+		if(!has_permission(m_session.permissions, permission::post_write))
+		{
+			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
+			return;
+		}
+		long long id = 0;
+		try
+		{
+			id = std::stoll(path.substr(18));
+		}
+		catch(const std::exception&)
+		{
+			m_content->addNew<Wt::WText>("Invalid link ID.", Wt::TextFormat::Plain);
+			return;
+		}
+		const auto opt = m_link_db->find(id);
+		if(!opt)
+		{
+			m_content->addNew<Wt::WText>("Link not found.", Wt::TextFormat::Plain);
+			return;
+		}
+		m_edit_link = opt;
+		m_content->addNew<link_editor_page>(m_link_db.get(), &(*m_edit_link), [this] {
+			reload_links();
+			handle_path("/links");
 		});
 	}
 	else if(path == "/login")
@@ -133,4 +188,9 @@ void altinf_app::handle_path(const std::string& path)
 void altinf_app::reload_posts()
 {
 	m_posts = blog_loader{m_posts_dir}.load();
+}
+
+void altinf_app::reload_links()
+{
+	m_links = m_link_db->load_all();
 }

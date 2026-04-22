@@ -22,6 +22,10 @@ nav_bar::nav_bar(const session_data& session):
 	  Wt::WLink{Wt::LinkType::InternalPath, "/"}, "Home");
 	home_link->setStyleClass("nav-link");
 
+	auto* links_link = links->addNew<Wt::WAnchor>(
+	  Wt::WLink{Wt::LinkType::InternalPath, "/links"}, "Links");
+	links_link->setStyleClass("nav-link");
+
 	auto* blog_link = links->addNew<Wt::WAnchor>(
 	  Wt::WLink{Wt::LinkType::InternalPath, "/blog"}, "Blog");
 	blog_link->setStyleClass("nav-link");
