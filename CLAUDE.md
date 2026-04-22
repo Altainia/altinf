@@ -23,3 +23,37 @@ When fixing a bug:
 
 ### Main branch
 Do not commit directly to `master`/`main` — always work through a feature or bug branch unless the user explicitly says otherwise.
+
+## Dependencies
+
+**Wt is installed from source** at `/usr/local` — do not attempt to install it via `apt`. All Wt headers and libraries are already present:
+- Headers: `/usr/local/include/Wt/`
+- Libraries: `/usr/local/lib/libwt*.so`
+- CMake config: `/usr/local/lib/cmake/wt/`
+
+There is **no separate `libwtauth`** on this system. `Wt::Auth` (including `BCryptHashFunction`) is compiled into the main `libwt.so`.
+
+`cmark` (`libcmark-dev`) is installed via apt.
+
+## Build
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel $(nproc)
+```
+
+The post-build step copies `resources/` and `posts/` next to the binary automatically.
+
+## Run
+
+```bash
+# First run only — creates the admin user
+ALTINF_ADMIN_PASSWORD=yourpassword ./build/altinf \
+  --docroot ./build/resources --http-address 0.0.0.0 --http-port 8080
+
+# Subsequent runs
+./build/altinf \
+  --docroot ./build/resources --http-address 0.0.0.0 --http-port 8080
+```
+
+The SQLite database is written to `./build/altinf.db`.

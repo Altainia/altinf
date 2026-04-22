@@ -158,6 +158,70 @@ a:hover { color: var(--color-accent-h); text-decoration: underline; }
   color:         var(--color-muted);
 }
 
+/* ---------- Nav auth area ---------- */
+.nav-auth { margin-left: auto; }
+
+.nav-logout { color: var(--color-muted) !important; }
+.nav-logout:hover { color: var(--color-text) !important; text-decoration: none; }
+
+/* ---------- Login page ---------- */
+.login-page {
+  display:          flex;
+  justify-content:  center;
+  padding-top:      4rem;
+}
+
+.login-form {
+  background:    var(--color-surface);
+  border:        1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding:       2rem;
+  width:         100%;
+  max-width:     360px;
+  display:       flex;
+  flex-direction: column;
+  gap:           0.75rem;
+}
+
+.login-form h2 { font-size: 1.25rem; margin-bottom: 0.25rem; }
+
+.login-field {
+  width:         100%;
+  padding:       0.5rem 0.75rem;
+  background:    var(--color-bg);
+  color:         var(--color-text);
+  border:        1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size:     0.95rem;
+  font-family:   var(--font-sans);
+}
+
+.login-field:focus {
+  outline:      none;
+  border-color: var(--color-accent);
+}
+
+.login-btn {
+  padding:       0.5rem 1rem;
+  background:    var(--color-accent);
+  color:         var(--color-bg);
+  border:        none;
+  border-radius: var(--radius);
+  font-size:     0.95rem;
+  font-family:   var(--font-sans);
+  cursor:        pointer;
+  font-weight:   600;
+  transition:    background 0.15s;
+}
+
+.login-btn:hover { background: var(--color-accent-h); }
+
+.login-error {
+  font-size: 0.85rem;
+  color:     #e06c6c;
+  min-height: 1.2em;
+}
+
 /* ---------- Blog post page ---------- */
 .post-header {
   margin-bottom: 2rem;
