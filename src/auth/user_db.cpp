@@ -2,11 +2,11 @@
 
 #include <Wt/Auth/HashFunction.h>
 #include <Wt/Dbo/Transaction.h>
+#include <Wt/Dbo/backend/Sqlite3.h>
 
-user_db::user_db(const std::string& db_path):
-  m_sqlite{db_path}
+user_db::user_db(const std::string& db_path)
 {
-	m_dbo.setConnection(m_sqlite);
+	m_dbo.setConnection(std::make_unique<Wt::Dbo::backend::Sqlite3>(db_path));
 	m_dbo.mapClass<user>("user");
 
 	try
@@ -41,7 +41,7 @@ bool user_db::authenticate(const std::string& uname,
 
 	out.logged_in   = true;
 	out.username    = uname;
-	out.permissions = found->permissions;
+	out.permissions = static_cast<uint64_t>(found->permissions);
 
 	return true;
 }
@@ -57,7 +57,7 @@ void user_db::create_user(const std::string& uname,
 	auto                 new_user    = m_dbo.add(std::make_unique<user>());
 	new_user.modify()->username      = uname;
 	new_user.modify()->password_hash = hash;
-	new_user.modify()->permissions   = perms;
+	new_user.modify()->permissions   = static_cast<long long>(perms);
 }
 
 bool user_db::has_users()

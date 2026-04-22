@@ -23,3 +23,11 @@ When fixing a bug:
 
 ### Main branch
 Do not commit directly to `master`/`main` — always work through a feature or bug branch unless the user explicitly says otherwise.
+
+
+## Build instructions
+
+```
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+```

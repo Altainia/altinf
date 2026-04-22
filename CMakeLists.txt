@@ -4,9 +4,8 @@ project(altinf CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Wt REQUIRED COMPONENTS Wt HTTP DBO DBOSQLite3)
-find_library(CMARK_LIB   cmark  REQUIRED)
-find_library(WT_AUTH_LIB wtauth REQUIRED)
+find_package(Wt REQUIRED)
+find_library(CMARK_LIB cmark REQUIRED)
 
 file(GLOB_RECURSE SOURCES src/*.cpp)
 
@@ -15,8 +14,7 @@ add_executable(altinf ${SOURCES})
 target_include_directories(altinf PRIVATE src)
 
 target_link_libraries(altinf PRIVATE
-  Wt::Wt Wt::HTTP Wt::DBO Wt::DBOSQLite3
-  ${WT_AUTH_LIB}
+  Wt::Wt Wt::HTTP wtdbo wtdbosqlite3
   ${CMARK_LIB}
 )
 

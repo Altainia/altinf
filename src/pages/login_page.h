@@ -5,6 +5,7 @@
 
 #include <Wt/WContainerWidget.h>
 #include <Wt/WLineEdit.h>
+#include <Wt/WPasswordEdit.h>
 #include <Wt/WText.h>
 
 #include <functional>
@@ -21,7 +22,7 @@ private:
 	session_data&         m_session;
 	std::function<void()> m_on_login;
 	Wt::WLineEdit*        m_username{nullptr};
-	Wt::WLineEdit*        m_password{nullptr};
+	Wt::WPasswordEdit*    m_password{nullptr};
 	Wt::WText*            m_error{nullptr};
 
 	void submit();

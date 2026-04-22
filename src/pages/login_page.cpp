@@ -1,5 +1,6 @@
 #include "login_page.h"
 
+#include <Wt/WPasswordEdit.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
@@ -21,9 +22,8 @@ login_page::login_page(user_db&              db,
 	m_username->setPlaceholderText("Username");
 	m_username->setStyleClass("login-field");
 
-	m_password = form->addNew<Wt::WLineEdit>();
+	m_password = form->addNew<Wt::WPasswordEdit>();
 	m_password->setPlaceholderText("Password");
-	m_password->setEchoMode(Wt::EchoMode::Password);
 	m_password->setStyleClass("login-field");
 
 	m_error = form->addNew<Wt::WText>();

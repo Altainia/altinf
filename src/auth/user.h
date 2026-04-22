@@ -2,14 +2,13 @@
 
 #include <Wt/Dbo/Dbo.h>
 
-#include <cstdint>
 #include <string>
 
 struct user
 {
 	std::string username;
 	std::string password_hash;
-	uint64_t    permissions{0};
+	long long   permissions{0};
 
 	template<class Action>
 	void persist(Action& a)

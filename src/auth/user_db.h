@@ -4,7 +4,6 @@
 #include "user.h"
 
 #include <Wt/Dbo/Session.h>
-#include <Wt/Dbo/backend/Sqlite3.h>
 
 #include <cstdint>
 #include <string>
@@ -25,6 +24,5 @@ public:
 	bool has_users();
 
 private:
-	Wt::Dbo::backend::Sqlite3 m_sqlite;
-	Wt::Dbo::Session          m_dbo;
+	Wt::Dbo::Session m_dbo;
 };
