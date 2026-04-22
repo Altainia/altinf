@@ -3,6 +3,7 @@
 #include "../auth/permission.h"
 #include "../auth/session_data.h"
 #include "../auth/user_db.h"
+#include "../blog/post_writer.h"
 
 #include <Wt/Http/Request.h>
 #include <Wt/Http/Response.h>
@@ -11,10 +12,7 @@
 #include <Wt/Json/Value.h>
 #include <Wt/Utils.h>
 
-#include <cctype>
 #include <ctime>
-#include <filesystem>
-#include <fstream>
 #include <sstream>
 #include <string>
 
@@ -113,57 +111,15 @@ void post_api_resource::handleRequest(const Wt::Http::Request& request,
 
 	const auto effective_date = date.empty() ? today_string() : date;
 
-	// Build slug and resolve filename collision
-	auto        slug     = make_slug(title);
-	std::string base     = effective_date + "-" + slug;
-	auto        filepath = m_posts_dir / (base + ".md");
+	const auto [filepath, slug] = resolve_new_post(m_posts_dir, effective_date, title);
 
-	if(std::filesystem::exists(filepath))
-	{
-		for(int n = 2;; ++n)
-		{
-			const auto candidate = m_posts_dir / (base + "-" + std::to_string(n) + ".md");
-			if(!std::filesystem::exists(candidate))
-			{
-				filepath = candidate;
-				slug     = slug + "-" + std::to_string(n);
-				break;
-			}
-		}
-	}
-
-	// Write post file
-	std::ofstream out{filepath};
-	if(!out)
+	if(!write_post_file(filepath, title, effective_date, tags, body))
 	{
 		json_error(response, 500, "Failed to write file.");
 		return;
 	}
 
-	out << "---\n";
-	out << "title: " << title << "\n";
-	out << "date: " << effective_date << "\n";
-	out << "tags: " << tags << "\n";
-	out << "---\n";
-	out << body;
-	out.flush();
-
 	response.setStatus(201);
 	response.setMimeType("application/json");
 	response.out() << "{\"status\":\"ok\",\"slug\":\"" << slug << "\"}";
-}
-
-std::string post_api_resource::make_slug(const std::string& title)
-{
-	std::string slug;
-	for(const char c: title)
-	{
-		if(std::isalnum(static_cast<unsigned char>(c)))
-			slug += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-		else if(std::isspace(static_cast<unsigned char>(c)) && !slug.empty() && slug.back() != '-')
-			slug += '-';
-	}
-	while(!slug.empty() && slug.back() == '-')
-		slug.pop_back();
-	return slug.empty() ? "post" : slug;
 }

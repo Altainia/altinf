@@ -1,5 +1,7 @@
 #include "post_editor_page.h"
 
+#include "blog/post_writer.h"
+
 #include <Wt/WAnchor.h>
 #include <Wt/WDate.h>
 #include <Wt/WLink.h>
@@ -9,7 +11,6 @@
 #include <cmark.h>
 
 #include <algorithm>
-#include <cctype>
 #include <fstream>
 #include <sstream>
 
@@ -139,57 +140,18 @@ void post_editor_page::save()
 	}
 	else
 	{
-		slug             = make_slug(title);
-		std::string base = date + "-" + slug;
-		filepath         = m_posts_dir / (base + ".md");
-
-		if(std::filesystem::exists(filepath))
-		{
-			for(int n = 2;; ++n)
-			{
-				const auto candidate = m_posts_dir / (base + "-" + std::to_string(n) + ".md");
-				if(!std::filesystem::exists(candidate))
-				{
-					filepath = candidate;
-					slug     = slug + "-" + std::to_string(n);
-					break;
-				}
-			}
-		}
+		auto result = resolve_new_post(m_posts_dir, date, title);
+		filepath    = result.filepath;
+		slug        = result.slug;
 	}
 
-	std::ofstream out{filepath};
-	if(!out)
+	if(!write_post_file(filepath, title, date, tags, body))
 	{
 		m_status->setText("Failed to write file.");
 		return;
 	}
 
-	out << "---\n";
-	out << "title: " << title << "\n";
-	out << "date: " << date << "\n";
-	out << "tags: " << tags << "\n";
-	out << "---\n";
-	out << body;
-
-	out.flush();
-
 	m_on_save(slug);
-}
-
-std::string post_editor_page::make_slug(const std::string& title) const
-{
-	std::string slug;
-	for(const char c: title)
-	{
-		if(std::isalnum(static_cast<unsigned char>(c)))
-			slug += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-		else if(std::isspace(static_cast<unsigned char>(c)) && !slug.empty() && slug.back() != '-')
-			slug += '-';
-	}
-	while(!slug.empty() && slug.back() == '-')
-		slug.pop_back();
-	return slug.empty() ? "post" : slug;
 }
 
 std::string post_editor_page::read_body(const blog_post& post)

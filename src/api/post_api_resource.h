@@ -15,8 +15,6 @@ private:
 	void handleRequest(const Wt::Http::Request& request,
 	                   Wt::Http::Response&      response) override;
 
-	static std::string make_slug(const std::string& title);
-
 	std::string           m_db_path;
 	std::filesystem::path m_posts_dir;
 };
