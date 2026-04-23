@@ -33,6 +33,36 @@ a {
 
 a:hover { color: var(--color-accent-h); text-decoration: underline; }
 
+/* ---------- Wt ----------*/
+.Wt-popup {
+  background: var(--color-bg);
+}
+
+.Wt-calendar select {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  border-radius: var(--radius)
+}
+
+.Wt-calendar th {
+  padding-left: 0.3rem;
+  padding-right: 0.3rem;
+  font-family: var(--font-mono);
+}
+
+.Wt-calendar td {
+  border-radius: 4px;
+  font-family: var(--font-mono);
+}
+
+.Wt-calendar .Wt-cal-oom {
+  color: var(--color-muted);
+}
+
+.Wt-calendar td:hover {
+  background-color: var(--color-border);
+}
+
 /* ---------- Layout ---------- */
 .site-root {
   display:        flex;
