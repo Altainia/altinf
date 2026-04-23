@@ -61,6 +61,7 @@ long long gantt_db::create_project(const gantt_project_entry& e)
 	p.modify()->description    = e.description;
 	p.modify()->owner_username = e.owner_username;
 	p.modify()->created_date   = e.created_date;
+	m_dbo.flush(); // force INSERT so the DB-assigned rowid is readable via id()
 	return p.id();
 }
 

@@ -70,17 +70,31 @@ gantt_view_page::gantt_view_page(const gantt_project_entry&           project,
 
 void gantt_view_page::render_chart(const std::vector<gantt_task_entry>& tasks)
 {
-	if(tasks.empty())
+	// Compute today in days-since-epoch using the same mktime path as date_to_days
+	const std::time_t now_t  = std::time(nullptr);
+	const std::tm*    now_tm = std::localtime(&now_t);
+	char              today_buf[12];
+	std::strftime(today_buf, sizeof(today_buf), "%Y-%m-%d", now_tm);
+	const int today_day = date_to_days(today_buf);
+
+	// Keep only tasks whose end date is today or in the future
+	std::vector<gantt_task_entry> active;
+	for(const auto& t: tasks)
+		if(date_to_days(t.end_date) >= today_day)
+			active.push_back(t);
+
+	if(active.empty())
 	{
-		m_chart_wrap->addNew<Wt::WText>("No tasks yet.", Wt::TextFormat::Plain)
+		m_chart_wrap->addNew<Wt::WText>(
+		              tasks.empty() ? "No tasks yet." : "No active tasks.", Wt::TextFormat::Plain)
 		  ->setStyleClass("gantt-empty");
 		return;
 	}
 
-	// Compute date range
-	int min_day = date_to_days(tasks.front().start_date);
-	int max_day = date_to_days(tasks.front().end_date);
-	for(const auto& t: tasks)
+	// Compute date range across active tasks
+	int min_day = date_to_days(active.front().start_date);
+	int max_day = date_to_days(active.front().end_date);
+	for(const auto& t: active)
 	{
 		min_day = std::min(min_day, date_to_days(t.start_date));
 		max_day = std::max(max_day, date_to_days(t.end_date));
@@ -117,7 +131,7 @@ void gantt_view_page::render_chart(const std::vector<gantt_task_entry>& tasks)
 	}
 
 	// Sort a stable copy by assignee (unassigned last), then preserve sort_order within group
-	auto sorted = tasks;
+	auto sorted = active;
 	std::stable_sort(sorted.begin(), sorted.end(), [](const gantt_task_entry& a, const gantt_task_entry& b) {
 		const bool ae = a.assigned_to.empty();
 		const bool be = b.assigned_to.empty();
