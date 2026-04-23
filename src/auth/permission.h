@@ -6,7 +6,8 @@ enum class permission : uint64_t
 {
 	none       = 0,
 	admin      = 1ULL << 0,
-	post_write = 1ULL << 1,
+	post_write  = 1ULL << 1,
+	gantt_write = 1ULL << 2,
 };
 
 inline bool has_permission(uint64_t mask, permission p)

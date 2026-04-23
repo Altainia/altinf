@@ -3,6 +3,8 @@
 #include "auth/session_data.h"
 #include "auth/user_db.h"
 #include "blog/blog_post.h"
+#include "gantt/gantt.h"
+#include "gantt/gantt_db.h"
 #include "links/link.h"
 #include "links/link_db.h"
 
@@ -26,9 +28,11 @@ private:
 	std::unique_ptr<user_db>  m_user_db;
 	std::filesystem::path     m_posts_dir;
 	std::vector<blog_post>    m_posts;
-	std::unique_ptr<link_db>  m_link_db;
-	std::vector<link_entry>   m_links;
-	std::optional<link_entry> m_edit_link;
+	std::unique_ptr<link_db>   m_link_db;
+	std::vector<link_entry>    m_links;
+	std::optional<link_entry>  m_edit_link;
+	std::unique_ptr<gantt_db>          m_gantt_db;
+	std::optional<gantt_project_entry> m_edit_project;
 	nav_bar*                  m_nav{nullptr};
 	Wt::WContainerWidget*     m_content{nullptr};
 
