@@ -33,6 +33,36 @@ a {
 
 a:hover { color: var(--color-accent-h); text-decoration: underline; }
 
+/* ---------- Wt ----------*/
+.Wt-popup {
+  background: var(--color-bg);
+}
+
+.Wt-calendar select {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  border-radius: var(--radius)
+}
+
+.Wt-calendar th {
+  padding-left: 0.3rem;
+  padding-right: 0.3rem;
+  font-family: var(--font-mono);
+}
+
+.Wt-calendar td {
+  border-radius: 4px;
+  font-family: var(--font-mono);
+}
+
+.Wt-calendar .Wt-cal-oom {
+  color: var(--color-muted);
+}
+
+.Wt-calendar td:hover {
+  background-color: var(--color-border);
+}
+
 /* ---------- Layout ---------- */
 .site-root {
   display:        flex;
@@ -461,3 +491,239 @@ a:hover { color: var(--color-accent-h); text-decoration: underline; }
   min-height: 80px;
   resize:     vertical;
 }
+
+/* ---------- Gantt list page ---------- */
+.gantt-list-page h1 {
+  font-size:      2rem;
+  margin-bottom:  1.5rem;
+  border-bottom:  1px solid var(--color-border);
+  padding-bottom: 0.5rem;
+}
+
+.gantt-new-btn   { display: inline-block; margin-bottom: 1.5rem; text-decoration: none; }
+.gantt-empty     { color: var(--color-muted); margin-top: 1rem; }
+
+.gantt-project-list {
+  display:        flex;
+  flex-direction: column;
+  gap:            1rem;
+}
+
+.gantt-project-item {
+  padding:       1rem;
+  background:    var(--color-surface);
+  border:        1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.gantt-project-title { font-size: 1.1rem; font-weight: 600; display: block; }
+
+.gantt-project-desc {
+  display:    block;
+  font-size:  0.88rem;
+  color:      var(--color-muted);
+  margin-top: 0.25rem;
+}
+
+.gantt-project-meta {
+  display:    block;
+  font-size:  0.78rem;
+  color:      var(--color-muted);
+  margin-top: 0.4rem;
+}
+
+/* ---------- Gantt view page ---------- */
+.gantt-view-page { padding-top: 1.5rem; }
+
+.gantt-view-hdr {
+  display:         flex;
+  align-items:     baseline;
+  gap:             1rem;
+  margin-bottom:   0.5rem;
+}
+
+.gantt-view-title {
+  font-size:   1.75rem;
+  font-weight: 700;
+}
+
+.gantt-edit-btn { font-size: 0.85rem; padding: 0.3rem 0.8rem; }
+
+.gantt-view-desc {
+  display:       block;
+  color:         var(--color-muted);
+  margin-bottom: 1.5rem;
+}
+
+/* Chart grid */
+.gantt-chart-wrap {
+  overflow-x: auto;
+  margin-top: 1.5rem;
+  border:     1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.gantt-rows { display: flex; flex-direction: column; }
+
+.gantt-row {
+  display:    flex;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  min-height: 2.5rem;
+}
+
+.gantt-row:last-child { border-bottom: none; }
+
+.gantt-header-row { background: var(--color-surface); min-height: 2rem; }
+
+.gantt-label {
+  flex:         0 0 220px;
+  padding:      0.35rem 0.75rem;
+  font-size:    0.85rem;
+  color:        var(--color-text);
+  border-right: 1px solid var(--color-border);
+  overflow:     hidden;
+  white-space:  nowrap;
+  text-overflow: ellipsis;
+}
+
+.gantt-track {
+  flex:     1;
+  position: relative;
+  height:   2.5rem;
+}
+
+.gantt-header-row .gantt-track { height: 2rem; }
+
+.gantt-week-marker {
+  position:   absolute;
+  top:        0.3rem;
+  font-size:  0.7rem;
+  color:      var(--color-muted);
+  white-space: nowrap;
+  transform:  translateX(-50%);
+}
+
+.gantt-bar {
+  position:     absolute;
+  top:          20%;
+  height:       60%;
+  border-radius: 3px;
+  min-width:    4px;
+  opacity:      0.9;
+  transition:   opacity 0.15s;
+}
+
+.gantt-bar:hover { opacity: 1; }
+
+.gantt-bar-dates {
+  position:   absolute;
+  left:       0.4rem;
+  top:        50%;
+  transform:  translateY(-50%);
+  font-size:  0.68rem;
+  color:      rgba(0,0,0,0.75);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Assignee group header row */
+.gantt-group-hdr {
+  background:    var(--color-surface);
+  font-size:     0.78rem;
+  font-weight:   700;
+  color:         var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  min-height:    1.75rem;
+  padding-left:  0.75rem;
+}
+
+/* Indent task rows slightly relative to the group header */
+.gantt-task-label { padding-left: 1.25rem !important; }
+
+/* Color picker sizing */
+.gantt-col-color input[type="color"] {
+  width:  40px;
+  height: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* ---------- Gantt editor page ---------- */
+.gantt-editor-page { padding-top: 2rem; }
+.gantt-editor-page h1 { font-size: 2rem; margin-bottom: 1.5rem; }
+
+.gantt-editor-form {
+  display:        flex;
+  flex-direction: column;
+  gap:            1rem;
+}
+
+.gantt-editor-form h2 {
+  font-size:     1.1rem;
+  color:         var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size:     0.8rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.3rem;
+  margin-top:    0.5rem;
+}
+
+.gantt-desc-field { min-height: 70px; resize: vertical; }
+
+/* Column headers for task rows */
+.gantt-task-col-hdr {
+  display:   flex;
+  gap:       0.5rem;
+  font-size: 0.75rem;
+  color:     var(--color-muted);
+}
+
+.gantt-col-lbl  { font-weight: 600; }
+.gantt-col-title    { flex: 3; }
+.gantt-col-assigned { flex: 2; }
+.gantt-col-date     { flex: 2; }
+.gantt-col-color    { flex: 0 0 44px; }
+
+/* Task rows */
+.gantt-tasks-container { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.gantt-task-row {
+  display:     flex;
+  gap:         0.5rem;
+  align-items: center;
+}
+
+.gantt-task-row .editor-field { margin: 0; }
+.gantt-task-row .gantt-col-title    { flex: 3; }
+.gantt-task-row .gantt-col-assigned { flex: 2; }
+.gantt-task-row .gantt-col-date     { flex: 2; }
+.gantt-task-row .gantt-col-color    { flex: 0 0 44px; }
+.gantt-del-btn { flex: 0 0 auto; }
+
+.gantt-add-btn { align-self: flex-start; }
+
+/* Viewers */
+.gantt-viewers-note  { font-size: 0.85rem; color: var(--color-muted); }
+.gantt-viewers-container { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.gantt-viewer-row {
+  display:     flex;
+  align-items: center;
+  gap:         0.75rem;
+}
+
+.gantt-viewer-name { font-size: 0.9rem; }
+
+.gantt-viewer-add-row {
+  display:     flex;
+  gap:         0.5rem;
+  align-items: center;
+}
+
+.gantt-viewer-input { width: 200px; flex: 0 0 auto; }
