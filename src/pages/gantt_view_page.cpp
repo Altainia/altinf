@@ -116,9 +116,30 @@ void gantt_view_page::render_chart(const std::vector<gantt_task_entry>& tasks)
 		}
 	}
 
-	// Task rows
-	for(const auto& task: tasks)
+	// Sort a stable copy by assignee (unassigned last), then preserve sort_order within group
+	auto sorted = tasks;
+	std::stable_sort(sorted.begin(), sorted.end(), [](const gantt_task_entry& a, const gantt_task_entry& b) {
+		const bool ae = a.assigned_to.empty();
+		const bool be = b.assigned_to.empty();
+		if(ae != be)
+			return be; // non-empty before empty
+		return a.assigned_to < b.assigned_to;
+	});
+
+	// Task rows grouped by assignee
+	std::string current_assignee{"\x01"};
+	for(const auto& task: sorted)
 	{
+		if(task.assigned_to != current_assignee)
+		{
+			current_assignee          = task.assigned_to;
+			const std::string hdr_txt = current_assignee.empty() ? "Unassigned" : current_assignee;
+
+			auto* grp_hdr = rows->addNew<Wt::WContainerWidget>();
+			grp_hdr->setStyleClass("gantt-row gantt-group-hdr");
+			grp_hdr->addNew<Wt::WText>(hdr_txt, Wt::TextFormat::Plain);
+		}
+
 		const int   start_off = date_to_days(task.start_date) - min_day;
 		const int   end_off   = date_to_days(task.end_date) - min_day;
 		const float left_pct  = static_cast<float>(std::max(0, start_off)) /
@@ -130,11 +151,8 @@ void gantt_view_page::render_chart(const std::vector<gantt_task_entry>& tasks)
 		row->setStyleClass("gantt-row");
 
 		auto* label = row->addNew<Wt::WContainerWidget>();
-		label->setStyleClass("gantt-label");
-
-		const std::string label_text =
-		  task.assigned_to.empty() ? task.title : task.assigned_to + " \xe2\x80\x94 " + task.title;
-		label->addNew<Wt::WText>(label_text, Wt::TextFormat::Plain);
+		label->setStyleClass("gantt-label gantt-task-label");
+		label->addNew<Wt::WText>(task.title, Wt::TextFormat::Plain);
 
 		auto* track = row->addNew<Wt::WContainerWidget>();
 		track->setStyleClass("gantt-track");
@@ -150,7 +168,7 @@ void gantt_view_page::render_chart(const std::vector<gantt_task_entry>& tasks)
 		    "background:" + color);
 
 		auto* bar_label = bar->addNew<Wt::WText>(
-		  task.start_date + " – " + task.end_date, Wt::TextFormat::Plain);
+		  task.start_date + " \xe2\x80\x93 " + task.end_date, Wt::TextFormat::Plain);
 		bar_label->setStyleClass("gantt-bar-dates");
 	}
 }

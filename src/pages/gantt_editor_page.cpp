@@ -1,10 +1,13 @@
 #include "gantt_editor_page.h"
 
 #include <Wt/WAnchor.h>
+#include <Wt/WColor.h>
+#include <Wt/WDate.h>
 #include <Wt/WLink.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
+#include <cstdio>
 #include <ctime>
 
 namespace
@@ -78,12 +81,7 @@ gantt_editor_page::gantt_editor_page(gantt_db&                      db,
 
 	auto* add_task_btn = form->addNew<Wt::WPushButton>("+ Add Task");
 	add_task_btn->setStyleClass("editor-btn editor-btn-cancel gantt-add-btn");
-	add_task_btn->clicked().connect([this]() {
-		gantt_task_entry blank;
-		blank.start_date = today_string();
-		blank.end_date   = today_string();
-		add_task_row(blank);
-	});
+	add_task_btn->clicked().connect([this]() { add_task_row(gantt_task_entry{}); });
 
 	// ── Viewers ───────────────────────────────────────────────────────────────
 	form->addNew<Wt::WText>("<h2>Viewers</h2>", Wt::TextFormat::UnsafeXHTML);
@@ -153,20 +151,33 @@ void gantt_editor_page::add_task_row(const gantt_task_entry& task)
 	r.assigned_to->setStyleClass("editor-field gantt-col-assigned");
 	r.assigned_to->setText(task.assigned_to);
 
-	r.start_date = row->addNew<Wt::WLineEdit>();
-	r.start_date->setPlaceholderText("YYYY-MM-DD");
+	r.start_date = row->addNew<Wt::WDateEdit>();
+	r.start_date->setFormat("yyyy-MM-dd");
 	r.start_date->setStyleClass("editor-field gantt-col-date");
-	r.start_date->setText(task.start_date);
+	{
+		const auto d = task.start_date.empty() ? Wt::WDate::currentDate() : Wt::WDate::fromString(task.start_date, "yyyy-MM-dd");
+		if(d.isValid())
+			r.start_date->setDate(d);
+	}
 
-	r.end_date = row->addNew<Wt::WLineEdit>();
-	r.end_date->setPlaceholderText("YYYY-MM-DD");
+	r.end_date = row->addNew<Wt::WDateEdit>();
+	r.end_date->setFormat("yyyy-MM-dd");
 	r.end_date->setStyleClass("editor-field gantt-col-date");
-	r.end_date->setText(task.end_date);
+	{
+		const auto d = task.end_date.empty() ? Wt::WDate::currentDate() : Wt::WDate::fromString(task.end_date, "yyyy-MM-dd");
+		if(d.isValid())
+			r.end_date->setDate(d);
+	}
 
-	r.color = row->addNew<Wt::WLineEdit>();
-	r.color->setPlaceholderText("#7aa2d4");
-	r.color->setStyleClass("editor-field gantt-col-color");
-	r.color->setText(task.color);
+	r.color = row->addNew<Wt::WColorPicker>();
+	r.color->setStyleClass("gantt-col-color");
+	{
+		const std::string hex = task.color.empty() ? "#7aa2d4" : task.color;
+		int               cr{0x7a}, cg{0xa2}, cb{0xd4};
+		if(hex.size() == 7 && hex[0] == '#')
+			std::sscanf(hex.c_str() + 1, "%02x%02x%02x", &cr, &cg, &cb);
+		r.color->setColor(Wt::WColor(cr, cg, cb));
+	}
 
 	auto* del_btn = row->addNew<Wt::WPushButton>("×");
 	del_btn->setStyleClass("link-action-btn link-delete-btn gantt-del-btn");
@@ -247,10 +258,17 @@ void gantt_editor_page::save()
 		t.project_id  = id;
 		t.title       = r.title->text().toUTF8();
 		t.assigned_to = r.assigned_to->text().toUTF8();
-		t.start_date  = r.start_date->text().toUTF8();
-		t.end_date    = r.end_date->text().toUTF8();
-		t.color       = r.color->text().toUTF8();
-		t.sort_order  = sort++;
+		if(const auto d = r.start_date->date(); d.isValid())
+			t.start_date = d.toString("yyyy-MM-dd").toUTF8();
+		if(const auto d = r.end_date->date(); d.isValid())
+			t.end_date = d.toString("yyyy-MM-dd").toUTF8();
+		{
+			const auto wc = r.color->color();
+			char       cbuf[8];
+			std::snprintf(cbuf, sizeof(cbuf), "#%02x%02x%02x", wc.red(), wc.green(), wc.blue());
+			t.color = cbuf;
+		}
+		t.sort_order = sort++;
 		if(!t.title.empty())
 			m_db.add_task(t);
 	}

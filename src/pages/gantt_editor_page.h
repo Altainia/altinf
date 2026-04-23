@@ -4,7 +4,9 @@
 #include "gantt/gantt.h"
 #include "gantt/gantt_db.h"
 
+#include <Wt/WColorPicker.h>
 #include <Wt/WContainerWidget.h>
+#include <Wt/WDateEdit.h>
 #include <Wt/WLineEdit.h>
 #include <Wt/WTextArea.h>
 
@@ -28,9 +30,9 @@ private:
 		Wt::WContainerWidget* container{nullptr};
 		Wt::WLineEdit*        title{nullptr};
 		Wt::WLineEdit*        assigned_to{nullptr};
-		Wt::WLineEdit*        start_date{nullptr};
-		Wt::WLineEdit*        end_date{nullptr};
-		Wt::WLineEdit*        color{nullptr};
+		Wt::WDateEdit*        start_date{nullptr};
+		Wt::WDateEdit*        end_date{nullptr};
+		Wt::WColorPicker*     color{nullptr};
 	};
 
 	struct viewer_row

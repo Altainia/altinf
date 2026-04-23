@@ -597,6 +597,32 @@ a:hover { color: var(--color-accent-h); text-decoration: underline; }
   pointer-events: none;
 }
 
+/* Assignee group header row */
+.gantt-group-hdr {
+  background:    var(--color-surface);
+  font-size:     0.78rem;
+  font-weight:   700;
+  color:         var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  min-height:    1.75rem;
+  padding-left:  0.75rem;
+}
+
+/* Indent task rows slightly relative to the group header */
+.gantt-task-label { padding-left: 1.25rem !important; }
+
+/* Color picker sizing */
+.gantt-col-color input[type="color"] {
+  width:  40px;
+  height: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: none;
+  cursor: pointer;
+  padding: 0;
+}
+
 /* ---------- Gantt editor page ---------- */
 .gantt-editor-page { padding-top: 2rem; }
 .gantt-editor-page h1 { font-size: 2rem; margin-bottom: 1.5rem; }
@@ -632,7 +658,7 @@ a:hover { color: var(--color-accent-h); text-decoration: underline; }
 .gantt-col-title    { flex: 3; }
 .gantt-col-assigned { flex: 2; }
 .gantt-col-date     { flex: 2; }
-.gantt-col-color    { flex: 1.5; }
+.gantt-col-color    { flex: 0 0 44px; }
 
 /* Task rows */
 .gantt-tasks-container { display: flex; flex-direction: column; gap: 0.4rem; }
@@ -647,7 +673,7 @@ a:hover { color: var(--color-accent-h); text-decoration: underline; }
 .gantt-task-row .gantt-col-title    { flex: 3; }
 .gantt-task-row .gantt-col-assigned { flex: 2; }
 .gantt-task-row .gantt-col-date     { flex: 2; }
-.gantt-task-row .gantt-col-color    { flex: 1.5; }
+.gantt-task-row .gantt-col-color    { flex: 0 0 44px; }
 .gantt-del-btn { flex: 0 0 auto; }
 
 .gantt-add-btn { align-self: flex-start; }
