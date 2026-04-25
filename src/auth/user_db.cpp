@@ -57,7 +57,7 @@ user_db::user_db(const std::string& db_path)
 	}
 	catch(const Wt::Dbo::Exception&)
 	{
-		// Some tables already exist; run targeted migrations for any new ones.
+		// Tables already exist — run targeted migrations for any new columns/tables.
 		Wt::Dbo::Transaction t{m_dbo};
 		m_dbo.execute(
 		  "CREATE TABLE IF NOT EXISTS \"api_token\" ("
@@ -66,6 +66,14 @@ user_db::user_db(const std::string& db_path)
 		  "  \"token_hash\" text not null,"
 		  "  \"username\" text not null"
 		  ")");
+		try
+		{
+			m_dbo.execute("ALTER TABLE \"user\" ADD COLUMN \"display_name\" text not null default ''");
+		}
+		catch(const Wt::Dbo::Exception&)
+		{
+			// Column already exists — nothing to do.
+		}
 	}
 }
 
@@ -89,16 +97,18 @@ bool user_db::authenticate(const std::string& uname,
 	if(!bcrypt.verify(password, "", found->password_hash))
 		return false;
 
-	out.logged_in   = true;
-	out.username    = uname;
-	out.permissions = static_cast<uint64_t>(found->permissions);
+	out.logged_in    = true;
+	out.username     = uname;
+	out.display_name = found->display_name;
+	out.permissions  = static_cast<uint64_t>(found->permissions);
 
 	return true;
 }
 
 void user_db::create_user(const std::string& uname,
                           const std::string& password,
-                          uint64_t           perms)
+                          uint64_t           perms,
+                          const std::string& display_name)
 {
 	const Wt::Auth::BCryptHashFunction bcrypt{12};
 	const std::string                  hash = bcrypt.compute(password, "");
@@ -106,6 +116,7 @@ void user_db::create_user(const std::string& uname,
 	Wt::Dbo::Transaction t{m_dbo};
 	auto                 new_user    = m_dbo.add(std::make_unique<user>());
 	new_user.modify()->username      = uname;
+	new_user.modify()->display_name  = display_name;
 	new_user.modify()->password_hash = hash;
 	new_user.modify()->permissions   = static_cast<long long>(perms);
 }
@@ -114,6 +125,115 @@ bool user_db::has_users()
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	return !m_dbo.find<user>().resultList().empty();
+}
+
+std::vector<user_entry> user_db::list_users()
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto results = m_dbo.find<user>().resultList();
+
+	std::vector<user_entry> out;
+	for(const auto& u: results)
+	{
+		user_entry e;
+		e.username     = u->username;
+		e.display_name = u->display_name;
+		e.permissions  = static_cast<uint64_t>(u->permissions);
+		out.push_back(std::move(e));
+	}
+	return out;
+}
+
+bool user_db::username_exists(const std::string& username)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	return !m_dbo.find<user>().where("username = ?").bind(username).resultList().empty();
+}
+
+void user_db::delete_user(const std::string& username)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	// Remove API tokens first
+	const auto tokens =
+	  m_dbo.find<api_token>().where("username = ?").bind(username).resultList();
+	for(const auto& tok: tokens)
+	{
+		Wt::Dbo::ptr<api_token> p = tok;
+		p.remove();
+	}
+
+	const auto results =
+	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
+	for(const auto& u: results)
+	{
+		Wt::Dbo::ptr<user> p = u;
+		p.remove();
+	}
+}
+
+void user_db::update_user(const std::string& username,
+                          const std::string& display_name,
+                          uint64_t           perms)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto results =
+	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
+	if(results.empty())
+		return;
+
+	const auto u             = *results.begin();
+	u.modify()->display_name = display_name;
+	u.modify()->permissions  = static_cast<long long>(perms);
+}
+
+void user_db::set_password(const std::string& username, const std::string& new_password)
+{
+	const Wt::Auth::BCryptHashFunction bcrypt{12};
+	const std::string                  hash = bcrypt.compute(new_password, "");
+
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto results =
+	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
+	if(results.empty())
+		return;
+
+	const auto u              = *results.begin();
+	u.modify()->password_hash = hash;
+}
+
+std::vector<api_token_entry> user_db::list_tokens(const std::string& username)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto results =
+	  m_dbo.find<api_token>().where("username = ?").bind(username).resultList();
+
+	std::vector<api_token_entry> out;
+	for(const auto& tok: results)
+	{
+		api_token_entry e;
+		e.id         = tok.id();
+		e.token_hash = tok->token_hash;
+		out.push_back(std::move(e));
+	}
+	return out;
+}
+
+void user_db::delete_token(long long token_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto results =
+	  m_dbo.find<api_token>().where("id = ?").bind(token_id).resultList();
+	for(const auto& tok: results)
+	{
+		Wt::Dbo::ptr<api_token> p = tok;
+		p.remove();
+	}
 }
 
 std::string user_db::create_api_token(const std::string& username)
@@ -153,9 +273,11 @@ bool user_db::verify_api_token(const std::string& raw_token, session_data& out)
 	if(users.empty())
 		return false;
 
-	out.logged_in   = true;
-	out.username    = tok_username;
-	out.permissions = static_cast<uint64_t>((*users.begin())->permissions);
+	const auto found = *users.begin();
+	out.logged_in    = true;
+	out.username     = tok_username;
+	out.display_name = found->display_name;
+	out.permissions  = static_cast<uint64_t>(found->permissions);
 
 	return true;
 }

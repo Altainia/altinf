@@ -53,6 +53,14 @@ void nav_bar::update()
 			new_post->setStyleClass("nav-link");
 		}
 
+		if(has_permission(m_session.permissions, permission::admin) ||
+		   has_permission(m_session.permissions, permission::manage_users))
+		{
+			auto* accounts_link = m_auth_area->addNew<Wt::WAnchor>(
+			  Wt::WLink{Wt::LinkType::InternalPath, "/admin/accounts"}, "Accounts");
+			accounts_link->setStyleClass("nav-link");
+		}
+
 		auto* logout_link = m_auth_area->addNew<Wt::WAnchor>(
 		  Wt::WLink{Wt::LinkType::InternalPath, "/logout"}, "Logout");
 		logout_link->setStyleClass("nav-link nav-logout");

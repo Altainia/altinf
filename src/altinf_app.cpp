@@ -2,6 +2,8 @@
 
 #include "auth/permission.h"
 #include "blog/blog_loader.h"
+#include "pages/account_editor_page.h"
+#include "pages/account_manager_page.h"
 #include "pages/blog_page.h"
 #include "pages/blog_post_page.h"
 #include "pages/gantt_editor_page.h"
@@ -39,8 +41,10 @@ altinf_app::altinf_app(const Wt::WEnvironment& env):
 		const char* const pw = std::getenv("ALTINF_ADMIN_PASSWORD");
 		if(!pw)
 			throw std::runtime_error{"ALTINF_ADMIN_PASSWORD must be set on first run"};
-		const auto all_perms = grant(grant(grant(0ULL, permission::admin), permission::post_write),
-	                             permission::gantt_write);
+		const auto all_perms = grant(grant(grant(grant(0ULL, permission::admin),
+		                                         permission::post_write),
+		                                   permission::gantt_write),
+		                             permission::manage_users);
 		m_user_db->create_user("admin", pw, all_perms);
 	}
 
@@ -230,9 +234,7 @@ void altinf_app::handle_path(const std::string& path)
 			return;
 		}
 		m_content->addNew<gantt_editor_page>(
-		  *m_gantt_db, m_session, nullptr,
-		  std::vector<gantt_task_entry>{}, std::vector<std::string>{},
-		  [this](long long id) { setInternalPath("/gantt/" + std::to_string(id), true); });
+		  *m_gantt_db, m_session, nullptr, std::vector<gantt_task_entry>{}, std::vector<std::string>{}, [this](long long id) { setInternalPath("/gantt/" + std::to_string(id), true); });
 	}
 	else if(path.size() > 18 && path.substr(0, 18) == "/admin/gantt/edit/")
 	{
@@ -262,14 +264,79 @@ void altinf_app::handle_path(const std::string& path)
 			m_content->addNew<Wt::WText>("Chart not found.", Wt::TextFormat::Plain);
 			return;
 		}
-		m_edit_project      = opt;
-		const auto tasks    = m_gantt_db->tasks_for_project(id);
-		const auto viewers  = m_gantt_db->viewers_for_project(id);
+		m_edit_project     = opt;
+		const auto tasks   = m_gantt_db->tasks_for_project(id);
+		const auto viewers = m_gantt_db->viewers_for_project(id);
 		m_content->addNew<gantt_editor_page>(
-		  *m_gantt_db, m_session, &(*m_edit_project), tasks, viewers,
-		  [this](long long saved_id) {
+		  *m_gantt_db, m_session, &(*m_edit_project), tasks, viewers, [this](long long saved_id) {
 			  setInternalPath("/gantt/" + std::to_string(saved_id), true);
 		  });
+	}
+	else if(path == "/admin/accounts")
+	{
+		if(!m_session.logged_in)
+		{
+			setInternalPath("/login", true);
+			return;
+		}
+		if(!has_permission(m_session.permissions, permission::admin) &&
+		   !has_permission(m_session.permissions, permission::manage_users))
+		{
+			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
+			return;
+		}
+		auto on_delete = [this](const std::string& username) {
+			if(username == m_session.username)
+				return;
+			m_user_db->delete_user(username);
+			handle_path("/admin/accounts");
+		};
+		m_content->addNew<account_manager_page>(*m_user_db, m_session, std::move(on_delete));
+	}
+	else if(path == "/admin/accounts/new")
+	{
+		if(!m_session.logged_in)
+		{
+			setInternalPath("/login", true);
+			return;
+		}
+		if(!has_permission(m_session.permissions, permission::admin) &&
+		   !has_permission(m_session.permissions, permission::manage_users))
+		{
+			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
+			return;
+		}
+		m_content->addNew<account_editor_page>(m_user_db.get(), nullptr, [this] {
+			setInternalPath("/admin/accounts", true);
+		});
+	}
+	else if(path.size() > 21 && path.substr(0, 21) == "/admin/accounts/edit/")
+	{
+		if(!m_session.logged_in)
+		{
+			setInternalPath("/login", true);
+			return;
+		}
+		if(!has_permission(m_session.permissions, permission::admin) &&
+		   !has_permission(m_session.permissions, permission::manage_users))
+		{
+			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
+			return;
+		}
+		const auto edit_username = path.substr(21);
+		const auto users         = m_user_db->list_users();
+		const auto it            = std::find_if(users.begin(), users.end(), [&edit_username](const user_entry& e) {
+      return e.username == edit_username;
+    });
+		if(it == users.end())
+		{
+			m_content->addNew<Wt::WText>("User not found.", Wt::TextFormat::Plain);
+			return;
+		}
+		m_edit_user = *it;
+		m_content->addNew<account_editor_page>(m_user_db.get(), &(*m_edit_user), [this] {
+			setInternalPath("/admin/accounts", true);
+		});
 	}
 	else if(path == "/login")
 	{

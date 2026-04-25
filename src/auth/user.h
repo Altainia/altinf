@@ -7,6 +7,7 @@
 struct user
 {
 	std::string username;
+	std::string display_name;
 	std::string password_hash;
 	long long   permissions{0};
 
@@ -14,6 +15,7 @@ struct user
 	void persist(Action& a)
 	{
 		Wt::Dbo::field(a, username, "username");
+		Wt::Dbo::field(a, display_name, "display_name");
 		Wt::Dbo::field(a, password_hash, "password_hash");
 		Wt::Dbo::field(a, permissions, "permissions");
 	}
