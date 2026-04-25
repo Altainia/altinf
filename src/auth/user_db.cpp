@@ -57,7 +57,15 @@ user_db::user_db(const std::string& db_path)
 	}
 	catch(const Wt::Dbo::Exception&)
 	{
-		// Tables already exist — ignore
+		// Some tables already exist; run targeted migrations for any new ones.
+		Wt::Dbo::Transaction t{m_dbo};
+		m_dbo.execute(
+		  "CREATE TABLE IF NOT EXISTS \"api_token\" ("
+		  "  \"id\" integer primary key autoincrement,"
+		  "  \"version\" integer not null,"
+		  "  \"token_hash\" text not null,"
+		  "  \"username\" text not null"
+		  ")");
 	}
 }
 
