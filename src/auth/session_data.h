@@ -7,5 +7,6 @@ struct session_data
 {
 	bool        logged_in = false;
 	std::string username;
+	std::string display_name;
 	uint64_t    permissions = 0;
 };
