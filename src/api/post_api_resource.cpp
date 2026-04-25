@@ -10,7 +10,6 @@
 #include <Wt/Json/Object.h>
 #include <Wt/Json/Parser.h>
 #include <Wt/Json/Value.h>
-#include <Wt/Utils.h>
 
 #include <ctime>
 #include <sstream>
@@ -36,11 +35,42 @@ static std::string today_string()
 	return buf;
 }
 
+static std::string json_escape(const std::string& s)
+{
+	std::string out;
+	out.reserve(s.size());
+	for(const char c: s)
+	{
+		switch(c)
+		{
+		case '"':
+			out += "\\\"";
+			break;
+		case '\\':
+			out += "\\\\";
+			break;
+		case '\n':
+			out += "\\n";
+			break;
+		case '\r':
+			out += "\\r";
+			break;
+		case '\t':
+			out += "\\t";
+			break;
+		default:
+			out += c;
+			break;
+		}
+	}
+	return out;
+}
+
 static void json_error(Wt::Http::Response& response, int status, const std::string& message)
 {
 	response.setStatus(status);
 	response.setMimeType("application/json");
-	response.out() << "{\"status\":\"error\",\"message\":\"" << message << "\"}";
+	response.out() << "{\"status\":\"error\",\"message\":\"" << json_escape(message) << "\"}";
 }
 
 void post_api_resource::handleRequest(const Wt::Http::Request& request,
@@ -52,28 +82,19 @@ void post_api_resource::handleRequest(const Wt::Http::Request& request,
 		return;
 	}
 
-	// Parse HTTP Basic Auth
+	// Parse Bearer token
 	const auto auth_header = request.headerValue("Authorization");
-	if(auth_header.size() < 7 || auth_header.substr(0, 6) != "Basic ")
+	if(auth_header.size() < 8 || auth_header.substr(0, 7) != "Bearer ")
 	{
 		json_error(response, 401, "Unauthorized.");
 		return;
 	}
-
-	const auto decoded = Wt::Utils::base64Decode(auth_header.substr(6));
-	const auto colon   = decoded.find(':');
-	if(colon == std::string::npos)
-	{
-		json_error(response, 401, "Unauthorized.");
-		return;
-	}
-	const auto api_user = decoded.substr(0, colon);
-	const auto api_pass = decoded.substr(colon + 1);
+	const auto raw_token = auth_header.substr(7);
 
 	// Authenticate — fresh user_db per request (thread safety)
 	user_db      db{m_db_path};
 	session_data sess;
-	if(!db.authenticate(api_user, api_pass, sess))
+	if(!db.verify_api_token(raw_token, sess))
 	{
 		json_error(response, 403, "Forbidden.");
 		return;
