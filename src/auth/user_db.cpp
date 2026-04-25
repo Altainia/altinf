@@ -205,6 +205,37 @@ void user_db::set_password(const std::string& username, const std::string& new_p
 	u.modify()->password_hash = hash;
 }
 
+std::vector<api_token_entry> user_db::list_tokens(const std::string& username)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto results =
+	  m_dbo.find<api_token>().where("username = ?").bind(username).resultList();
+
+	std::vector<api_token_entry> out;
+	for(const auto& tok: results)
+	{
+		api_token_entry e;
+		e.id         = tok.id();
+		e.token_hash = tok->token_hash;
+		out.push_back(std::move(e));
+	}
+	return out;
+}
+
+void user_db::delete_token(long long token_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto results =
+	  m_dbo.find<api_token>().where("id = ?").bind(token_id).resultList();
+	for(const auto& tok: results)
+	{
+		Wt::Dbo::ptr<api_token> p = tok;
+		p.remove();
+	}
+}
+
 std::string user_db::create_api_token(const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};

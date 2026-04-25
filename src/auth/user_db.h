@@ -16,6 +16,12 @@ struct user_entry
 	uint64_t    permissions{0};
 };
 
+struct api_token_entry
+{
+	long long   id{0};
+	std::string token_hash;
+};
+
 class user_db
 {
 public:
@@ -43,6 +49,10 @@ public:
 	                 uint64_t           permissions);
 
 	void set_password(const std::string& username, const std::string& new_password);
+
+	std::vector<api_token_entry> list_tokens(const std::string& username);
+
+	void delete_token(long long token_id);
 
 	// Returns the raw token to present once; stores only its SHA-256 hash.
 	std::string create_api_token(const std::string& username);

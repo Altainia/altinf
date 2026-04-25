@@ -38,6 +38,41 @@ a:hover { color: var(--color-accent-h); text-decoration: underline; }
   background: var(--color-bg);
 }
 
+/* ---------- Dialog ---------- */
+.Wt-dialog {
+  background: var(--color-surface);
+  border:     1px solid var(--color-border);
+  border-radius: var(--radius);
+  color:      var(--color-text);
+  min-width:  320px;
+  max-width:  480px;
+}
+
+.Wt-dialog .titlebar {
+  padding:       0.7rem 1rem;
+  background:    var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  border-radius: var(--radius) var(--radius) 0 0;
+  font-weight:   600;
+  font-size:     0.95rem;
+}
+
+.Wt-dialog .body {
+  padding: 1.1rem 1rem 0.85rem;
+}
+
+.Wt-dialog .footer {
+  display:         flex;
+  justify-content: flex-end;
+  gap:             0.5rem;
+  padding:         0.75rem 1rem;
+  border-top:      1px solid var(--color-border);
+}
+
+.Wt-dialogcover {
+  background: rgba(0, 0, 0, 0.55);
+}
+
 .Wt-calendar select {
   background-color: var(--color-bg);
   color: var(--color-text);
@@ -791,4 +826,57 @@ a:hover { color: var(--color-accent-h); text-decoration: underline; }
   font-size:     0.85rem;
   color:         var(--color-muted);
   margin-bottom: 0.15rem;
+}
+
+/* ---------- Account tokens section ---------- */
+.account-tokens-section {
+  margin-top:    1.5rem;
+  padding:       1.25rem;
+  background:    var(--color-surface);
+  border:        1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.account-tokens-section h3 {
+  font-size:      0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color:          var(--color-muted);
+  border-bottom:  1px solid var(--color-border);
+  padding-bottom: 0.3rem;
+  margin-bottom:  0.75rem;
+}
+
+.account-token-list {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.4rem;
+  margin-bottom:  0.85rem;
+}
+
+.account-token-row {
+  display:     flex;
+  align-items: center;
+  gap:         0.75rem;
+}
+
+.account-token-hash {
+  font-family: var(--font-mono);
+  font-size:   0.82rem;
+  color:       var(--color-muted);
+  flex:        1;
+}
+
+.account-tokens-empty {
+  font-size:     0.85rem;
+  color:         var(--color-muted);
+  margin-bottom: 0.75rem;
+  display:       block;
+}
+
+.token-display-field {
+  font-family: var(--font-mono);
+  font-size:   0.85rem;
+  margin-top:  0.5rem;
+  width:       100%;
 }

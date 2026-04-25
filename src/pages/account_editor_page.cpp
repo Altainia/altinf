@@ -3,6 +3,8 @@
 #include "auth/permission.h"
 
 #include <Wt/WApplication.h>
+#include <Wt/WDialog.h>
+#include <Wt/WLineEdit.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
@@ -80,6 +82,20 @@ account_editor_page::account_editor_page(user_db*              db,
 	cancel_btn->clicked().connect([] {
 		Wt::WApplication::instance()->setInternalPath("/admin/accounts", true);
 	});
+
+	if(m_existing)
+	{
+		auto* tokens_section = addNew<Wt::WContainerWidget>();
+		tokens_section->setStyleClass("account-tokens-section");
+		tokens_section->addNew<Wt::WText>("<h3>API Tokens</h3>", Wt::TextFormat::UnsafeXHTML);
+
+		m_tokens_container = tokens_section->addNew<Wt::WContainerWidget>();
+		build_token_list();
+
+		auto* gen_btn = tokens_section->addNew<Wt::WPushButton>("Generate New Token");
+		gen_btn->setStyleClass("editor-btn");
+		gen_btn->clicked().connect(this, &account_editor_page::generate_token);
+	}
 }
 
 void account_editor_page::save()
@@ -136,4 +152,68 @@ void account_editor_page::save()
 	}
 
 	m_on_save();
+}
+
+void account_editor_page::build_token_list()
+{
+	m_tokens_container->clear();
+
+	const auto tokens = m_db->list_tokens(m_existing->username);
+
+	if(tokens.empty())
+	{
+		auto* empty = m_tokens_container->addNew<Wt::WText>("No tokens.", Wt::TextFormat::Plain);
+		empty->setStyleClass("account-tokens-empty");
+		return;
+	}
+
+	for(const auto& tok: tokens)
+	{
+		auto* row = m_tokens_container->addNew<Wt::WContainerWidget>();
+		row->setStyleClass("account-token-row");
+
+		const auto display   = tok.token_hash.substr(0, 12) + "...";
+		auto*      hash_text = row->addNew<Wt::WText>(display, Wt::TextFormat::Plain);
+		hash_text->setStyleClass("account-token-hash");
+
+		const long long token_id = tok.id;
+		auto*           rev_btn  = row->addNew<Wt::WPushButton>("Revoke");
+		rev_btn->setStyleClass("link-action-btn link-delete-btn");
+		rev_btn->clicked().connect([this, token_id] {
+			auto* d = new Wt::WDialog("Revoke Token");
+			d->contents()->addNew<Wt::WText>("Revoke this API token? This cannot be undone.",
+			                                 Wt::TextFormat::Plain);
+			auto* yes = d->footer()->addNew<Wt::WPushButton>("Revoke");
+			yes->setStyleClass("editor-btn");
+			auto* no = d->footer()->addNew<Wt::WPushButton>("Cancel");
+			no->setStyleClass("editor-btn editor-btn-cancel");
+			yes->clicked().connect([this, d, token_id] {
+				d->accept();
+				m_db->delete_token(token_id);
+				build_token_list();
+			});
+			no->clicked().connect([d] { d->reject(); });
+			d->finished().connect([d](Wt::DialogCode) { delete d; });
+			d->show();
+		});
+	}
+}
+
+void account_editor_page::generate_token()
+{
+	const auto raw_token = m_db->create_api_token(m_existing->username);
+	build_token_list();
+
+	auto* d = new Wt::WDialog("New API Token");
+	d->contents()->addNew<Wt::WText>(
+	  "<p>Copy this token now — it will <strong>not</strong> be shown again.</p>",
+	  Wt::TextFormat::UnsafeXHTML);
+	auto* field = d->contents()->addNew<Wt::WLineEdit>(raw_token);
+	field->setReadOnly(true);
+	field->setStyleClass("editor-field token-display-field");
+	auto* ok = d->footer()->addNew<Wt::WPushButton>("Done");
+	ok->setStyleClass("editor-btn");
+	ok->clicked().connect([d] { d->accept(); });
+	d->finished().connect([d](Wt::DialogCode) { delete d; });
+	d->show();
 }

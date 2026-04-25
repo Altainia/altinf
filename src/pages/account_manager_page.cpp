@@ -4,6 +4,7 @@
 
 #include <Wt/WAnchor.h>
 #include <Wt/WApplication.h>
+#include <Wt/WDialog.h>
 #include <Wt/WLink.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WTable.h>
@@ -88,41 +89,31 @@ account_manager_page::account_manager_page(
 
 		if(is_me)
 		{
-			auto* note = actions->addNew<Wt::WText>(
-			  "cannot delete own account", Wt::TextFormat::Plain);
+			auto* note =
+			  actions->addNew<Wt::WText>("cannot delete own account", Wt::TextFormat::Plain);
 			note->setStyleClass("account-self-note");
 		}
 		else
 		{
 			const std::string del_username = u.username;
-
-			auto* del_btn = actions->addNew<Wt::WPushButton>("Delete");
+			auto*             del_btn      = actions->addNew<Wt::WPushButton>("Delete");
 			del_btn->setStyleClass("link-action-btn link-delete-btn");
-
-			auto* confirm = actions->addNew<Wt::WContainerWidget>();
-			confirm->setStyleClass("link-confirm");
-			confirm->hide();
-
-			confirm->addNew<Wt::WText>("Delete user? ", Wt::TextFormat::Plain);
-
-			auto* yes_btn = confirm->addNew<Wt::WPushButton>("Yes");
-			yes_btn->setStyleClass("link-action-btn link-delete-btn");
-
-			auto* no_btn = confirm->addNew<Wt::WPushButton>("No");
-			no_btn->setStyleClass("link-action-btn");
-
-			del_btn->clicked().connect([del_btn, confirm] {
-				del_btn->hide();
-				confirm->show();
-			});
-
-			no_btn->clicked().connect([del_btn, confirm] {
-				confirm->hide();
-				del_btn->show();
-			});
-
-			yes_btn->clicked().connect([this, del_username] {
-				m_on_delete(del_username);
+			del_btn->clicked().connect([this, del_username] {
+				auto* d = new Wt::WDialog("Confirm Delete");
+				d->contents()->addNew<Wt::WText>(
+				  "Delete user \"" + del_username + "\"? This cannot be undone.",
+				  Wt::TextFormat::Plain);
+				auto* yes = d->footer()->addNew<Wt::WPushButton>("Delete");
+				yes->setStyleClass("editor-btn");
+				auto* no = d->footer()->addNew<Wt::WPushButton>("Cancel");
+				no->setStyleClass("editor-btn editor-btn-cancel");
+				yes->clicked().connect([this, d, del_username] {
+					d->accept();
+					m_on_delete(del_username);
+				});
+				no->clicked().connect([d] { d->reject(); });
+				d->finished().connect([d](Wt::DialogCode) { delete d; });
+				d->show();
 			});
 		}
 	}

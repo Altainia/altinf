@@ -34,6 +34,9 @@ private:
 	Wt::WCheckBox*            m_perm_post_write{nullptr};
 	Wt::WCheckBox*            m_perm_gantt_write{nullptr};
 	Wt::WText*                m_status{nullptr};
+	Wt::WContainerWidget*     m_tokens_container{nullptr};
 
 	void save();
+	void build_token_list();
+	void generate_token();
 };
