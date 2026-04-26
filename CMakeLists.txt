@@ -17,7 +17,7 @@ target_include_directories(altinf PRIVATE src)
 
 target_link_libraries(altinf PRIVATE
   Wt::Wt Wt::HTTP wtdbo wtdbosqlite3
-  OpenSSL::Crypto
+  OpenSSL::SSL OpenSSL::Crypto
   ${CMARK_LIB}
 )
 
