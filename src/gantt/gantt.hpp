@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Wt/Dbo/Dbo.h>
+#include <Wt/Dbo/WtSqlTraits.h>
+#include <Wt/WDate.h>
 
 #include <string>
 
@@ -9,7 +11,7 @@ struct gantt_project_record
 	std::string title;
 	std::string description;
 	std::string owner_username;
-	std::string created_date;
+	Wt::WDate   created_date;
 
 	template<class Action>
 	void persist(Action& a)
@@ -26,8 +28,8 @@ struct gantt_task_record
 	long long   project_id{0};
 	std::string title;
 	std::string assigned_to;
-	std::string start_date;
-	std::string end_date;
+	Wt::WDate   start_date;
+	Wt::WDate   end_date;
 	std::string color;
 	int         sort_order{0};
 
@@ -63,7 +65,7 @@ struct gantt_project_entry
 	std::string title;
 	std::string description;
 	std::string owner_username;
-	std::string created_date;
+	Wt::WDate   created_date;
 };
 
 struct gantt_task_entry
@@ -72,8 +74,8 @@ struct gantt_task_entry
 	long long   project_id{0};
 	std::string title;
 	std::string assigned_to;
-	std::string start_date;
-	std::string end_date;
+	Wt::WDate   start_date;
+	Wt::WDate   end_date;
 	std::string color;
 	int         sort_order{0};
 };

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Wt/Dbo/Dbo.h>
+#include <Wt/Dbo/WtSqlTraits.h>
+#include <Wt/WDate.h>
 
 #include <string>
 
@@ -12,7 +14,7 @@ struct link_entry
 	std::string description;
 	std::string section;
 	int         sort_order{0};
-	std::string added_date;
+	Wt::WDate   added_date;
 };
 
 struct link_record
@@ -22,7 +24,7 @@ struct link_record
 	std::string description;
 	std::string section;
 	int         sort_order{0};
-	std::string added_date;
+	Wt::WDate   added_date;
 
 	template<class Action>
 	void persist(Action& a)

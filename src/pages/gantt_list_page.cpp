@@ -1,10 +1,10 @@
 #include "gantt_list_page.hpp"
 
-#include "auth/permission.hpp"
-
 #include <Wt/WAnchor.h>
 #include <Wt/WLink.h>
 #include <Wt/WText.h>
+
+#include "auth/permission.hpp"
 
 gantt_list_page::gantt_list_page(const std::vector<gantt_project_entry>& projects,
                                  const session_data&                     session)
@@ -48,7 +48,8 @@ gantt_list_page::gantt_list_page(const std::vector<gantt_project_entry>& project
 		}
 
 		auto* meta = item->addNew<Wt::WText>(
-		  "Owner: " + proj.owner_username + "  ·  Created: " + proj.created_date,
+		  "Owner: " + proj.owner_username + "  \xc2\xb7  Created: " +
+		    (proj.created_date.isValid() ? proj.created_date.toString("yyyy-MM-dd").toUTF8() : std::string{}),
 		  Wt::TextFormat::Plain);
 		meta->setStyleClass("gantt-project-meta");
 	}

@@ -60,8 +60,9 @@ void blog_page::render_list()
 		  Wt::WLink{Wt::LinkType::InternalPath, "/blog/" + post.slug}, post.title);
 		title_link->setStyleClass("post-title");
 
-		item->addNew<Wt::WText>(" <span class=\"post-date\">" + post.date + "</span>",
-		                        Wt::TextFormat::UnsafeXHTML);
+		item->addNew<Wt::WText>(
+		  " <span class=\"post-date\">" + post.date.toString("yyyy-MM-dd").toUTF8() + "</span>",
+		  Wt::TextFormat::UnsafeXHTML);
 
 		if(!post.tags.empty())
 		{

@@ -1,5 +1,7 @@
 #include "post_writer.hpp"
 
+#include <Wt/WDate.h>
+
 #include <cctype>
 #include <filesystem>
 #include <fstream>
@@ -27,12 +29,13 @@ std::string make_post_slug(const std::string& title)
 }
 
 post_path resolve_new_post(const std::filesystem::path& posts_dir,
-                           const std::string&           date,
+                           Wt::WDate                    date,
                            const std::string&           title)
 {
-	std::string slug     = make_post_slug(title);
-	std::string base     = date + "-" + slug;
-	auto        filepath = posts_dir / (base + ".md");
+	const std::string date_str = date.toString("yyyy-MM-dd").toUTF8();
+	std::string       slug     = make_post_slug(title);
+	std::string       base     = date_str + "-" + slug;
+	auto              filepath = posts_dir / (base + ".md");
 
 	if(std::filesystem::exists(filepath))
 	{
@@ -53,7 +56,7 @@ post_path resolve_new_post(const std::filesystem::path& posts_dir,
 
 bool write_post_file(const std::filesystem::path& filepath,
                      const std::string&           title,
-                     const std::string&           date,
+                     Wt::WDate                    date,
                      const std::string&           tags,
                      const std::string&           body)
 {
@@ -65,7 +68,7 @@ bool write_post_file(const std::filesystem::path& filepath,
 
 	out << "---\n";
 	out << "title: " << title << "\n";
-	out << "date: " << date << "\n";
+	out << "date: " << date.toString("yyyy-MM-dd").toUTF8() << "\n";
 	out << "tags: " << tags << "\n";
 	out << "---\n";
 	out << body;

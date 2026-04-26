@@ -1,19 +1,19 @@
 #include "post_api_resource.hpp"
 
-#include "../auth/permission.hpp"
-#include "../auth/session_data.hpp"
-#include "../auth/user_db.hpp"
-#include "../blog/post_writer.hpp"
-
 #include <Wt/Http/Request.h>
 #include <Wt/Http/Response.h>
 #include <Wt/Json/Object.h>
 #include <Wt/Json/Parser.h>
 #include <Wt/Json/Value.h>
+#include <Wt/WDate.h>
 
-#include <ctime>
 #include <sstream>
 #include <string>
+
+#include "../auth/permission.hpp"
+#include "../auth/session_data.hpp"
+#include "../auth/user_db.hpp"
+#include "../blog/post_writer.hpp"
 
 post_api_resource::post_api_resource(std::string db_path, std::filesystem::path posts_dir):
   m_db_path{std::move(db_path)},
@@ -24,15 +24,6 @@ post_api_resource::post_api_resource(std::string db_path, std::filesystem::path 
 post_api_resource::~post_api_resource()
 {
 	beingDeleted();
-}
-
-static std::string today_string()
-{
-	const std::time_t now = std::time(nullptr);
-	const std::tm*    tm  = std::localtime(&now);
-	char              buf[11];
-	std::strftime(buf, sizeof(buf), "%Y-%m-%d", tm);
-	return buf;
 }
 
 static std::string json_escape(const std::string& s)
@@ -119,10 +110,10 @@ void post_api_resource::handleRequest(const Wt::Http::Request& request,
 		return;
 	}
 
-	const std::string title = obj.get("title").toString().orIfNull("");
-	const std::string date  = obj.get("date").toString().orIfNull("");
-	const std::string tags  = obj.get("tags").toString().orIfNull("");
-	const std::string body  = obj.get("body").toString().orIfNull("");
+	const std::string title    = obj.get("title").toString().orIfNull("");
+	const std::string date_str = obj.get("date").toString().orIfNull("");
+	const std::string tags     = obj.get("tags").toString().orIfNull("");
+	const std::string body     = obj.get("body").toString().orIfNull("");
 
 	if(title.empty())
 	{
@@ -130,11 +121,15 @@ void post_api_resource::handleRequest(const Wt::Http::Request& request,
 		return;
 	}
 
-	const auto effective_date = date.empty() ? today_string() : date;
+	Wt::WDate date = date_str.empty() ? Wt::WDate::currentDate() : Wt::WDate::fromString(Wt::WString{date_str}, "yyyy-MM-dd");
+	if(!date.isValid())
+	{
+		date = Wt::WDate::currentDate();
+	}
 
-	const auto [filepath, slug] = resolve_new_post(m_posts_dir, effective_date, title);
+	const auto [filepath, slug] = resolve_new_post(m_posts_dir, date, title);
 
-	if(!write_post_file(filepath, title, effective_date, tags, body))
+	if(!write_post_file(filepath, title, date, tags, body))
 	{
 		json_error(response, 500, "Failed to write file.");
 		return;

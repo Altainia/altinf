@@ -1,34 +1,17 @@
 #include "gantt_view_page.hpp"
 
-#include "auth/permission.hpp"
-
+#include <Wt/WDate.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
 #include <algorithm>
-#include <cstdio>
-#include <ctime>
 #include <string>
 
-int gantt_view_page::date_to_days(const std::string& d)
-{
-	int y{1970}, m{1}, day{1};
-	std::sscanf(d.c_str(), "%d-%d-%d", &y, &m, &day);
-	std::tm tm{};
-	tm.tm_year  = y - 1900;
-	tm.tm_mon   = m - 1;
-	tm.tm_mday  = day;
-	tm.tm_isdst = -1;
-	return static_cast<int>(std::mktime(&tm) / 86400);
-}
+#include "auth/permission.hpp"
 
-std::string gantt_view_page::days_to_date_label(int days)
+std::string gantt_view_page::date_label(const Wt::WDate& d)
 {
-	const std::time_t t  = static_cast<std::time_t>(days) * 86400;
-	std::tm*          tm = std::gmtime(&t);
-	char              buf[12];
-	std::strftime(buf, sizeof(buf), "%b %d", tm);
-	return buf;
+	return d.toString("MMM dd").toUTF8();
 }
 
 gantt_view_page::gantt_view_page(const gantt_project_entry&           project,
@@ -70,18 +53,13 @@ gantt_view_page::gantt_view_page(const gantt_project_entry&           project,
 
 void gantt_view_page::render_chart(const std::vector<gantt_task_entry>& tasks)
 {
-	// Compute today in days-since-epoch using the same mktime path as date_to_days
-	const std::time_t now_t  = std::time(nullptr);
-	const std::tm*    now_tm = std::localtime(&now_t);
-	char              today_buf[12];
-	std::strftime(today_buf, sizeof(today_buf), "%Y-%m-%d", now_tm);
-	const int today_day = date_to_days(today_buf);
+	const Wt::WDate today = Wt::WDate::currentDate();
 
-	// Keep only tasks whose end date is today or in the future
+	// Keep only tasks with a valid end date that is today or in the future
 	std::vector<gantt_task_entry> active;
 	for(const auto& t: tasks)
 	{
-		if(date_to_days(t.end_date) >= today_day)
+		if(t.end_date.isValid() && t.end_date >= today)
 		{
 			active.push_back(t);
 		}
@@ -96,14 +74,21 @@ void gantt_view_page::render_chart(const std::vector<gantt_task_entry>& tasks)
 	}
 
 	// Compute date range across active tasks
-	int min_day = date_to_days(active.front().start_date);
-	int max_day = date_to_days(active.front().end_date);
+	Wt::WDate min_date = active.front().start_date.isValid() ? active.front().start_date : active.front().end_date;
+	Wt::WDate max_date = active.front().end_date;
 	for(const auto& t: active)
 	{
-		min_day = std::min(min_day, date_to_days(t.start_date));
-		max_day = std::max(max_day, date_to_days(t.end_date));
+		if(t.start_date.isValid() && t.start_date < min_date)
+		{
+			min_date = t.start_date;
+		}
+		if(t.end_date.isValid() && t.end_date > max_date)
+		{
+			max_date = t.end_date;
+		}
 	}
-	const int total_days = max_day - min_day + 1;
+
+	const int total_days = min_date.daysTo(max_date) + 1;
 	if(total_days <= 0)
 	{
 		return;
@@ -122,14 +107,12 @@ void gantt_view_page::render_chart(const std::vector<gantt_task_entry>& tasks)
 		auto* track = hdr_row->addNew<Wt::WContainerWidget>();
 		track->setStyleClass("gantt-track");
 
-		// First week starts on min_day rounded down to Monday, or just min_day
 		for(int d = 0; d < total_days; d += 7)
 		{
-			const int   abs_day  = min_day + d;
 			const float left_pct = static_cast<float>(d) / static_cast<float>(total_days) * 100.0f;
 
 			auto* marker = track->addNew<Wt::WText>(
-			  days_to_date_label(abs_day), Wt::TextFormat::Plain);
+			  date_label(min_date.addDays(d)), Wt::TextFormat::Plain);
 			marker->setStyleClass("gantt-week-marker");
 			marker->setAttributeValue(
 			  "style", "left:" + std::to_string(static_cast<int>(left_pct)) + "%");
@@ -162,8 +145,8 @@ void gantt_view_page::render_chart(const std::vector<gantt_task_entry>& tasks)
 			grp_hdr->addNew<Wt::WText>(hdr_txt, Wt::TextFormat::Plain);
 		}
 
-		const int   start_off = date_to_days(task.start_date) - min_day;
-		const int   end_off   = date_to_days(task.end_date) - min_day;
+		const int   start_off = task.start_date.isValid() ? min_date.daysTo(task.start_date) : 0;
+		const int   end_off   = task.end_date.isValid() ? min_date.daysTo(task.end_date) : 0;
 		const float left_pct  = static_cast<float>(std::max(0, start_off)) /
 		                       static_cast<float>(total_days) * 100.0f;
 		const float width_pct = static_cast<float>(std::max(1, end_off - start_off + 1)) /
@@ -189,8 +172,12 @@ void gantt_view_page::render_chart(const std::vector<gantt_task_entry>& tasks)
 		    "width:" + std::to_string(static_cast<int>(std::max(1.0f, width_pct))) + "%;" +
 		    "background:" + color);
 
+		const std::string start_str =
+		  task.start_date.isValid() ? task.start_date.toString("yyyy-MM-dd").toUTF8() : "";
+		const std::string end_str =
+		  task.end_date.isValid() ? task.end_date.toString("yyyy-MM-dd").toUTF8() : "";
 		auto* bar_label = bar->addNew<Wt::WText>(
-		  task.start_date + " \xe2\x80\x93 " + task.end_date, Wt::TextFormat::Plain);
+		  start_str + " \xe2\x80\x93 " + end_str, Wt::TextFormat::Plain);
 		bar_label->setStyleClass("gantt-bar-dates");
 	}
 }
