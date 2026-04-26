@@ -1,6 +1,6 @@
 #pragma once
 
-#include "link.h"
+#include "link.hpp"
 
 #include <Wt/Dbo/Session.h>
 

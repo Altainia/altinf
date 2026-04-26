@@ -1,4 +1,4 @@
-#include "link_editor_page.h"
+#include "link_editor_page.hpp"
 
 #include <Wt/WApplication.h>
 #include <Wt/WPushButton.h>

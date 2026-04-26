@@ -1,6 +1,6 @@
-#include "account_editor_page.h"
+#include "account_editor_page.hpp"
 
-#include "auth/permission.h"
+#include "auth/permission.hpp"
 
 #include <Wt/WApplication.h>
 #include <Wt/WDialog.h>

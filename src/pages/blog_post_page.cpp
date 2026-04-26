@@ -1,4 +1,4 @@
-#include "blog_post_page.h"
+#include "blog_post_page.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WLink.h>

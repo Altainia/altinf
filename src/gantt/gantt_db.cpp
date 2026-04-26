@@ -1,6 +1,6 @@
-#include "gantt_db.h"
+#include "gantt_db.hpp"
 
-#include "auth/permission.h"
+#include "auth/permission.hpp"
 
 #include <Wt/Dbo/Transaction.h>
 #include <Wt/Dbo/backend/Sqlite3.h>

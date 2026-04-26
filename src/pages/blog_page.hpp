@@ -1,6 +1,6 @@
 #pragma once
 
-#include "blog/blog_post.h"
+#include "blog/blog_post.hpp"
 
 #include <Wt/WContainerWidget.h>
 

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "auth/session_data.h"
-#include "auth/user_db.h"
-#include "blog/blog_post.h"
-#include "gantt/gantt.h"
-#include "gantt/gantt_db.h"
-#include "links/link.h"
-#include "links/link_db.h"
+#include "auth/session_data.hpp"
+#include "auth/user_db.hpp"
+#include "blog/blog_post.hpp"
+#include "gantt/gantt.hpp"
+#include "gantt/gantt_db.hpp"
+#include "links/link.hpp"
+#include "links/link_db.hpp"
 
 #include <Wt/WApplication.h>
 #include <Wt/WContainerWidget.h>

@@ -1,6 +1,6 @@
-#include "nav_bar.h"
+#include "nav_bar.hpp"
 
-#include "auth/permission.h"
+#include "auth/permission.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WLink.h>

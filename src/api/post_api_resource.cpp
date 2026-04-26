@@ -1,9 +1,9 @@
-#include "post_api_resource.h"
+#include "post_api_resource.hpp"
 
-#include "../auth/permission.h"
-#include "../auth/session_data.h"
-#include "../auth/user_db.h"
-#include "../blog/post_writer.h"
+#include "../auth/permission.hpp"
+#include "../auth/session_data.hpp"
+#include "../auth/user_db.hpp"
+#include "../blog/post_writer.hpp"
 
 #include <Wt/Http/Request.h>
 #include <Wt/Http/Response.h>

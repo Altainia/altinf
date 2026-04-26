@@ -1,6 +1,6 @@
 #pragma once
 
-#include "blog_post.h"
+#include "blog_post.hpp"
 
 #include <filesystem>
 #include <string>

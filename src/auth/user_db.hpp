@@ -1,7 +1,7 @@
 #pragma once
 
-#include "session_data.h"
-#include "user.h"
+#include "session_data.hpp"
+#include "user.hpp"
 
 #include <Wt/Dbo/Session.h>
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "auth/session_data.h"
+#include "auth/session_data.hpp"
 
 #include <Wt/WContainerWidget.h>
 

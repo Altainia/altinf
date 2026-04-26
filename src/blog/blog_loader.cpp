@@ -1,4 +1,4 @@
-#include "blog_loader.h"
+#include "blog_loader.hpp"
 
 #include <algorithm>
 #include <fstream>

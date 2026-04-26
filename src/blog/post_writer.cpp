@@ -1,4 +1,4 @@
-#include "post_writer.h"
+#include "post_writer.hpp"
 
 #include <cctype>
 #include <filesystem>

@@ -1,6 +1,6 @@
-#include "links_page.h"
+#include "links_page.hpp"
 
-#include "auth/permission.h"
+#include "auth/permission.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WApplication.h>

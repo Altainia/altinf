@@ -1,6 +1,6 @@
-#include "post_editor_page.h"
+#include "post_editor_page.hpp"
 
-#include "blog/post_writer.h"
+#include "blog/post_writer.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WDate.h>

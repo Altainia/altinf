@@ -1,6 +1,6 @@
-#include "user_db.h"
+#include "user_db.hpp"
 
-#include "api_token.h"
+#include "api_token.hpp"
 
 #include <Wt/Auth/HashFunction.h>
 #include <Wt/Dbo/Transaction.h>

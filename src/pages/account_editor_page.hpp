@@ -1,6 +1,6 @@
 #pragma once
 
-#include "auth/user_db.h"
+#include "auth/user_db.hpp"
 
 #include <Wt/WCheckBox.h>
 #include <Wt/WContainerWidget.h>

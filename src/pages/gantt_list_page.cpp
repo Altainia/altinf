@@ -1,6 +1,6 @@
-#include "gantt_list_page.h"
+#include "gantt_list_page.hpp"
 
-#include "auth/permission.h"
+#include "auth/permission.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WLink.h>

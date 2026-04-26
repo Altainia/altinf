@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gantt.h"
+#include "gantt.hpp"
 
 #include <Wt/Dbo/Session.h>
 
