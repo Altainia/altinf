@@ -8,19 +8,6 @@
 #include <Wt/WText.h>
 
 #include <cstdio>
-#include <ctime>
-
-namespace
-{
-	std::string today_string()
-	{
-		const std::time_t t  = std::time(nullptr);
-		const std::tm*    tm = std::localtime(&t);
-		char              buf[12];
-		std::strftime(buf, sizeof(buf), "%Y-%m-%d", tm);
-		return buf;
-	}
-} // namespace
 
 gantt_editor_page::gantt_editor_page(gantt_db&                      db,
                                      const session_data&            session,
@@ -168,24 +155,12 @@ void gantt_editor_page::add_task_row(const gantt_task_entry& task)
 	r.start_date = row->addNew<Wt::WDateEdit>();
 	r.start_date->setFormat("yyyy-MM-dd");
 	r.start_date->setStyleClass("editor-field gantt-col-date");
-	{
-		const auto d = task.start_date.empty() ? Wt::WDate::currentDate() : Wt::WDate::fromString(task.start_date, "yyyy-MM-dd");
-		if(d.isValid())
-		{
-			r.start_date->setDate(d);
-		}
-	}
+	r.start_date->setDate(task.start_date.isValid() ? task.start_date : Wt::WDate::currentDate());
 
 	r.end_date = row->addNew<Wt::WDateEdit>();
 	r.end_date->setFormat("yyyy-MM-dd");
 	r.end_date->setStyleClass("editor-field gantt-col-date");
-	{
-		const auto d = task.end_date.empty() ? Wt::WDate::currentDate() : Wt::WDate::fromString(task.end_date, "yyyy-MM-dd");
-		if(d.isValid())
-		{
-			r.end_date->setDate(d);
-		}
-	}
+	r.end_date->setDate(task.end_date.isValid() ? task.end_date : Wt::WDate::currentDate());
 
 	r.color = row->addNew<Wt::WColorPicker>();
 	r.color->setStyleClass("gantt-col-color");
@@ -253,7 +228,7 @@ void gantt_editor_page::save()
 	proj.title          = title;
 	proj.description    = m_description->text().toUTF8();
 	proj.owner_username = m_session.username;
-	proj.created_date   = today_string();
+	proj.created_date   = Wt::WDate::currentDate();
 
 	long long id = 0;
 	if(m_existing)
@@ -280,11 +255,11 @@ void gantt_editor_page::save()
 		t.assigned_to = r.assigned_to->text().toUTF8();
 		if(const auto d = r.start_date->date(); d.isValid())
 		{
-			t.start_date = d.toString("yyyy-MM-dd").toUTF8();
+			t.start_date = d;
 		}
 		if(const auto d = r.end_date->date(); d.isValid())
 		{
-			t.end_date = d.toString("yyyy-MM-dd").toUTF8();
+			t.end_date = d;
 		}
 		{
 			const auto wc = r.color->color();

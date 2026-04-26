@@ -1,21 +1,12 @@
 #include "link_editor_page.hpp"
 
 #include <Wt/WApplication.h>
+#include <Wt/WDate.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
-#include <ctime>
 #include <stdexcept>
 #include <string>
-
-static std::string today_date()
-{
-	const std::time_t t  = std::time(nullptr);
-	const std::tm*    tm = std::localtime(&t);
-	char              buf[11];
-	std::strftime(buf, sizeof(buf), "%Y-%m-%d", tm);
-	return buf;
-}
 
 link_editor_page::link_editor_page(link_db*              db,
                                    const link_entry*     existing,
@@ -128,7 +119,7 @@ void link_editor_page::save()
 	e.description = m_description->text().toUTF8();
 	e.section     = section;
 	e.sort_order  = sort_order;
-	e.added_date  = m_existing ? m_existing->added_date : today_date();
+	e.added_date  = m_existing ? m_existing->added_date : Wt::WDate::currentDate();
 
 	if(m_existing)
 	{

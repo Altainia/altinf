@@ -1,5 +1,7 @@
 #include "blog_loader.hpp"
 
+#include <Wt/WDate.h>
+
 #include <algorithm>
 #include <fstream>
 #include <sstream>
@@ -70,7 +72,7 @@ blog_post blog_loader::parse_post(const std::filesystem::path& path)
 		}
 		else if(key == "date")
 		{
-			post.date = value;
+			post.date = Wt::WDate::fromString(Wt::WString{value}, "yyyy-MM-dd");
 		}
 		else if(key == "tags")
 		{

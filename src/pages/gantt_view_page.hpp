@@ -4,6 +4,7 @@
 #include "gantt/gantt.hpp"
 
 #include <Wt/WContainerWidget.h>
+#include <Wt/WDate.h>
 
 #include <functional>
 #include <vector>
@@ -19,8 +20,7 @@ public:
 private:
 	void render_chart(const std::vector<gantt_task_entry>& tasks);
 
-	static int         date_to_days(const std::string& d);
-	static std::string days_to_date_label(int days);
+	static std::string date_label(const Wt::WDate& d);
 
 	Wt::WContainerWidget* m_chart_wrap{nullptr};
 };

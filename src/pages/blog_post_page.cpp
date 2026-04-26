@@ -16,8 +16,9 @@ blog_post_page::blog_post_page(const blog_post& post, const session_data& sessio
 	header->setStyleClass("post-header");
 
 	header->addNew<Wt::WText>("<h1>" + post.title + "</h1>", Wt::TextFormat::UnsafeXHTML);
-	header->addNew<Wt::WText>("<span class=\"post-date\">" + post.date + "</span>",
-	                          Wt::TextFormat::UnsafeXHTML);
+	header->addNew<Wt::WText>(
+	  "<span class=\"post-date\">" + post.date.toString("yyyy-MM-dd").toUTF8() + "</span>",
+	  Wt::TextFormat::UnsafeXHTML);
 
 	if(!post.tags.empty())
 	{

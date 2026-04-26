@@ -1,9 +1,8 @@
 #include "post_editor_page.hpp"
 
-#include "blog/post_writer.hpp"
-
 #include <Wt/WAnchor.h>
 #include <Wt/WDate.h>
+#include <Wt/WDateEdit.h>
 #include <Wt/WLink.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WStackedWidget.h>
@@ -13,6 +12,8 @@
 #include <algorithm>
 #include <fstream>
 #include <sstream>
+
+#include "blog/post_writer.hpp"
 
 post_editor_page::post_editor_page(const std::filesystem::path&          posts_dir,
                                    const blog_post*                      existing,
@@ -33,8 +34,8 @@ post_editor_page::post_editor_page(const std::filesystem::path&          posts_d
 	m_title->setPlaceholderText("Title");
 	m_title->setStyleClass("editor-field");
 
-	m_date = form->addNew<Wt::WLineEdit>();
-	m_date->setPlaceholderText("Date (YYYY-MM-DD)");
+	m_date = form->addNew<Wt::WDateEdit>();
+	m_date->setFormat("yyyy-MM-dd");
 	m_date->setStyleClass("editor-field");
 
 	m_tags = form->addNew<Wt::WLineEdit>();
@@ -91,7 +92,7 @@ post_editor_page::post_editor_page(const std::filesystem::path&          posts_d
 	if(m_existing)
 	{
 		m_title->setText(m_existing->title);
-		m_date->setText(m_existing->date);
+		m_date->setDate(m_existing->date);
 
 		std::string tags_str;
 		for(std::size_t i = 0; i < m_existing->tags.size(); ++i)
@@ -108,14 +109,14 @@ post_editor_page::post_editor_page(const std::filesystem::path&          posts_d
 	}
 	else
 	{
-		m_date->setText(Wt::WDate::currentDate().toString("yyyy-MM-dd").toUTF8());
+		m_date->setDate(Wt::WDate::currentDate());
 	}
 }
 
 void post_editor_page::save()
 {
 	const auto title = m_title->text().toUTF8();
-	const auto date  = m_date->text().toUTF8();
+	const auto date  = m_date->date();
 	const auto tags  = m_tags->text().toUTF8();
 	const auto body  = m_body->text().toUTF8();
 
@@ -124,7 +125,7 @@ void post_editor_page::save()
 		m_status->setText("Title is required.");
 		return;
 	}
-	if(date.empty())
+	if(!date.isValid())
 	{
 		m_status->setText("Date is required.");
 		return;
