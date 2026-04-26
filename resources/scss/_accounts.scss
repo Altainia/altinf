@@ -1,0 +1,114 @@
+.account-manager-page {
+  h1 {
+    font-size:      2rem;
+    margin-bottom:  1.5rem;
+    border-bottom:  1px solid var(--color-border);
+    padding-bottom: 0.5rem;
+  }
+}
+
+.account-new-btn { margin-bottom: 1.5rem; }
+.accounts-empty  { color: var(--color-muted); margin-top: 1rem; }
+
+.account-table {
+  width:           100%;
+  border-collapse: collapse;
+  font-size:       0.9rem;
+
+  th, td {
+    padding:        0.55rem 0.75rem;
+    border:         1px solid var(--color-border);
+    text-align:     left;
+    vertical-align: middle;
+  }
+
+  th {
+    background:     var(--color-surface);
+    font-weight:    600;
+    color:          var(--color-muted);
+    font-size:      0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  tr:nth-child(even) td { background: var(--color-surface); }
+}
+
+.account-actions {
+  display:     flex;
+  align-items: center;
+  gap:         0.6rem;
+  flex-wrap:   wrap;
+}
+
+.account-self-note {
+  font-size:  0.78rem;
+  color:      var(--color-muted);
+  font-style: italic;
+}
+
+.account-editor-page { padding-top: 2rem; }
+
+.account-perms-section {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.35rem;
+}
+
+.account-perms-label {
+  font-size:     0.85rem;
+  color:         var(--color-muted);
+  margin-bottom: 0.15rem;
+}
+
+.account-tokens-section {
+  margin-top:    1.5rem;
+  padding:       1.25rem;
+  background:    var(--color-surface);
+  border:        1px solid var(--color-border);
+  border-radius: var(--radius);
+
+  h3 {
+    font-size:      0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color:          var(--color-muted);
+    border-bottom:  1px solid var(--color-border);
+    padding-bottom: 0.3rem;
+    margin-bottom:  0.75rem;
+  }
+}
+
+.account-token-list {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.4rem;
+  margin-bottom:  0.85rem;
+}
+
+.account-token-row {
+  display:     flex;
+  align-items: center;
+  gap:         0.75rem;
+}
+
+.account-token-hash {
+  font-family: var(--font-mono);
+  font-size:   0.82rem;
+  color:       var(--color-muted);
+  flex:        1;
+}
+
+.account-tokens-empty {
+  font-size:     0.85rem;
+  color:         var(--color-muted);
+  margin-bottom: 0.75rem;
+  display:       block;
+}
+
+.token-display-field {
+  font-family: var(--font-mono);
+  font-size:   0.85rem;
+  margin-top:  0.5rem;
+  width:       100%;
+}

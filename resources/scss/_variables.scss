@@ -1,0 +1,62 @@
+@use 'sass:map';
+@use 'sass:list';
+@use 'contrast';
+
+// --- design-intent colors (inputs only, never emitted directly) ---
+
+$bg-colors: (
+  'bg':      #0f0f0f,
+  'surface': #1a1a1a,
+  'border':  #2e2e2e,
+);
+
+$text-intents: (
+  'text':     #d4d4d4,
+  'muted':    #6b6b6b,
+  'accent':   #d279d2,
+  'accent-h': #db94db,
+  'error':    #e06c6c,
+);
+
+// --- derive contrast-safe text color maps ---
+
+// Reference surface: 'surface' (#1a1a1a) has higher luminance than 'bg' (#0f0f0f),
+// giving the lower contrast ratio against light text — the stricter of the two.
+// Any color that passes here also passes on the darker 'bg'.
+$_ref-bg: map.get($bg-colors, 'surface');
+
+$text-normal: ();
+$text-large:  ();
+
+@each $name, $color in $text-intents {
+  $pair-n: contrast.ensure-contrast(16px, false, $color, $_ref-bg);
+  $text-normal: map.set($text-normal, $name, list.nth($pair-n, 1));
+
+  $pair-l: contrast.ensure-contrast(24px, false, $color, $_ref-bg);
+  $text-large: map.set($text-large, $name, list.nth($pair-l, 1));
+}
+
+// --- emit CSS custom properties ---
+
+:root {
+  // surfaces
+  @each $name, $color in $bg-colors {
+    --color-#{$name}: #{$color};
+  }
+
+  // text colors verified at 4.5:1 (normal text, ≤ 18.66px or non-bold ≤ 24px)
+  @each $name, $color in $text-normal {
+    --color-#{$name}: #{$color};
+  }
+
+  // text colors verified at 3:1 (large text — use for bold ≥ 14pt or regular ≥ 18pt)
+  @each $name, $color in $text-large {
+    --color-#{$name}-large: #{$color};
+  }
+
+  --font-sans: 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Fira Code', 'Cascadia Code', monospace;
+
+  --max-width: 720px;
+  --radius:    4px;
+}
