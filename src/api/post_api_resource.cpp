@@ -7,6 +7,7 @@
 #include <Wt/Json/Value.h>
 #include <Wt/WDate.h>
 
+#include <optional>
 #include <sstream>
 #include <string>
 
@@ -110,10 +111,9 @@ void post_api_resource::handleRequest(const Wt::Http::Request& request,
 		return;
 	}
 
-	const std::string title    = obj.get("title").toString().orIfNull("");
-	const std::string date_str = obj.get("date").toString().orIfNull("");
-	const std::string tags     = obj.get("tags").toString().orIfNull("");
-	const std::string body     = obj.get("body").toString().orIfNull("");
+	const std::string title = obj.get("title").toString().orIfNull("");
+	const std::string tags  = obj.get("tags").toString().orIfNull("");
+	const std::string body  = obj.get("body").toString().orIfNull("");
 
 	if(title.empty())
 	{
@@ -121,15 +121,11 @@ void post_api_resource::handleRequest(const Wt::Http::Request& request,
 		return;
 	}
 
-	Wt::WDate date = date_str.empty() ? Wt::WDate::currentDate() : Wt::WDate::fromString(Wt::WString{date_str}, "yyyy-MM-dd");
-	if(!date.isValid())
-	{
-		date = Wt::WDate::currentDate();
-	}
+	const Wt::WDate date = Wt::WDate::currentDate();
 
-	const auto [filepath, slug] = resolve_new_post(m_posts_dir, date, title);
+	const auto [filepath, slug] = resolve_new_post(m_posts_dir, title);
 
-	if(!write_post_file(filepath, title, date, tags, body))
+	if(!write_post_file(filepath, title, date, std::nullopt, tags, body))
 	{
 		json_error(response, 500, "Failed to write file.");
 		return;

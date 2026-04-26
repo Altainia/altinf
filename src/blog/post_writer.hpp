@@ -3,6 +3,7 @@
 #include <Wt/WDate.h>
 
 #include <filesystem>
+#include <optional>
 #include <string>
 
 struct post_path
@@ -15,14 +16,15 @@ struct post_path
 std::string make_post_slug(const std::string& title);
 
 // Returns a unique filepath and final slug for a new post in posts_dir,
-// appending a counter suffix if the obvious name already exists.
-post_path resolve_new_post(const std::filesystem::path& posts_dir,
-                           Wt::WDate                    date,
-                           const std::string&           title);
+// using today's date as the filename prefix.  Appends a counter suffix if
+// the obvious name already exists.
+post_path resolve_new_post(const std::filesystem::path& posts_dir, const std::string& title);
 
 // Writes YAML frontmatter + body to filepath.  Returns false on I/O failure.
-bool write_post_file(const std::filesystem::path& filepath,
-                     const std::string&           title,
-                     Wt::WDate                    date,
-                     const std::string&           tags,
-                     const std::string&           body);
+// last_modified is written only when it has a value.
+bool write_post_file(const std::filesystem::path&     filepath,
+                     const std::string&               title,
+                     Wt::WDate                        date,
+                     std::optional<Wt::WDate>         last_modified,
+                     const std::string&               tags,
+                     const std::string&               body);

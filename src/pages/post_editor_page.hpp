@@ -3,7 +3,6 @@
 #include "blog/blog_post.hpp"
 
 #include <Wt/WContainerWidget.h>
-#include <Wt/WDateEdit.h>
 #include <Wt/WLineEdit.h>
 #include <Wt/WStackedWidget.h>
 #include <Wt/WText.h>
@@ -28,7 +27,6 @@ private:
 	std::function<void(std::string)> m_on_save;
 	Wt::WStackedWidget*              m_stack{nullptr};
 	Wt::WLineEdit*                   m_title{nullptr};
-	Wt::WDateEdit*                   m_date{nullptr};
 	Wt::WLineEdit*                   m_tags{nullptr};
 	Wt::WTextArea*                   m_body{nullptr};
 	Wt::WContainerWidget*            m_preview{nullptr};

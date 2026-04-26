@@ -74,6 +74,14 @@ blog_post blog_loader::parse_post(const std::filesystem::path& path)
 		{
 			post.date = Wt::WDate::fromString(Wt::WString{value}, "yyyy-MM-dd");
 		}
+		else if(key == "last_modified")
+		{
+			const auto lm = Wt::WDate::fromString(Wt::WString{value}, "yyyy-MM-dd");
+			if(lm.isValid())
+			{
+				post.last_modified = lm;
+			}
+		}
 		else if(key == "tags")
 		{
 			std::istringstream tag_stream{value};
