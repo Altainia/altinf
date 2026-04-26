@@ -1,0 +1,131 @@
+@use 'sass:math';
+@use 'sass:color';
+
+// --- private helpers ---
+
+@function _to-px($size) {
+  @if math.unit($size) == 'pt' {
+    // 1pt = 4/3 px  (CSS: 1pt = 1/72 in, 1px = 1/96 in)
+    @return math.div(math.div($size, 1pt) * 4, 3) * 1px;
+  } @else if math.unit($size) == 'px' {
+    @return $size;
+  } @else {
+    @error "ensure-contrast: unsupported size unit '#{math.unit($size)}'. Use px or pt.";
+  }
+}
+
+@function _required-ratio($size, $bold) {
+  $px-val: math.div(_to-px($size), 1px);
+  // WCAG 2.0 §1.4.3: large text = 14pt bold or 18pt regular.
+  // Use exact fractional thresholds to avoid floating-point boundary misses
+  // (e.g. 14pt = 56/3 px = 18.6666…, which is < the rounded literal 18.6667).
+  $bold-threshold:   math.div(56, 3); // 14pt in px, exact
+  $normal-threshold: 24;              // 18pt in px, exact
+  $large: ($bold and $px-val >= $bold-threshold) or (not $bold and $px-val >= $normal-threshold);
+  @if $large { @return 3; }
+  @return 4.5;
+}
+
+@function _linearise($c) {
+  $c: math.div($c, 255);
+  @if $c <= 0.04045 {
+    @return math.div($c, 12.92);
+  } @else {
+    @return math.pow(math.div($c + 0.055, 1.055), 2.4);
+  }
+}
+
+@function _luminance($color) {
+  @return 0.2126 * _linearise(color.channel($color, "red",   $space: rgb))
+        + 0.7152 * _linearise(color.channel($color, "green", $space: rgb))
+        + 0.0722 * _linearise(color.channel($color, "blue",  $space: rgb));
+}
+
+@function _contrast($c1, $c2) {
+  $l1: _luminance($c1);
+  $l2: _luminance($c2);
+  @return math.div(math.max($l1, $l2) + 0.05, math.min($l1, $l2) + 0.05);
+}
+
+// Binary-searches for the minimum lightness change in $direction that achieves
+// $target-ratio against $against.  Returns the adjusted color, or the extreme
+// value (0% / 100%) if even that cannot meet the ratio.
+@function _adjust-lightness($color, $direction, $against, $target-ratio) {
+  $l0: color.channel($color, "lightness", $space: hsl);
+
+  $lo: 0%;
+  $hi: $l0;
+  $extreme-l: 0%;
+  @if $direction == 'lighter' {
+    $lo: $l0;
+    $hi: 100%;
+    $extreme-l: 100%;
+  }
+
+  $extreme: color.change($color, $lightness: $extreme-l);
+  @if _contrast($extreme, $against) < $target-ratio {
+    @return $extreme; // best-effort: even full white/black can't reach the ratio
+  }
+
+  // Bisect toward minimum change that still passes.
+  // Invariant: lo never passes, hi always passes (lighter); reversed for darker.
+  @for $i from 1 through 20 {
+    $mid:       math.div($lo + $hi, 2);
+    $candidate: color.change($color, $lightness: $mid);
+    @if _contrast($candidate, $against) >= $target-ratio {
+      @if $direction == 'lighter' { $hi: $mid; }
+      @else                       { $lo: $mid; }
+    } @else {
+      @if $direction == 'lighter' { $lo: $mid; }
+      @else                       { $hi: $mid; }
+    }
+  }
+
+  // After convergence: $hi is the minimum passing lightness (lighter),
+  // $lo is the maximum passing lightness (darker).
+  $final-l: $lo;
+  @if $direction == 'lighter' { $final-l: $hi; }
+  @return color.change($color, $lightness: $final-l);
+}
+
+// --- public API ---
+
+// Returns a (text-color, bg-color) list guaranteed to meet the WCAG 2.0
+// contrast ratio for the given size and weight.  Only lightness is modified;
+// hue and saturation are preserved.  Text color is adjusted first; background
+// is only adjusted if text-color adjustment alone is insufficient.
+// Which color is lighter/darker is preserved; when they start equal, text is
+// pushed lighter.
+//
+// Usage:
+//   $pair: contrast.ensure-contrast(16px, false, #6b6b6b, #1a1a1a);
+//   color:      list.nth($pair, 1);
+//   background: list.nth($pair, 2);
+@function ensure-contrast($text-size, $bold, $text-color, $bg-color) {
+  $ratio: _required-ratio($text-size, $bold);
+
+  @if _contrast($text-color, $bg-color) >= $ratio {
+    @return ($text-color, $bg-color);
+  }
+
+  $l-text: _luminance($text-color);
+  $l-bg:   _luminance($bg-color);
+
+  // text darker than bg → make text darker, bg lighter if needed
+  // text lighter than bg, or equal luminance → make text lighter (spec preference)
+  $text-dir: 'lighter';
+  $bg-dir:   'darker';
+  @if $l-text < $l-bg {
+    $text-dir: 'darker';
+    $bg-dir:   'lighter';
+  }
+
+  $new-text: _adjust-lightness($text-color, $text-dir, $bg-color, $ratio);
+  @if _contrast($new-text, $bg-color) >= $ratio {
+    @return ($new-text, $bg-color);
+  }
+
+  // Adjust bg against the already-moved text color.
+  $new-bg: _adjust-lightness($bg-color, $bg-dir, $new-text, $ratio);
+  @return ($new-text, $new-bg);
+}

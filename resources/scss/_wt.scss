@@ -1,0 +1,65 @@
+.Wt-popup {
+  background: var(--color-bg);
+}
+
+.Wt-dialogcover {
+  position:   fixed;
+  left:       0;
+  top:        0;
+  width:      100%;
+  height:     100%;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.Wt-dialog {
+  background:    var(--color-surface);
+  border:        1px solid var(--color-border);
+  border-radius: var(--radius);
+  color:         var(--color-text);
+  min-width:     320px;
+  max-width:     480px;
+
+  .titlebar {
+    padding:       0.7rem 1rem;
+    background:    var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+    border-radius: var(--radius) var(--radius) 0 0;
+    font-weight:   600;
+    font-size:     0.95rem;
+  }
+
+  .body {
+    padding: 1.1rem 1rem 0.85rem;
+  }
+
+  .footer {
+    display:         flex;
+    justify-content: flex-end;
+    gap:             0.5rem;
+    padding:         0.75rem 1rem;
+    border-top:      1px solid var(--color-border);
+  }
+}
+
+.Wt-calendar {
+  select {
+    background-color: var(--color-bg);
+    color:            var(--color-text);
+    border-radius:    var(--radius);
+  }
+
+  th {
+    padding-left:  0.3rem;
+    padding-right: 0.3rem;
+    font-family:   var(--font-mono);
+  }
+
+  td {
+    border-radius: 4px;
+    font-family:   var(--font-mono);
+
+    &:hover { background-color: var(--color-border); }
+  }
+
+  .Wt-cal-oom { color: var(--color-muted); }
+}
