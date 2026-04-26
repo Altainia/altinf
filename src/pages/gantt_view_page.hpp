@@ -1,7 +1,7 @@
 #pragma once
 
-#include "auth/session_data.h"
-#include "gantt/gantt.h"
+#include "auth/session_data.hpp"
+#include "gantt/gantt.hpp"
 
 #include <Wt/WContainerWidget.h>
 

@@ -1,4 +1,4 @@
-#include "link_db.h"
+#include "link_db.hpp"
 
 #include <Wt/Dbo/Transaction.h>
 #include <Wt/Dbo/backend/Sqlite3.h>

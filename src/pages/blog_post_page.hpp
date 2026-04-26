@@ -1,8 +1,8 @@
 #pragma once
 
-#include "auth/permission.h"
-#include "auth/session_data.h"
-#include "blog/blog_post.h"
+#include "auth/permission.hpp"
+#include "auth/session_data.hpp"
+#include "blog/blog_post.hpp"
 
 #include <Wt/WContainerWidget.h>
 

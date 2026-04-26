@@ -1,4 +1,4 @@
-#include "main_page.h"
+#include "main_page.hpp"
 
 #include <Wt/WText.h>
 

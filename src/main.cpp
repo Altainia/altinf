@@ -1,6 +1,6 @@
-#include "altinf_app.h"
-#include "api/post_api_resource.h"
-#include "auth/user_db.h"
+#include "altinf_app.hpp"
+#include "api/post_api_resource.hpp"
+#include "auth/user_db.hpp"
 
 #include <Wt/WApplication.h>
 #include <Wt/WServer.h>

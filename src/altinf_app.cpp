@@ -1,21 +1,21 @@
-#include "altinf_app.h"
+#include "altinf_app.hpp"
 
-#include "auth/permission.h"
-#include "blog/blog_loader.h"
-#include "pages/account_editor_page.h"
-#include "pages/account_manager_page.h"
-#include "pages/blog_page.h"
-#include "pages/blog_post_page.h"
-#include "pages/gantt_editor_page.h"
-#include "pages/gantt_list_page.h"
-#include "pages/gantt_view_page.h"
-#include "pages/link_editor_page.h"
-#include "pages/links_page.h"
-#include "pages/login_page.h"
-#include "pages/main_page.h"
-#include "pages/post_editor_page.h"
-#include "widgets/footer.h"
-#include "widgets/nav_bar.h"
+#include "auth/permission.hpp"
+#include "blog/blog_loader.hpp"
+#include "pages/account_editor_page.hpp"
+#include "pages/account_manager_page.hpp"
+#include "pages/blog_page.hpp"
+#include "pages/blog_post_page.hpp"
+#include "pages/gantt_editor_page.hpp"
+#include "pages/gantt_list_page.hpp"
+#include "pages/gantt_view_page.hpp"
+#include "pages/link_editor_page.hpp"
+#include "pages/links_page.hpp"
+#include "pages/login_page.hpp"
+#include "pages/main_page.hpp"
+#include "pages/post_editor_page.hpp"
+#include "widgets/footer.hpp"
+#include "widgets/nav_bar.hpp"
 
 #include <Wt/WLink.h>
 #include <Wt/WText.h>
@@ -74,21 +74,22 @@ void altinf_app::handle_path(const std::string& path)
 {
 	m_content->clear();
 
+	// root
 	if(path == "/" || path.empty())
 	{
 		m_content->addNew<main_page>();
 	}
+	// blog
 	else if(path == "/blog")
 	{
 		m_content->addNew<blog_page>(m_posts);
 	}
-	else if(path.substr(0, 6) == "/blog/")
+	else if(path.starts_with("/blog/"))
 	{
 		const auto slug = path.substr(6);
 		const auto it   = std::find_if(m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) {
       return p.slug == slug;
     });
-
 		if(it != m_posts.end())
 		{
 			m_content->addNew<blog_post_page>(*it, m_session);
@@ -98,6 +99,7 @@ void altinf_app::handle_path(const std::string& path)
 			m_content->addNew<Wt::WText>("Post not found.", Wt::TextFormat::Plain);
 		}
 	}
+	// post editor
 	else if(path == "/admin/new")
 	{
 		if(!has_permission(m_session.permissions, permission::post_write))
@@ -110,7 +112,7 @@ void altinf_app::handle_path(const std::string& path)
 			setInternalPath("/blog/" + slug, true);
 		});
 	}
-	else if(path.size() > 12 && path.substr(0, 12) == "/admin/edit/")
+	else if(path.starts_with("/admin/edit/"))
 	{
 		if(!has_permission(m_session.permissions, permission::post_write))
 		{
@@ -131,6 +133,7 @@ void altinf_app::handle_path(const std::string& path)
 			setInternalPath("/blog/" + s, true);
 		});
 	}
+	// links
 	else if(path == "/links")
 	{
 		auto on_delete = [this](long long id) {
@@ -152,7 +155,7 @@ void altinf_app::handle_path(const std::string& path)
 			handle_path("/links");
 		});
 	}
-	else if(path.size() > 18 && path.substr(0, 18) == "/admin/links/edit/")
+	else if(path.starts_with("/admin/links/edit/"))
 	{
 		if(!has_permission(m_session.permissions, permission::post_write))
 		{
@@ -181,6 +184,7 @@ void altinf_app::handle_path(const std::string& path)
 			handle_path("/links");
 		});
 	}
+	// gantt
 	else if(path == "/gantt")
 	{
 		if(!m_session.logged_in)
@@ -192,8 +196,7 @@ void altinf_app::handle_path(const std::string& path)
 		  m_gantt_db->projects_visible_to(m_session.username, m_session.permissions);
 		m_content->addNew<gantt_list_page>(projects, m_session);
 	}
-	else if(path.size() > 7 && path.substr(0, 7) == "/gantt/" &&
-	        path.substr(7).find('/') == std::string::npos)
+	else if(path.starts_with("/gantt/") && path.find('/', 7) == std::string::npos)
 	{
 		if(!m_session.logged_in)
 		{
@@ -242,7 +245,7 @@ void altinf_app::handle_path(const std::string& path)
 		m_content->addNew<gantt_editor_page>(
 		  *m_gantt_db, m_session, nullptr, std::vector<gantt_task_entry>{}, std::vector<std::string>{}, [this](long long id) { setInternalPath("/gantt/" + std::to_string(id), true); });
 	}
-	else if(path.size() > 18 && path.substr(0, 18) == "/admin/gantt/edit/")
+	else if(path.starts_with("/admin/gantt/edit/"))
 	{
 		if(!m_session.logged_in)
 		{
@@ -278,6 +281,7 @@ void altinf_app::handle_path(const std::string& path)
 			  setInternalPath("/gantt/" + std::to_string(saved_id), true);
 		  });
 	}
+	// accounts
 	else if(path == "/admin/accounts")
 	{
 		if(!m_session.logged_in)
@@ -318,7 +322,7 @@ void altinf_app::handle_path(const std::string& path)
 			setInternalPath("/admin/accounts", true);
 		});
 	}
-	else if(path.size() > 21 && path.substr(0, 21) == "/admin/accounts/edit/")
+	else if(path.starts_with("/admin/accounts/edit/"))
 	{
 		if(!m_session.logged_in)
 		{
@@ -346,6 +350,7 @@ void altinf_app::handle_path(const std::string& path)
 			setInternalPath("/admin/accounts", true);
 		});
 	}
+	// auth
 	else if(path == "/login")
 	{
 		m_content->addNew<login_page>(*m_user_db, m_session, [this] {

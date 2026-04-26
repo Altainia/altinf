@@ -1,7 +1,7 @@
 #pragma once
 
-#include "auth/session_data.h"
-#include "auth/user_db.h"
+#include "auth/session_data.hpp"
+#include "auth/user_db.hpp"
 
 #include <Wt/WContainerWidget.h>
 #include <Wt/WLineEdit.h>

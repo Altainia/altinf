@@ -1,6 +1,6 @@
-#include "gantt_view_page.h"
+#include "gantt_view_page.hpp"
 
-#include "auth/permission.h"
+#include "auth/permission.hpp"
 
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>

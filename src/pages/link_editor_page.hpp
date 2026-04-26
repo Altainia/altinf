@@ -1,7 +1,7 @@
 #pragma once
 
-#include "links/link.h"
-#include "links/link_db.h"
+#include "links/link.hpp"
+#include "links/link_db.hpp"
 
 #include <Wt/WContainerWidget.h>
 #include <Wt/WLineEdit.h>

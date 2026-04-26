@@ -1,4 +1,4 @@
-#include "gantt_editor_page.h"
+#include "gantt_editor_page.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WColor.h>

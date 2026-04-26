@@ -1,6 +1,6 @@
-#include "account_manager_page.h"
+#include "account_manager_page.hpp"
 
-#include "auth/permission.h"
+#include "auth/permission.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WApplication.h>

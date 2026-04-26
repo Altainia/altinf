@@ -1,4 +1,4 @@
-#include "login_page.h"
+#include "login_page.hpp"
 
 #include <Wt/WPasswordEdit.h>
 #include <Wt/WPushButton.h>

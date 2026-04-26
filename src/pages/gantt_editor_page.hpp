@@ -1,8 +1,8 @@
 #pragma once
 
-#include "auth/session_data.h"
-#include "gantt/gantt.h"
-#include "gantt/gantt_db.h"
+#include "auth/session_data.hpp"
+#include "gantt/gantt.hpp"
+#include "gantt/gantt_db.hpp"
 
 #include <Wt/WColorPicker.h>
 #include <Wt/WContainerWidget.h>

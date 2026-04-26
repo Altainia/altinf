@@ -1,4 +1,4 @@
-#include "footer.h"
+#include "footer.hpp"
 
 #include <Wt/WText.h>
 
