@@ -24,7 +24,9 @@ link_editor_page::link_editor_page(link_db*              db,
   m_on_save{std::move(on_save)}
 {
 	if(existing)
+	{
 		m_existing = *existing;
+	}
 
 	setStyleClass("page link-editor-page");
 
@@ -38,25 +40,33 @@ link_editor_page::link_editor_page(link_db*              db,
 	m_url->setStyleClass("editor-field");
 	m_url->setPlaceholderText("URL (required)");
 	if(m_existing)
+	{
 		m_url->setText(m_existing->url);
+	}
 
 	m_title = form->addNew<Wt::WLineEdit>();
 	m_title->setStyleClass("editor-field");
 	m_title->setPlaceholderText("Title (required)");
 	if(m_existing)
+	{
 		m_title->setText(m_existing->title);
+	}
 
 	m_description = form->addNew<Wt::WTextArea>();
 	m_description->setStyleClass("editor-field link-desc-field");
 	m_description->setPlaceholderText("Short description (optional)");
 	if(m_existing)
+	{
 		m_description->setText(m_existing->description);
+	}
 
 	m_section = form->addNew<Wt::WLineEdit>();
 	m_section->setStyleClass("editor-field");
 	m_section->setPlaceholderText("Section (e.g. \"Claude Artifacts\")");
 	if(m_existing)
+	{
 		m_section->setText(m_existing->section);
+	}
 
 	m_sort_order = form->addNew<Wt::WLineEdit>();
 	m_sort_order->setStyleClass("editor-field");

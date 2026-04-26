@@ -11,12 +11,18 @@ std::string make_post_slug(const std::string& title)
 	for(const char c: title)
 	{
 		if(std::isalnum(static_cast<unsigned char>(c)))
+		{
 			slug += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+		}
 		else if(std::isspace(static_cast<unsigned char>(c)) && !slug.empty() && slug.back() != '-')
+		{
 			slug += '-';
+		}
 	}
 	while(!slug.empty() && slug.back() == '-')
+	{
 		slug.pop_back();
+	}
 	return slug.empty() ? "post" : slug;
 }
 
@@ -53,7 +59,9 @@ bool write_post_file(const std::filesystem::path& filepath,
 {
 	std::ofstream out{filepath};
 	if(!out)
+	{
 		return false;
+	}
 
 	out << "---\n";
 	out << "title: " << title << "\n";

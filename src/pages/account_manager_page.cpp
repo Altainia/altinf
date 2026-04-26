@@ -17,20 +17,32 @@ static std::string permissions_label(uint64_t perms)
 {
 	std::vector<std::string> parts;
 	if(has_permission(perms, permission::admin))
+	{
 		parts.emplace_back("Admin");
+	}
 	if(has_permission(perms, permission::manage_users))
+	{
 		parts.emplace_back("Manage Users");
+	}
 	if(has_permission(perms, permission::post_write))
+	{
 		parts.emplace_back("Write Posts");
+	}
 	if(has_permission(perms, permission::gantt_write))
+	{
 		parts.emplace_back("Write Gantt");
+	}
 	if(parts.empty())
+	{
 		return "None";
+	}
 	std::string out;
 	for(std::size_t i = 0; i < parts.size(); ++i)
 	{
 		if(i)
+		{
 			out += ", ";
+		}
 		out += parts[i];
 	}
 	return out;

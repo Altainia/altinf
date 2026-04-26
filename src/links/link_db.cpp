@@ -51,7 +51,9 @@ std::optional<link_entry> link_db::find(long long id)
 	  m_dbo.find<link_record>().where("id = ?").bind(id).resultList();
 
 	if(results.empty())
+	{
 		return std::nullopt;
+	}
 
 	const Wt::Dbo::ptr<link_record>& p = *results.begin();
 	link_entry                       e;
@@ -88,7 +90,9 @@ void link_db::update(const link_entry& e)
 	  m_dbo.find<link_record>().where("id = ?").bind(e.id).resultList();
 
 	if(results.empty())
+	{
 		return;
+	}
 
 	Wt::Dbo::ptr<link_record> p = *results.begin();
 	p.modify()->url             = e.url;
@@ -107,5 +111,7 @@ void link_db::remove(long long id)
 	  m_dbo.find<link_record>().where("id = ?").bind(id).resultList();
 
 	if(!results.empty())
+	{
 		(*results.begin()).remove();
+	}
 }

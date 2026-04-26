@@ -15,7 +15,9 @@ account_editor_page::account_editor_page(user_db*              db,
   m_on_save{std::move(on_save)}
 {
 	if(existing)
+	{
 		m_existing = *existing;
+	}
 
 	setStyleClass("page account-editor-page");
 
@@ -38,7 +40,9 @@ account_editor_page::account_editor_page(user_db*              db,
 	m_display_name->setStyleClass("editor-field");
 	m_display_name->setPlaceholderText("Display name (optional)");
 	if(m_existing)
+	{
 		m_display_name->setText(m_existing->display_name);
+	}
 
 	m_password = form->addNew<Wt::WPasswordEdit>();
 	m_password->setStyleClass("editor-field");
@@ -127,19 +131,29 @@ void account_editor_page::save()
 
 	uint64_t perms = 0;
 	if(m_perm_admin->isChecked())
+	{
 		perms = grant(perms, permission::admin);
+	}
 	if(m_perm_manage_users->isChecked())
+	{
 		perms = grant(perms, permission::manage_users);
+	}
 	if(m_perm_post_write->isChecked())
+	{
 		perms = grant(perms, permission::post_write);
+	}
 	if(m_perm_gantt_write->isChecked())
+	{
 		perms = grant(perms, permission::gantt_write);
+	}
 
 	if(m_existing)
 	{
 		m_db->update_user(username, display_name, perms);
 		if(!password.empty())
+		{
 			m_db->set_password(username, password);
+		}
 	}
 	else
 	{

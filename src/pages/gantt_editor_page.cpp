@@ -49,13 +49,17 @@ gantt_editor_page::gantt_editor_page(gantt_db&                      db,
 	m_title->setPlaceholderText("Chart title");
 	m_title->setStyleClass("editor-field");
 	if(existing)
+	{
 		m_title->setText(existing->title);
+	}
 
 	m_description = form->addNew<Wt::WTextArea>();
 	m_description->setPlaceholderText("Description (optional)");
 	m_description->setStyleClass("editor-field gantt-desc-field");
 	if(existing)
+	{
 		m_description->setText(existing->description);
+	}
 
 	// ── Tasks ─────────────────────────────────────────────────────────────────
 	form->addNew<Wt::WText>("<h2>Tasks</h2>", Wt::TextFormat::UnsafeXHTML);
@@ -77,7 +81,9 @@ gantt_editor_page::gantt_editor_page(gantt_db&                      db,
 	m_tasks_container->setStyleClass("gantt-tasks-container");
 
 	for(const auto& t: tasks)
+	{
 		add_task_row(t);
+	}
 
 	auto* add_task_btn = form->addNew<Wt::WPushButton>("+ Add Task");
 	add_task_btn->setStyleClass("editor-btn editor-btn-cancel gantt-add-btn");
@@ -94,7 +100,9 @@ gantt_editor_page::gantt_editor_page(gantt_db&                      db,
 	m_viewers_container->setStyleClass("gantt-viewers-container");
 
 	for(const auto& v: viewers)
+	{
 		add_viewer_row(v);
+	}
 
 	auto* viewer_add_row = form->addNew<Wt::WContainerWidget>();
 	viewer_add_row->setStyleClass("gantt-viewer-add-row");
@@ -106,11 +114,17 @@ gantt_editor_page::gantt_editor_page(gantt_db&                      db,
 	add_viewer_btn->clicked().connect([this]() {
 		const std::string u = m_viewer_input->text().toUTF8();
 		if(u.empty())
+		{
 			return;
+		}
 		// Avoid duplicates
 		for(const auto& r: m_viewer_rows)
+		{
 			if(r.username == u)
+			{
 				return;
+			}
+		}
 		add_viewer_row(u);
 		m_viewer_input->setText("");
 	});
@@ -157,7 +171,9 @@ void gantt_editor_page::add_task_row(const gantt_task_entry& task)
 	{
 		const auto d = task.start_date.empty() ? Wt::WDate::currentDate() : Wt::WDate::fromString(task.start_date, "yyyy-MM-dd");
 		if(d.isValid())
+		{
 			r.start_date->setDate(d);
+		}
 	}
 
 	r.end_date = row->addNew<Wt::WDateEdit>();
@@ -166,7 +182,9 @@ void gantt_editor_page::add_task_row(const gantt_task_entry& task)
 	{
 		const auto d = task.end_date.empty() ? Wt::WDate::currentDate() : Wt::WDate::fromString(task.end_date, "yyyy-MM-dd");
 		if(d.isValid())
+		{
 			r.end_date->setDate(d);
+		}
 	}
 
 	r.color = row->addNew<Wt::WColorPicker>();
@@ -175,7 +193,9 @@ void gantt_editor_page::add_task_row(const gantt_task_entry& task)
 		const std::string hex = task.color.empty() ? "#7aa2d4" : task.color;
 		int               cr{0x7a}, cg{0xa2}, cb{0xd4};
 		if(hex.size() == 7 && hex[0] == '#')
+		{
 			std::sscanf(hex.c_str() + 1, "%02x%02x%02x", &cr, &cg, &cb);
+		}
 		r.color->setColor(Wt::WColor(cr, cg, cb));
 	}
 
@@ -259,9 +279,13 @@ void gantt_editor_page::save()
 		t.title       = r.title->text().toUTF8();
 		t.assigned_to = r.assigned_to->text().toUTF8();
 		if(const auto d = r.start_date->date(); d.isValid())
+		{
 			t.start_date = d.toString("yyyy-MM-dd").toUTF8();
+		}
 		if(const auto d = r.end_date->date(); d.isValid())
+		{
 			t.end_date = d.toString("yyyy-MM-dd").toUTF8();
+		}
 		{
 			const auto wc = r.color->color();
 			char       cbuf[8];
@@ -270,12 +294,18 @@ void gantt_editor_page::save()
 		}
 		t.sort_order = sort++;
 		if(!t.title.empty())
+		{
 			m_db.add_task(t);
+		}
 	}
 
 	for(const auto& vr: m_viewer_rows)
+	{
 		if(!vr.username.empty())
+		{
 			m_db.add_viewer(id, vr.username);
+		}
+	}
 
 	m_on_save(id);
 }

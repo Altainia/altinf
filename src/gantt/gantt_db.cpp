@@ -71,7 +71,9 @@ void gantt_db::update_project(const gantt_project_entry& e)
 	const auto           results =
 	  m_dbo.find<gantt_project_record>().where("id = ?").bind(e.id).resultList();
 	if(results.empty())
+	{
 		return;
+	}
 	Wt::Dbo::ptr<gantt_project_record> p = *results.begin();
 	p.modify()->title                    = e.title;
 	p.modify()->description              = e.description;
@@ -99,7 +101,9 @@ std::optional<gantt_project_entry> gantt_db::find_project(long long id)
 	const auto           results =
 	  m_dbo.find<gantt_project_record>().where("id = ?").bind(id).resultList();
 	if(results.empty())
+	{
 		return std::nullopt;
+	}
 	return to_entry(*results.begin());
 }
 
@@ -127,7 +131,9 @@ std::vector<gantt_project_entry> gantt_db::projects_visible_to(const std::string
 
 	std::vector<gantt_project_entry> out;
 	for(const auto& p: results)
+	{
 		out.push_back(to_entry(p));
+	}
 	return out;
 }
 
@@ -153,7 +159,9 @@ void gantt_db::update_task(const gantt_task_entry& e)
 	const auto           results =
 	  m_dbo.find<gantt_task_record>().where("id = ?").bind(e.id).resultList();
 	if(results.empty())
+	{
 		return;
+	}
 	Wt::Dbo::ptr<gantt_task_record> p = *results.begin();
 	p.modify()->title                 = e.title;
 	p.modify()->assigned_to           = e.assigned_to;
@@ -184,7 +192,9 @@ void gantt_db::delete_tasks_for_project(long long project_id)
 	                       .resultList();
 	std::vector<Wt::Dbo::ptr<gantt_task_record>> ptrs(results.begin(), results.end());
 	for(auto& p: ptrs)
+	{
 		p.remove();
+	}
 }
 
 std::vector<gantt_task_entry> gantt_db::tasks_for_project(long long project_id)
@@ -197,7 +207,9 @@ std::vector<gantt_task_entry> gantt_db::tasks_for_project(long long project_id)
 	                       .resultList();
 	std::vector<gantt_task_entry> out;
 	for(const auto& p: results)
+	{
 		out.push_back(to_entry(p));
+	}
 	return out;
 }
 
@@ -235,7 +247,9 @@ void gantt_db::delete_viewers_for_project(long long project_id)
 	                       .resultList();
 	std::vector<Wt::Dbo::ptr<gantt_viewer_record>> ptrs(results.begin(), results.end());
 	for(auto& p: ptrs)
+	{
 		p.remove();
+	}
 }
 
 std::vector<std::string> gantt_db::viewers_for_project(long long project_id)
@@ -247,7 +261,9 @@ std::vector<std::string> gantt_db::viewers_for_project(long long project_id)
 	                       .resultList();
 	std::vector<std::string> out;
 	for(const auto& p: results)
+	{
 		out.push_back(p->username);
+	}
 	return out;
 }
 
@@ -256,13 +272,19 @@ std::vector<std::string> gantt_db::viewers_for_project(long long project_id)
 bool gantt_db::can_view(long long project_id, const std::string& username, uint64_t perms)
 {
 	if(has_permission(perms, permission::admin))
+	{
 		return true;
+	}
 
 	const auto opt = find_project(project_id);
 	if(!opt)
+	{
 		return false;
+	}
 	if(opt->owner_username == username)
+	{
 		return true;
+	}
 
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results = m_dbo.find<gantt_viewer_record>()
@@ -276,9 +298,13 @@ bool gantt_db::can_view(long long project_id, const std::string& username, uint6
 bool gantt_db::can_edit(long long project_id, const std::string& username, uint64_t perms)
 {
 	if(has_permission(perms, permission::admin))
+	{
 		return true;
+	}
 	if(!has_permission(perms, permission::gantt_write))
+	{
 		return false;
+	}
 
 	const auto opt = find_project(project_id);
 	return opt && opt->owner_username == username;

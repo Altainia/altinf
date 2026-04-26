@@ -40,7 +40,9 @@ altinf_app::altinf_app(const Wt::WEnvironment& env):
 	{
 		const char* const pw = std::getenv("ALTINF_ADMIN_PASSWORD");
 		if(!pw)
+		{
 			throw std::runtime_error{"ALTINF_ADMIN_PASSWORD must be set on first run"};
+		}
 		const auto all_perms = grant(grant(grant(grant(0ULL, permission::admin),
 		                                         permission::post_write),
 		                                   permission::gantt_write),
@@ -88,9 +90,13 @@ void altinf_app::handle_path(const std::string& path)
     });
 
 		if(it != m_posts.end())
+		{
 			m_content->addNew<blog_post_page>(*it, m_session);
+		}
 		else
+		{
 			m_content->addNew<Wt::WText>("Post not found.", Wt::TextFormat::Plain);
+		}
 	}
 	else if(path == "/admin/new")
 	{
@@ -287,7 +293,9 @@ void altinf_app::handle_path(const std::string& path)
 		}
 		auto on_delete = [this](const std::string& username) {
 			if(username == m_session.username)
+			{
 				return;
+			}
 			m_user_db->delete_user(username);
 			handle_path("/admin/accounts");
 		};

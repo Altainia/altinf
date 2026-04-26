@@ -97,7 +97,9 @@ post_editor_page::post_editor_page(const std::filesystem::path&          posts_d
 		for(std::size_t i = 0; i < m_existing->tags.size(); ++i)
 		{
 			if(i > 0)
+			{
 				tags_str += ", ";
+			}
 			tags_str += m_existing->tags[i];
 		}
 		m_tags->setText(tags_str);
@@ -177,7 +179,9 @@ std::string post_editor_page::read_body(const blog_post& post)
 				continue;
 			}
 			if(in_fm)
+			{
 				continue;
+			}
 		}
 		body += line + "\n";
 	}

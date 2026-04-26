@@ -80,8 +80,12 @@ void gantt_view_page::render_chart(const std::vector<gantt_task_entry>& tasks)
 	// Keep only tasks whose end date is today or in the future
 	std::vector<gantt_task_entry> active;
 	for(const auto& t: tasks)
+	{
 		if(date_to_days(t.end_date) >= today_day)
+		{
 			active.push_back(t);
+		}
+	}
 
 	if(active.empty())
 	{
@@ -101,7 +105,9 @@ void gantt_view_page::render_chart(const std::vector<gantt_task_entry>& tasks)
 	}
 	const int total_days = max_day - min_day + 1;
 	if(total_days <= 0)
+	{
 		return;
+	}
 
 	auto* rows = m_chart_wrap->addNew<Wt::WContainerWidget>();
 	rows->setStyleClass("gantt-rows");
@@ -136,7 +142,9 @@ void gantt_view_page::render_chart(const std::vector<gantt_task_entry>& tasks)
 		const bool ae = a.assigned_to.empty();
 		const bool be = b.assigned_to.empty();
 		if(ae != be)
+		{
 			return be; // non-empty before empty
+		}
 		return a.assigned_to < b.assigned_to;
 	});
 

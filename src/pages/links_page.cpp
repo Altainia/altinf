@@ -41,7 +41,9 @@ void links_page::render()
 	// Group by section
 	std::map<std::string, std::vector<const link_entry*>> by_section;
 	for(const auto& e: m_links)
+	{
 		by_section[e.section].push_back(&e);
+	}
 
 	if(by_section.empty())
 	{
@@ -132,5 +134,7 @@ void links_page::render()
 	}
 
 	for(const auto& [name, entries]: by_section)
+	{
 		render_section(name, entries);
+	}
 }

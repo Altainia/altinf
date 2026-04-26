@@ -61,7 +61,9 @@ blog_post_page::blog_post_page(const blog_post& post, const session_data& sessio
 				continue;
 			}
 			if(in_frontmatter)
+			{
 				continue;
+			}
 		}
 		body += line + "\n";
 	}

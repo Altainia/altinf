@@ -48,7 +48,9 @@ void blog_page::render_list()
 			const auto has_tag =
 			  std::find(post.tags.begin(), post.tags.end(), m_active_tag) != post.tags.end();
 			if(!has_tag)
+			{
 				continue;
+			}
 		}
 
 		auto* item = m_post_list->addNew<Wt::WContainerWidget>();

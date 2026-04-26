@@ -32,7 +32,9 @@ static std::string generate_raw_token()
 {
 	std::array<unsigned char, 32> bytes{};
 	if(RAND_bytes(bytes.data(), static_cast<int>(bytes.size())) != 1)
+	{
 		throw std::runtime_error{"RAND_bytes failed"};
+	}
 
 	static constexpr char hex[] = "0123456789abcdef";
 	std::string           out;
@@ -89,13 +91,17 @@ bool user_db::authenticate(const std::string& uname,
 	                       .resultList();
 
 	if(results.empty())
+	{
 		return false;
+	}
 
 	const Wt::Dbo::ptr<user> found = *results.begin();
 
 	const Wt::Auth::BCryptHashFunction bcrypt{12};
 	if(!bcrypt.verify(password, "", found->password_hash))
+	{
 		return false;
+	}
 
 	out.logged_in    = true;
 	out.username     = uname;
@@ -182,7 +188,9 @@ void user_db::update_user(const std::string& username,
 	const auto results =
 	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
 	if(results.empty())
+	{
 		return;
+	}
 
 	const auto u             = *results.begin();
 	u.modify()->display_name = display_name;
@@ -199,7 +207,9 @@ void user_db::set_password(const std::string& username, const std::string& new_p
 	const auto results =
 	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
 	if(results.empty())
+	{
 		return;
+	}
 
 	const auto u              = *results.begin();
 	u.modify()->password_hash = hash;
@@ -243,7 +253,9 @@ std::string user_db::create_api_token(const std::string& username)
 	const auto users =
 	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
 	if(users.empty())
+	{
 		throw std::runtime_error{"Unknown user: " + username};
+	}
 
 	const auto raw_token = generate_raw_token();
 	const auto hash      = sha256_hex(raw_token);
@@ -264,14 +276,18 @@ bool user_db::verify_api_token(const std::string& raw_token, session_data& out)
 	const auto tokens =
 	  m_dbo.find<api_token>().where("token_hash = ?").bind(hash).resultList();
 	if(tokens.empty())
+	{
 		return false;
+	}
 
 	const auto tok_username = (*tokens.begin())->username;
 
 	const auto users =
 	  m_dbo.find<user>().where("username = ?").bind(tok_username).resultList();
 	if(users.empty())
+	{
 		return false;
+	}
 
 	const auto found = *users.begin();
 	out.logged_in    = true;
