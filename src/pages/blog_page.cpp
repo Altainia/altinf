@@ -60,9 +60,15 @@ void blog_page::render_list()
 		  Wt::WLink{Wt::LinkType::InternalPath, "/blog/" + post.slug}, post.title);
 		title_link->setStyleClass("post-title");
 
-		item->addNew<Wt::WText>(
-		  " <span class=\"post-date\">" + post.date.toString("yyyy-MM-dd").toUTF8() + "</span>",
-		  Wt::TextFormat::UnsafeXHTML);
+		std::string date_html =
+		  " <span class=\"post-date\">" + post.date.toString("yyyy-MM-dd").toUTF8() + "</span>";
+		if(post.last_modified)
+		{
+			date_html +=
+			  " <span class=\"post-date post-date-modified\">(updated: " +
+			  post.last_modified->toString("yyyy-MM-dd").toUTF8() + ")</span>";
+		}
+		item->addNew<Wt::WText>(date_html, Wt::TextFormat::UnsafeXHTML);
 
 		if(!post.tags.empty())
 		{

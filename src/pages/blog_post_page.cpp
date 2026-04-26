@@ -16,9 +16,16 @@ blog_post_page::blog_post_page(const blog_post& post, const session_data& sessio
 	header->setStyleClass("post-header");
 
 	header->addNew<Wt::WText>("<h1>" + post.title + "</h1>", Wt::TextFormat::UnsafeXHTML);
-	header->addNew<Wt::WText>(
-	  "<span class=\"post-date\">" + post.date.toString("yyyy-MM-dd").toUTF8() + "</span>",
-	  Wt::TextFormat::UnsafeXHTML);
+
+	std::string date_html =
+	  "<span class=\"post-date\">Posted: " + post.date.toString("yyyy-MM-dd").toUTF8() + "</span>";
+	if(post.last_modified)
+	{
+		date_html +=
+		  " <span class=\"post-date post-date-modified\">Updated: " +
+		  post.last_modified->toString("yyyy-MM-dd").toUTF8() + "</span>";
+	}
+	header->addNew<Wt::WText>(date_html, Wt::TextFormat::UnsafeXHTML);
 
 	if(!post.tags.empty())
 	{

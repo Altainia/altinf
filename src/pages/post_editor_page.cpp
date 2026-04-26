@@ -2,7 +2,6 @@
 
 #include <Wt/WAnchor.h>
 #include <Wt/WDate.h>
-#include <Wt/WDateEdit.h>
 #include <Wt/WLink.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WStackedWidget.h>
@@ -11,6 +10,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <optional>
 #include <sstream>
 
 #include "blog/post_writer.hpp"
@@ -33,10 +33,6 @@ post_editor_page::post_editor_page(const std::filesystem::path&          posts_d
 	m_title = form->addNew<Wt::WLineEdit>();
 	m_title->setPlaceholderText("Title");
 	m_title->setStyleClass("editor-field");
-
-	m_date = form->addNew<Wt::WDateEdit>();
-	m_date->setFormat("yyyy-MM-dd");
-	m_date->setStyleClass("editor-field");
 
 	m_tags = form->addNew<Wt::WLineEdit>();
 	m_tags->setPlaceholderText("Tags (comma-separated)");
@@ -92,7 +88,6 @@ post_editor_page::post_editor_page(const std::filesystem::path&          posts_d
 	if(m_existing)
 	{
 		m_title->setText(m_existing->title);
-		m_date->setDate(m_existing->date);
 
 		std::string tags_str;
 		for(std::size_t i = 0; i < m_existing->tags.size(); ++i)
@@ -107,16 +102,11 @@ post_editor_page::post_editor_page(const std::filesystem::path&          posts_d
 
 		m_body->setText(read_body(*m_existing));
 	}
-	else
-	{
-		m_date->setDate(Wt::WDate::currentDate());
-	}
 }
 
 void post_editor_page::save()
 {
 	const auto title = m_title->text().toUTF8();
-	const auto date  = m_date->date();
 	const auto tags  = m_tags->text().toUTF8();
 	const auto body  = m_body->text().toUTF8();
 
@@ -125,30 +115,30 @@ void post_editor_page::save()
 		m_status->setText("Title is required.");
 		return;
 	}
-	if(!date.isValid())
-	{
-		m_status->setText("Date is required.");
-		return;
-	}
 
 	m_status->setText("");
 
-	std::filesystem::path filepath;
-	std::string           slug;
+	std::filesystem::path    filepath;
+	std::string              slug;
+	Wt::WDate                date;
+	std::optional<Wt::WDate> last_modified;
 
 	if(m_existing)
 	{
-		filepath = m_existing->filepath;
-		slug     = m_existing->slug;
+		filepath      = m_existing->filepath;
+		slug          = m_existing->slug;
+		date          = m_existing->date;
+		last_modified = Wt::WDate::currentDate();
 	}
 	else
 	{
-		auto result = resolve_new_post(m_posts_dir, date, title);
+		auto result = resolve_new_post(m_posts_dir, title);
 		filepath    = result.filepath;
 		slug        = result.slug;
+		date        = Wt::WDate::currentDate();
 	}
 
-	if(!write_post_file(filepath, title, date, tags, body))
+	if(!write_post_file(filepath, title, date, last_modified, tags, body))
 	{
 		m_status->setText("Failed to write file.");
 		return;

@@ -5,6 +5,7 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <string>
 
 std::string make_post_slug(const std::string& title)
@@ -28,11 +29,9 @@ std::string make_post_slug(const std::string& title)
 	return slug.empty() ? "post" : slug;
 }
 
-post_path resolve_new_post(const std::filesystem::path& posts_dir,
-                           Wt::WDate                    date,
-                           const std::string&           title)
+post_path resolve_new_post(const std::filesystem::path& posts_dir, const std::string& title)
 {
-	const std::string date_str = date.toString("yyyy-MM-dd").toUTF8();
+	const std::string date_str = Wt::WDate::currentDate().toString("yyyy-MM-dd").toUTF8();
 	std::string       slug     = make_post_slug(title);
 	std::string       base     = date_str + "-" + slug;
 	auto              filepath = posts_dir / (base + ".md");
@@ -57,6 +56,7 @@ post_path resolve_new_post(const std::filesystem::path& posts_dir,
 bool write_post_file(const std::filesystem::path& filepath,
                      const std::string&           title,
                      Wt::WDate                    date,
+                     std::optional<Wt::WDate>     last_modified,
                      const std::string&           tags,
                      const std::string&           body)
 {
@@ -69,6 +69,10 @@ bool write_post_file(const std::filesystem::path& filepath,
 	out << "---\n";
 	out << "title: " << title << "\n";
 	out << "date: " << date.toString("yyyy-MM-dd").toUTF8() << "\n";
+	if(last_modified)
+	{
+		out << "last_modified: " << last_modified->toString("yyyy-MM-dd").toUTF8() << "\n";
+	}
 	out << "tags: " << tags << "\n";
 	out << "---\n";
 	out << body;
