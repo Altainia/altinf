@@ -167,8 +167,7 @@ TEST_CASE("gantt_db - projects_visible_to admin sees all")
 	gantt_db db{":memory:"};
 	db.create_project(make_project("Alice's", "alice"));
 	db.create_project(make_project("Bob's", "bob"));
-	const uint64_t admin = static_cast<uint64_t>(permission::admin);
-	CHECK(db.projects_visible_to("anyone", admin).size() == 2);
+	CHECK(db.projects_visible_to("anyone", permission::admin).size() == 2);
 }
 
 TEST_CASE("gantt_db - projects_visible_to non-admin sees own and shared")
@@ -179,7 +178,7 @@ TEST_CASE("gantt_db - projects_visible_to non-admin sees own and shared")
 	db.create_project(make_project("Carol's", "carol"));
 	db.add_viewer(id2, "alice");
 
-	auto visible = db.projects_visible_to("alice", 0);
+	auto visible = db.projects_visible_to("alice", permission::none);
 	REQUIRE(visible.size() == 2);
 
 	bool saw_id1 = false, saw_id2 = false;
@@ -198,7 +197,7 @@ TEST_CASE("gantt_db - projects_visible_to stranger sees nothing")
 {
 	gantt_db db{":memory:"};
 	db.create_project(make_project("Alice's", "alice"));
-	CHECK(db.projects_visible_to("stranger", 0).empty());
+	CHECK(db.projects_visible_to("stranger", permission::none).empty());
 }
 
 // ---- can_view ----
@@ -209,12 +208,11 @@ TEST_CASE("gantt_db - can_view")
 	long long pid = db.create_project(make_project("P", "alice"));
 	db.add_viewer(pid, "bob");
 
-	const uint64_t admin = static_cast<uint64_t>(permission::admin);
-	CHECK(db.can_view(pid, "anyone", admin)); // admin bypasses all checks
-	CHECK(db.can_view(pid, "alice", 0));      // owner
-	CHECK(db.can_view(pid, "bob", 0));        // explicit viewer
-	CHECK(!db.can_view(pid, "carol", 0));     // stranger
-	CHECK(!db.can_view(9999, "alice", 0));    // non-existent project
+	CHECK(db.can_view(pid, "anyone", permission::admin)); // admin bypasses all checks
+	CHECK(db.can_view(pid, "alice", permission::none));   // owner
+	CHECK(db.can_view(pid, "bob", permission::none));     // explicit viewer
+	CHECK(!db.can_view(pid, "carol", permission::none));  // stranger
+	CHECK(!db.can_view(9999, "alice", permission::none)); // non-existent project
 }
 
 // ---- can_edit ----
@@ -224,12 +222,9 @@ TEST_CASE("gantt_db - can_edit")
 	gantt_db  db{":memory:"};
 	long long pid = db.create_project(make_project("P", "alice"));
 
-	const uint64_t admin = static_cast<uint64_t>(permission::admin);
-	const uint64_t write = static_cast<uint64_t>(permission::gantt_write);
-
-	CHECK(db.can_edit(pid, "anyone", admin));  // admin
-	CHECK(db.can_edit(pid, "alice", write));   // owner with gantt_write
-	CHECK(!db.can_edit(pid, "alice", 0));      // owner without gantt_write
-	CHECK(!db.can_edit(pid, "bob", write));    // non-owner even with gantt_write
-	CHECK(!db.can_edit(9999, "alice", write)); // non-existent project
+	CHECK(db.can_edit(pid, "anyone", permission::admin));        // admin
+	CHECK(db.can_edit(pid, "alice", permission::gantt_write));   // owner with gantt_write
+	CHECK(!db.can_edit(pid, "alice", permission::none));         // owner without gantt_write
+	CHECK(!db.can_edit(pid, "bob", permission::gantt_write));    // non-owner even with gantt_write
+	CHECK(!db.can_edit(9999, "alice", permission::gantt_write)); // non-existent project
 }

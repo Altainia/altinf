@@ -1,7 +1,5 @@
 #include "user_db.hpp"
 
-#include "api_token.hpp"
-
 #include <Wt/Auth/HashFunction.h>
 #include <Wt/Dbo/Transaction.h>
 #include <Wt/Dbo/backend/Sqlite3.h>
@@ -10,6 +8,8 @@
 
 #include <array>
 #include <stdexcept>
+
+#include "api_token.hpp"
 
 static std::string sha256_hex(const std::string& input)
 {
@@ -106,14 +106,14 @@ bool user_db::authenticate(const std::string& uname,
 	out.logged_in    = true;
 	out.username     = uname;
 	out.display_name = found->display_name;
-	out.permissions  = static_cast<uint64_t>(found->permissions);
+	out.permissions  = found->permissions;
 
 	return true;
 }
 
 void user_db::create_user(const std::string& uname,
                           const std::string& password,
-                          uint64_t           perms,
+                          permission::flags  perms,
                           const std::string& display_name)
 {
 	const Wt::Auth::BCryptHashFunction bcrypt{12};
@@ -124,7 +124,7 @@ void user_db::create_user(const std::string& uname,
 	new_user.modify()->username      = uname;
 	new_user.modify()->display_name  = display_name;
 	new_user.modify()->password_hash = hash;
-	new_user.modify()->permissions   = static_cast<long long>(perms);
+	new_user.modify()->permissions   = perms;
 }
 
 bool user_db::has_users()
@@ -145,7 +145,7 @@ std::vector<user_entry> user_db::list_users()
 		user_entry e;
 		e.username     = u->username;
 		e.display_name = u->display_name;
-		e.permissions  = static_cast<uint64_t>(u->permissions);
+		e.permissions  = u->permissions;
 		out.push_back(std::move(e));
 	}
 	return out;
@@ -181,7 +181,7 @@ void user_db::delete_user(const std::string& username)
 
 void user_db::update_user(const std::string& username,
                           const std::string& display_name,
-                          uint64_t           perms)
+                          permission::flags  perms)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 
@@ -194,7 +194,7 @@ void user_db::update_user(const std::string& username,
 
 	const auto u             = *results.begin();
 	u.modify()->display_name = display_name;
-	u.modify()->permissions  = static_cast<long long>(perms);
+	u.modify()->permissions  = perms;
 }
 
 void user_db::set_password(const std::string& username, const std::string& new_password)
@@ -293,7 +293,7 @@ bool user_db::verify_api_token(const std::string& raw_token, session_data& out)
 	out.logged_in    = true;
 	out.username     = tok_username;
 	out.display_name = found->display_name;
-	out.permissions  = static_cast<uint64_t>(found->permissions);
+	out.permissions  = found->permissions;
 
 	return true;
 }

@@ -1,7 +1,5 @@
 #include "account_manager_page.hpp"
 
-#include "auth/permission.hpp"
-
 #include <Wt/WAnchor.h>
 #include <Wt/WApplication.h>
 #include <Wt/WDialog.h>
@@ -13,22 +11,24 @@
 #include <string>
 #include <vector>
 
-static std::string permissions_label(uint64_t perms)
+#include "auth/permission.hpp"
+
+static std::string permissions_label(permission::flags perms)
 {
 	std::vector<std::string> parts;
-	if(has_permission(perms, permission::admin))
+	if(perms.has_any(permission::admin))
 	{
 		parts.emplace_back("Admin");
 	}
-	if(has_permission(perms, permission::manage_users))
+	if(perms.has_any(permission::manage_users))
 	{
 		parts.emplace_back("Manage Users");
 	}
-	if(has_permission(perms, permission::post_write))
+	if(perms.has_any(permission::post_write))
 	{
 		parts.emplace_back("Write Posts");
 	}
-	if(has_permission(perms, permission::gantt_write))
+	if(perms.has_any(permission::gantt_write))
 	{
 		parts.emplace_back("Write Gantt");
 	}

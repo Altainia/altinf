@@ -16,12 +16,12 @@ test('home page shows nav brand and links', async ({ page }) => {
 
 test('home page shows welcome text', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('h1')).toContainText('Hello');
-  await expect(page.locator('text=Welcome to AltInf')).toBeVisible();
+  await expect(page.locator('h1')).toContainText("Hi, I'm Ben.");
+  await expect(page.locator('text=software developer')).toBeVisible();
 });
 
 test('nav brand links back to home', async ({ page }) => {
   await page.goto('/?_=/blog');
   await page.locator('.nav-brand').click();
-  await expect(page.locator('h1')).toContainText('Hello');
+  await expect(page.locator('h1')).toContainText("Hi, I'm Ben.");
 });

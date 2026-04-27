@@ -108,12 +108,12 @@ std::optional<gantt_project_entry> gantt_db::find_project(long long id)
 }
 
 std::vector<gantt_project_entry> gantt_db::projects_visible_to(const std::string& username,
-                                                               uint64_t           perms)
+                                                               permission::flags  perms)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 
 	Wt::Dbo::collection<Wt::Dbo::ptr<gantt_project_record>> results;
-	if(has_permission(perms, permission::admin))
+	if(perms.has_any(permission::admin))
 	{
 		results = m_dbo.find<gantt_project_record>().orderBy("id").resultList();
 	}
@@ -270,9 +270,9 @@ std::vector<std::string> gantt_db::viewers_for_project(long long project_id)
 
 // ---- Permission helpers ----
 
-bool gantt_db::can_view(long long project_id, const std::string& username, uint64_t perms)
+bool gantt_db::can_view(long long project_id, const std::string& username, permission::flags perms)
 {
-	if(has_permission(perms, permission::admin))
+	if(perms.has_any(permission::admin))
 	{
 		return true;
 	}
@@ -296,13 +296,13 @@ bool gantt_db::can_view(long long project_id, const std::string& username, uint6
 	return !results.empty();
 }
 
-bool gantt_db::can_edit(long long project_id, const std::string& username, uint64_t perms)
+bool gantt_db::can_edit(long long project_id, const std::string& username, permission::flags perms)
 {
-	if(has_permission(perms, permission::admin))
+	if(perms.has_any(permission::admin))
 	{
 		return true;
 	}
-	if(!has_permission(perms, permission::gantt_write))
+	if(!perms.has_any(permission::gantt_write))
 	{
 		return false;
 	}

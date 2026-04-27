@@ -1,10 +1,10 @@
 #pragma once
 
+#include "auth/permission.hpp"
 #include "gantt.hpp"
 
 #include <Wt/Dbo/Session.h>
 
-#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -20,7 +20,7 @@ public:
 	void                               delete_project(long long id);
 	std::optional<gantt_project_entry> find_project(long long id);
 	std::vector<gantt_project_entry>   projects_visible_to(const std::string& username,
-	                                                       uint64_t           perms);
+	                                                       permission::flags  perms);
 
 	// Tasks
 	long long                     add_task(const gantt_task_entry& e);
@@ -36,8 +36,8 @@ public:
 	std::vector<std::string> viewers_for_project(long long project_id);
 
 	// Permission helpers
-	bool can_view(long long project_id, const std::string& username, uint64_t perms);
-	bool can_edit(long long project_id, const std::string& username, uint64_t perms);
+	bool can_view(long long project_id, const std::string& username, permission::flags perms);
+	bool can_edit(long long project_id, const std::string& username, permission::flags perms);
 
 private:
 	static gantt_project_entry to_entry(const Wt::Dbo::ptr<gantt_project_record>& p);
