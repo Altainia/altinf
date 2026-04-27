@@ -91,7 +91,7 @@ void post_api_resource::handleRequest(const Wt::Http::Request& request,
 		json_error(response, 403, "Forbidden.");
 		return;
 	}
-	if(!has_permission(sess.permissions, permission::post_write))
+	if(!sess.permissions.has_any(permission::post_write))
 	{
 		json_error(response, 403, "Forbidden.");
 		return;

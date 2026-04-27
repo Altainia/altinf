@@ -13,8 +13,8 @@ gantt_list_page::gantt_list_page(const std::vector<gantt_project_entry>& project
 
 	addNew<Wt::WText>("<h1>Gantt Charts</h1>", Wt::TextFormat::UnsafeXHTML);
 
-	if(has_permission(session.permissions, permission::gantt_write) ||
-	   has_permission(session.permissions, permission::admin))
+	if(session.permissions.has_any(permission::gantt_write) ||
+	   session.permissions.has_any(permission::admin))
 	{
 		auto* new_btn = addNew<Wt::WAnchor>(
 		  Wt::WLink{Wt::LinkType::InternalPath, "/admin/gantt/new"}, "New Chart");

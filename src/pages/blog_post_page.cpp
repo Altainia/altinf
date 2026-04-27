@@ -40,7 +40,7 @@ blog_post_page::blog_post_page(const blog_post& post, const session_data& sessio
 		}
 	}
 
-	if(has_permission(session.permissions, permission::post_write))
+	if(session.permissions.has_any(permission::post_write))
 	{
 		auto* edit_link = header->addNew<Wt::WAnchor>(
 		  Wt::WLink{Wt::LinkType::InternalPath, "/admin/edit/" + post.slug}, "Edit");

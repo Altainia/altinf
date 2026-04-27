@@ -1,12 +1,12 @@
 #include "account_editor_page.hpp"
 
-#include "auth/permission.hpp"
-
 #include <Wt/WApplication.h>
 #include <Wt/WDialog.h>
 #include <Wt/WLineEdit.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
+
+#include "auth/permission.hpp"
 
 account_editor_page::account_editor_page(user_db*              db,
                                          const user_entry*     existing,
@@ -57,19 +57,19 @@ account_editor_page::account_editor_page(user_db*              db,
 	perms_section->addNew<Wt::WText>("<p class=\"account-perms-label\">Permissions</p>",
 	                                 Wt::TextFormat::UnsafeXHTML);
 
-	const uint64_t cur_perms = m_existing ? m_existing->permissions : 0;
+	const auto cur_perms = m_existing ? m_existing->permissions : permission::flags{};
 
 	m_perm_admin = perms_section->addNew<Wt::WCheckBox>("Admin");
-	m_perm_admin->setChecked(has_permission(cur_perms, permission::admin));
+	m_perm_admin->setChecked(cur_perms.has_any(permission::admin));
 
 	m_perm_manage_users = perms_section->addNew<Wt::WCheckBox>("Manage Users");
-	m_perm_manage_users->setChecked(has_permission(cur_perms, permission::manage_users));
+	m_perm_manage_users->setChecked(cur_perms.has_any(permission::manage_users));
 
 	m_perm_post_write = perms_section->addNew<Wt::WCheckBox>("Write Posts");
-	m_perm_post_write->setChecked(has_permission(cur_perms, permission::post_write));
+	m_perm_post_write->setChecked(cur_perms.has_any(permission::post_write));
 
 	m_perm_gantt_write = perms_section->addNew<Wt::WCheckBox>("Write Gantt");
-	m_perm_gantt_write->setChecked(has_permission(cur_perms, permission::gantt_write));
+	m_perm_gantt_write->setChecked(cur_perms.has_any(permission::gantt_write));
 
 	m_status = form->addNew<Wt::WText>("", Wt::TextFormat::Plain);
 	m_status->setStyleClass("editor-status");
@@ -129,23 +129,15 @@ void account_editor_page::save()
 		return;
 	}
 
-	uint64_t perms = 0;
+	permission::flags perms;
 	if(m_perm_admin->isChecked())
-	{
-		perms = grant(perms, permission::admin);
-	}
+		perms |= permission::admin;
 	if(m_perm_manage_users->isChecked())
-	{
-		perms = grant(perms, permission::manage_users);
-	}
+		perms |= permission::manage_users;
 	if(m_perm_post_write->isChecked())
-	{
-		perms = grant(perms, permission::post_write);
-	}
+		perms |= permission::post_write;
 	if(m_perm_gantt_write->isChecked())
-	{
-		perms = grant(perms, permission::gantt_write);
-	}
+		perms |= permission::gantt_write;
 
 	if(m_existing)
 	{

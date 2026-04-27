@@ -1,5 +1,13 @@
 #include "altinf_app.hpp"
 
+#include <Wt/WLink.h>
+#include <Wt/WText.h>
+
+#include <algorithm>
+#include <cstdlib>
+#include <filesystem>
+#include <stdexcept>
+
 #include "auth/permission.hpp"
 #include "blog/blog_loader.hpp"
 #include "pages/account_editor_page.hpp"
@@ -16,14 +24,6 @@
 #include "pages/post_editor_page.hpp"
 #include "widgets/footer.hpp"
 #include "widgets/nav_bar.hpp"
-
-#include <Wt/WLink.h>
-#include <Wt/WText.h>
-
-#include <algorithm>
-#include <cstdlib>
-#include <filesystem>
-#include <stdexcept>
 
 altinf_app::altinf_app(const Wt::WEnvironment& env):
   Wt::WApplication{env}
@@ -43,10 +43,7 @@ altinf_app::altinf_app(const Wt::WEnvironment& env):
 		{
 			throw std::runtime_error{"ALTINF_ADMIN_PASSWORD must be set on first run"};
 		}
-		const auto all_perms = grant(grant(grant(grant(0ULL, permission::admin),
-		                                         permission::post_write),
-		                                   permission::gantt_write),
-		                             permission::manage_users);
+		constexpr auto all_perms = permission::admin | permission::post_write | permission::gantt_write | permission::manage_users;
 		m_user_db->create_user("admin", pw, all_perms);
 	}
 
@@ -102,7 +99,7 @@ void altinf_app::handle_path(const std::string& path)
 	// post editor
 	else if(path == "/admin/new")
 	{
-		if(!has_permission(m_session.permissions, permission::post_write))
+		if(!m_session.permissions.has_any(permission::post_write))
 		{
 			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
 			return;
@@ -114,7 +111,7 @@ void altinf_app::handle_path(const std::string& path)
 	}
 	else if(path.starts_with("/admin/edit/"))
 	{
-		if(!has_permission(m_session.permissions, permission::post_write))
+		if(!m_session.permissions.has_any(permission::post_write))
 		{
 			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
 			return;
@@ -145,7 +142,7 @@ void altinf_app::handle_path(const std::string& path)
 	}
 	else if(path == "/admin/links/new")
 	{
-		if(!has_permission(m_session.permissions, permission::post_write))
+		if(!m_session.permissions.has_any(permission::post_write))
 		{
 			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
 			return;
@@ -157,7 +154,7 @@ void altinf_app::handle_path(const std::string& path)
 	}
 	else if(path.starts_with("/admin/links/edit/"))
 	{
-		if(!has_permission(m_session.permissions, permission::post_write))
+		if(!m_session.permissions.has_any(permission::post_write))
 		{
 			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
 			return;
@@ -236,8 +233,8 @@ void altinf_app::handle_path(const std::string& path)
 			setInternalPath("/login", true);
 			return;
 		}
-		if(!has_permission(m_session.permissions, permission::gantt_write) &&
-		   !has_permission(m_session.permissions, permission::admin))
+		if(!m_session.permissions.has_any(permission::gantt_write) &&
+		   !m_session.permissions.has_any(permission::admin))
 		{
 			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
 			return;
@@ -289,8 +286,8 @@ void altinf_app::handle_path(const std::string& path)
 			setInternalPath("/login", true);
 			return;
 		}
-		if(!has_permission(m_session.permissions, permission::admin) &&
-		   !has_permission(m_session.permissions, permission::manage_users))
+		if(!m_session.permissions.has_any(permission::admin) &&
+		   !m_session.permissions.has_any(permission::manage_users))
 		{
 			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
 			return;
@@ -312,8 +309,8 @@ void altinf_app::handle_path(const std::string& path)
 			setInternalPath("/login", true);
 			return;
 		}
-		if(!has_permission(m_session.permissions, permission::admin) &&
-		   !has_permission(m_session.permissions, permission::manage_users))
+		if(!m_session.permissions.has_any(permission::admin) &&
+		   !m_session.permissions.has_any(permission::manage_users))
 		{
 			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
 			return;
@@ -329,8 +326,8 @@ void altinf_app::handle_path(const std::string& path)
 			setInternalPath("/login", true);
 			return;
 		}
-		if(!has_permission(m_session.permissions, permission::admin) &&
-		   !has_permission(m_session.permissions, permission::manage_users))
+		if(!m_session.permissions.has_any(permission::admin) &&
+		   !m_session.permissions.has_any(permission::manage_users))
 		{
 			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
 			return;

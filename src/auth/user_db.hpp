@@ -1,19 +1,19 @@
 #pragma once
 
+#include "permission.hpp"
 #include "session_data.hpp"
 #include "user.hpp"
 
 #include <Wt/Dbo/Session.h>
 
-#include <cstdint>
 #include <string>
 #include <vector>
 
 struct user_entry
 {
-	std::string username;
-	std::string display_name;
-	uint64_t    permissions{0};
+	std::string       username;
+	std::string       display_name;
+	permission::flags permissions;
 };
 
 struct api_token_entry
@@ -33,7 +33,7 @@ public:
 
 	void create_user(const std::string& username,
 	                 const std::string& password,
-	                 uint64_t           permissions,
+	                 permission::flags  permissions,
 	                 const std::string& display_name = "");
 
 	bool has_users();
@@ -46,7 +46,7 @@ public:
 
 	void update_user(const std::string& username,
 	                 const std::string& display_name,
-	                 uint64_t           permissions);
+	                 permission::flags  permissions);
 
 	void set_password(const std::string& username, const std::string& new_password);
 

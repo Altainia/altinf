@@ -1,22 +1,16 @@
 #pragma once
 
+#include <alt/flags.hpp>
 #include <cstdint>
 
-enum class permission : uint64_t
+namespace permission
 {
-	none         = 0,
-	admin        = 1ULL << 0,
-	post_write   = 1ULL << 1,
-	gantt_write  = 1ULL << 2,
-	manage_users = 1ULL << 3,
-};
+	enum class bit : uint64_t {};
+	using flags = alt::flags<bit>;
 
-inline bool has_permission(uint64_t mask, permission p)
-{
-	return (mask & static_cast<uint64_t>(p)) != 0;
-}
-
-inline uint64_t grant(uint64_t mask, permission p)
-{
-	return mask | static_cast<uint64_t>(p);
+	inline constexpr flags none         = {};
+	inline constexpr flags admin        = flags::from_value(1ULL << 0);
+	inline constexpr flags post_write   = flags::from_value(1ULL << 1);
+	inline constexpr flags gantt_write  = flags::from_value(1ULL << 2);
+	inline constexpr flags manage_users = flags::from_value(1ULL << 3);
 }

@@ -67,9 +67,9 @@ test('delete button removes a task row', async ({ page }) => {
   await loginAndGoToGantt(page);
   await page.locator('.gantt-new-btn').click();
   await page.locator('.gantt-add-btn').click();
-  const before = await page.locator('.gantt-task-row').count();
+  await expect(page.locator('.gantt-task-row')).toHaveCount(1);
   await page.locator('.gantt-del-btn').first().click();
-  await expect(page.locator('.gantt-task-row')).toHaveCount(before - 1);
+  await expect(page.locator('.gantt-task-row')).toHaveCount(0);
 });
 
 test('creating a chart navigates to view page', async ({ page }) => {

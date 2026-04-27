@@ -29,8 +29,8 @@ gantt_view_page::gantt_view_page(const gantt_project_entry&           project,
 	title->setStyleClass("gantt-view-title");
 
 	const bool user_can_edit =
-	  has_permission(session.permissions, permission::admin) ||
-	  (has_permission(session.permissions, permission::gantt_write) &&
+	  session.permissions.has_any(permission::admin) ||
+	  (session.permissions.has_any(permission::gantt_write) &&
 	   project.owner_username == session.username);
 	if(user_can_edit)
 	{

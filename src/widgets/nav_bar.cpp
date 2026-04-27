@@ -1,10 +1,10 @@
 #include "nav_bar.hpp"
 
-#include "auth/permission.hpp"
-
 #include <Wt/WAnchor.h>
 #include <Wt/WLink.h>
 #include <Wt/WText.h>
+
+#include "auth/permission.hpp"
 
 nav_bar::nav_bar(const session_data& session):
   m_session{session}
@@ -46,15 +46,15 @@ void nav_bar::update()
 
 	if(m_session.logged_in)
 	{
-		if(has_permission(m_session.permissions, permission::post_write))
+		if(m_session.permissions.has_any(permission::post_write))
 		{
 			auto* new_post = m_auth_area->addNew<Wt::WAnchor>(
 			  Wt::WLink{Wt::LinkType::InternalPath, "/admin/new"}, "New Post");
 			new_post->setStyleClass("nav-link");
 		}
 
-		if(has_permission(m_session.permissions, permission::admin) ||
-		   has_permission(m_session.permissions, permission::manage_users))
+		if(m_session.permissions.has_any(permission::admin) ||
+		   m_session.permissions.has_any(permission::manage_users))
 		{
 			auto* accounts_link = m_auth_area->addNew<Wt::WAnchor>(
 			  Wt::WLink{Wt::LinkType::InternalPath, "/admin/accounts"}, "Accounts");

@@ -1,7 +1,5 @@
 #include "links_page.hpp"
 
-#include "auth/permission.hpp"
-
 #include <Wt/WAnchor.h>
 #include <Wt/WApplication.h>
 #include <Wt/WLink.h>
@@ -11,6 +9,8 @@
 #include <map>
 #include <string>
 #include <vector>
+
+#include "auth/permission.hpp"
 
 links_page::links_page(const std::vector<link_entry>& links,
                        const session_data&            session,
@@ -25,7 +25,7 @@ links_page::links_page(const std::vector<link_entry>& links,
 
 void links_page::render()
 {
-	const bool can_edit = has_permission(m_session.permissions, permission::post_write);
+	const bool can_edit = m_session.permissions.has_any(permission::post_write);
 
 	addNew<Wt::WText>("<h1>Links</h1>", Wt::TextFormat::UnsafeXHTML);
 
