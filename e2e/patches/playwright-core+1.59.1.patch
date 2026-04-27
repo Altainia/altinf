@@ -1,0 +1,16 @@
+diff --git a/node_modules/playwright-core/lib/server/utils/hostPlatform.js b/node_modules/playwright-core/lib/server/utils/hostPlatform.js
+index 0255beb..9186a5c 100644
+--- a/node_modules/playwright-core/lib/server/utils/hostPlatform.js
++++ b/node_modules/playwright-core/lib/server/utils/hostPlatform.js
+@@ -75,9 +75,8 @@ function calculatePlatform() {
+         return { hostPlatform: "ubuntu20.04" + archSuffix, isOfficiallySupportedPlatform: isUbuntu && version === "20.04" };
+       if (major < 24)
+         return { hostPlatform: "ubuntu22.04" + archSuffix, isOfficiallySupportedPlatform: isUbuntu && version === "22.04" };
+-      if (major < 26)
+-        return { hostPlatform: "ubuntu24.04" + archSuffix, isOfficiallySupportedPlatform: isUbuntu && version === "24.04" };
+-      return { hostPlatform: "ubuntu" + distroInfo.version + archSuffix, isOfficiallySupportedPlatform: false };
++      if (major >= 24)
++        return { hostPlatform: "ubuntu24.04" + archSuffix, isOfficiallySupportedPlatform: false };
+     }
+     if (distroInfo?.id === "linuxmint") {
+       const mintMajor = parseInt(distroInfo.version, 10);

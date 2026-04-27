@@ -78,6 +78,7 @@ long long link_db::add(const link_entry& e)
 	p.modify()->section     = e.section;
 	p.modify()->sort_order  = e.sort_order;
 	p.modify()->added_date  = e.added_date;
+	m_dbo.flush(); // force INSERT so the DB-assigned rowid is readable via id()
 
 	return p.id();
 }

@@ -50,3 +50,6 @@ add_custom_target(copy_resources ALL
   COMMENT "Copying resources and posts to build directory"
 )
 add_dependencies(copy_resources altinf)
+
+enable_testing()
+add_subdirectory(tests)
