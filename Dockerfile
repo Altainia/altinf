@@ -38,6 +38,11 @@ RUN curl -fsSL "https://github.com/sass/dart-sass/releases/download/${SASS_VERSI
     | tar -xz -C /opt
 ENV PATH="/opt/dart-sass:${PATH}"
 
+# alt library — header-only, installed before source copy so this layer is cached
+RUN git clone --depth 1 https://github.com/Altainia/alt.git /alt-src \
+    && bash /alt-src/scripts/install-local.sh \
+    && rm -rf /alt-src
+
 COPY . /src
 # posts/ is gitignored; create it so the copy_resources target doesn't fail
 RUN mkdir -p /src/posts
