@@ -1,11 +1,11 @@
 #include "gantt_db.hpp"
 
-#include "auth/permission.hpp"
-
 #include <Wt/Dbo/Transaction.h>
 #include <Wt/Dbo/backend/Sqlite3.h>
 
 #include <vector>
+
+#include "auth/permission.hpp"
 
 gantt_db::gantt_db(const std::string& db_path)
 {
@@ -150,6 +150,7 @@ long long gantt_db::add_task(const gantt_task_entry& e)
 	p.modify()->end_date    = e.end_date;
 	p.modify()->color       = e.color;
 	p.modify()->sort_order  = e.sort_order;
+	m_dbo.flush(); // force INSERT so the DB-assigned rowid is readable via id()
 	return p.id();
 }
 
