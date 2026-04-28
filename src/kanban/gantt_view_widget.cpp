@@ -57,7 +57,7 @@ std::string gantt_view_widget::serialize_tasks(const std::vector<kanban_task_ent
 	bool first = true;
 	for(const auto& t: tasks)
 	{
-		if(!t.start_date.isValid() || !t.end_date.isValid())
+		if(!t.start_date.isValid() && !t.end_date.isValid())
 			continue;
 		if(!first)
 			ss << ',';

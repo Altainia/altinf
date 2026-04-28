@@ -40,6 +40,17 @@ target_include_directories(test_kanban_db PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_kanban_db PRIVATE Catch2::Catch2WithMain Wt::Wt wtdbo wtdbosqlite3)
 catch_discover_tests(test_kanban_db)
 
+# test_gantt (JavaScript — requires Node.js)
+find_program(NODE_EXECUTABLE node)
+if(NODE_EXECUTABLE)
+  add_test(
+    NAME    gantt_js
+    COMMAND ${NODE_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/js/test_gantt.js
+  )
+else()
+  message(STATUS "Node.js not found — skipping gantt JS tests")
+endif()
+
 # test_user_db — needs OpenSSL for SHA-256 and token generation
 add_executable(test_user_db test_user_db.cpp
   ${CMAKE_SOURCE_DIR}/src/auth/user_db.cpp)

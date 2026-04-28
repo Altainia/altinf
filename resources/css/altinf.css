@@ -818,6 +818,70 @@ a:hover {
   margin-top: 1rem;
 }
 
+.gv-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  gap: 1rem;
+}
+
+.gv-nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.gv-btn {
+  padding: 0.35rem 0.85rem;
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.gv-btn:hover:not(:disabled) {
+  background: var(--color-surface);
+}
+.gv-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.gv-btn--today {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent);
+}
+.gv-btn--today:hover:not(:disabled) {
+  background: var(--color-accent-h);
+  color: var(--color-bg);
+}
+
+.gv-range-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.gv-range-label {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+.gv-range-select {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+
 .kb-editor-page {
   padding-top: 2rem;
 }

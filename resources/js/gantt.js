@@ -1,11 +1,13 @@
 (function () {
   'use strict';
 
-  var ROW_H    = 36;
-  var LABEL_W  = 190;
-  var HDR_H    = 28;
-  var PX_DAY   = 22;   // pixels per day
-  var PAD_DAYS = 3;    // blank days added on each side of the date range
+  var ROW_H              = 36;
+  var LABEL_W            = 190;
+  var HDR_H              = 28;
+  var MIN_PX_DAY         = 22;   // minimum px per day; triggers scroll when exceeded
+  var DEFAULT_RANGE_DAYS = 13;
+  var DEFAULT_PAST_DAYS  = 4;
+  var RANGE_OPTIONS      = [7, 13, 21, 30, 60];
 
   function svgEl(tag) {
     return document.createElementNS('http://www.w3.org/2000/svg', tag);
@@ -58,75 +60,159 @@
     return m + '-' + day;
   }
 
-  window.initGantt = function (mountId, tasks) {
-    var mount = document.getElementById(mountId);
-    if (!mount) return;
+  function todayDate() {
+    var now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  function todayViewStart(rangeDays) {
+    var pastDays = Math.round(rangeDays * DEFAULT_PAST_DAYS / DEFAULT_RANGE_DAYS);
+    return addDays(todayDate(), -pastDays);
+  }
+
+  function renderGantt(mount, tasks, viewStart, rangeDays) {
     mount.innerHTML = '';
 
-    if (!tasks.length) {
+    var viewEnd = addDays(viewStart, rangeDays);
+
+    // Slide boundary detection — per spec:
+    //   tasks with no end_date are NOT "in the future"
+    //   tasks with no start_date are NOT "in the past"
+    var canGoBack    = tasks.some(function (t) { return t._startDate && t._startDate < viewStart; });
+    var canGoForward = tasks.some(function (t) { return t._endDate   && t._endDate   > viewEnd;  });
+
+    // ── Controls ────────────────────────────────────────────────────────────────
+    var ctrl = document.createElement('div');
+    ctrl.className = 'gv-controls';
+
+    var navGroup = document.createElement('div');
+    navGroup.className = 'gv-nav';
+
+    var prevBtn = document.createElement('button');
+    prevBtn.className = 'gv-btn';
+    prevBtn.textContent = '← Prev';
+    if (!canGoBack) prevBtn.setAttribute('disabled', '');
+
+    var todayBtn = document.createElement('button');
+    todayBtn.className = 'gv-btn gv-btn--today';
+    todayBtn.textContent = 'Today';
+
+    var nextBtn = document.createElement('button');
+    nextBtn.className = 'gv-btn';
+    nextBtn.textContent = 'Next →';
+    if (!canGoForward) nextBtn.setAttribute('disabled', '');
+
+    navGroup.appendChild(prevBtn);
+    navGroup.appendChild(todayBtn);
+    navGroup.appendChild(nextBtn);
+
+    var rangeGroup = document.createElement('div');
+    rangeGroup.className = 'gv-range-group';
+
+    var rangeLabel = document.createElement('label');
+    rangeLabel.className = 'gv-range-label';
+    rangeLabel.textContent = 'Show:';
+
+    var rangeSelect = document.createElement('select');
+    rangeSelect.className = 'gv-range-select';
+    RANGE_OPTIONS.forEach(function (d) {
+      var opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = d + ' days';
+      if (d === rangeDays) opt.selected = true;
+      rangeSelect.appendChild(opt);
+    });
+
+    rangeGroup.appendChild(rangeLabel);
+    rangeGroup.appendChild(rangeSelect);
+    ctrl.appendChild(navGroup);
+    ctrl.appendChild(rangeGroup);
+    mount.appendChild(ctrl);
+
+    var slideAmt = Math.max(1, Math.floor(rangeDays / 2));
+    prevBtn.addEventListener('click', function () {
+      renderGantt(mount, tasks, addDays(viewStart, -slideAmt), rangeDays);
+    });
+    todayBtn.addEventListener('click', function () {
+      renderGantt(mount, tasks, todayViewStart(rangeDays), rangeDays);
+    });
+    nextBtn.addEventListener('click', function () {
+      renderGantt(mount, tasks, addDays(viewStart, slideAmt), rangeDays);
+    });
+    rangeSelect.addEventListener('change', function () {
+      var newRange = +rangeSelect.value;
+      renderGantt(mount, tasks, todayViewStart(newRange), newRange);
+    });
+
+    // ── Task filtering and grouping ──────────────────────────────────────────────
+    var renderTasks = tasks.filter(function (t) {
+      return t._startDate && t._endDate &&
+             t._startDate < viewEnd && t._endDate > viewStart;
+    });
+
+    if (!renderTasks.length) {
       var empty = document.createElement('p');
       empty.className = 'gv-empty';
-      empty.textContent = 'No tasks with dates to display.';
+      empty.textContent = 'No tasks with dates in this range.';
       mount.appendChild(empty);
       return;
     }
 
-    // Compute date range across all tasks
-    var minDate = null, maxDate = null;
-    tasks.forEach(function (t) {
-      var s = parseDate(t.start_date), e = parseDate(t.end_date);
-      if (s && (!minDate || s < minDate)) minDate = s;
-      if (e && (!maxDate || e > maxDate)) maxDate = e;
-    });
-
-    if (!minDate || !maxDate) {
-      var empty2 = document.createElement('p');
-      empty2.className = 'gv-empty';
-      empty2.textContent = 'No tasks with dates to display.';
-      mount.appendChild(empty2);
-      return;
-    }
-
-    minDate = addDays(minDate, -PAD_DAYS);
-    maxDate = addDays(maxDate,  PAD_DAYS);
-    var totalDays  = daysBetween(minDate, maxDate);
-    var trackWidth = totalDays * PX_DAY;
-
-    // Group by assignee (non-empty first, then empty last)
     var seen = {}, assignees = [];
-    tasks.forEach(function (t) {
+    renderTasks.forEach(function (t) {
       if (t.assigned_to && !seen[t.assigned_to]) {
         seen[t.assigned_to] = true;
         assignees.push(t.assigned_to);
       }
     });
-    var hasUnassigned = tasks.some(function (t) { return !t.assigned_to; });
+    var hasUnassigned = renderTasks.some(function (t) { return !t.assigned_to; });
     if (hasUnassigned) assignees.push('');
 
     var byAssignee = {};
     assignees.forEach(function (a) { byAssignee[a] = []; });
-    tasks.forEach(function (t) { byAssignee[t.assigned_to || ''].push(t); });
+    renderTasks.forEach(function (t) { byAssignee[t.assigned_to || ''].push(t); });
 
-    // Total rows = one group-header row + one row per task, per assignee group
     var totalRows = 0;
     assignees.forEach(function (a) { totalRows += 1 + byAssignee[a].length; });
 
-    var svgW = LABEL_W + trackWidth;
-    var svgH = HDR_H + totalRows * ROW_H + 4;
+    // ── SVG sizing ──────────────────────────────────────────────────────────────
+    // Attach the SVG to the DOM first with CSS-driven width so the browser can
+    // compute the actual available width via getBoundingClientRect (synchronous
+    // reflow).  CSS rule: width:100% fills the container; min-width ensures the
+    // minimum px-per-day so the scrollbar appears when needed.
+    var minSvgW = LABEL_W + rangeDays * MIN_PX_DAY;
+    var svgH    = HDR_H + totalRows * ROW_H + 4;
 
     var svg = svgEl('svg');
-    svg.setAttribute('width',  svgW);
     svg.setAttribute('height', svgH);
     svg.setAttribute('class',  'gv-svg');
+    svg.style.width    = '100%';
+    svg.style.minWidth = minSvgW + 'px';
 
-    // Background
+    var wrapper = document.createElement('div');
+    wrapper.className = 'gv-scroll';
+    wrapper.appendChild(svg);
+    mount.appendChild(wrapper);
+
+    // getBoundingClientRect forces a synchronous reflow, giving the actual
+    // rendered width regardless of when in the page lifecycle we run.
+    var svgW = Math.round(svg.getBoundingClientRect().width);
+    if (svgW < minSvgW) svgW = minSvgW; // guard: layout not ready yet
+
+    // Set explicit width + viewBox so SVG internal coordinates match display size
+    svg.setAttribute('width',   svgW);
+    svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
+
+    var pxDay = (svgW - LABEL_W) / rangeDays;
+
+    // ── Draw SVG contents ────────────────────────────────────────────────────────
     svg.appendChild(svgRect(0, 0, svgW, svgH, 'fill:var(--color-bg)'));
 
     // Week grid lines + date labels in header
-    var cur = new Date(minDate);
-    while (cur.getDay() !== 1) cur = addDays(cur, 1); // advance to first Monday
-    while (cur < maxDate) {
-      var gx = LABEL_W + daysBetween(minDate, cur) * PX_DAY;
+    var cur = new Date(viewStart);
+    while (cur.getDay() !== 1) cur = addDays(cur, 1);
+    while (cur < viewEnd) {
+      var gx = LABEL_W + daysBetween(viewStart, cur) * pxDay;
       svg.appendChild(svgLine(gx, HDR_H, gx, svgH,
         'stroke:var(--color-border);stroke-width:1'));
       svg.appendChild(svgText(gx + 3, HDR_H - 6, fmtDate(cur),
@@ -134,18 +220,13 @@
       cur = addDays(cur, 7);
     }
 
-    // Header divider
     svg.appendChild(svgLine(0, HDR_H, svgW, HDR_H,
       'stroke:var(--color-border);stroke-width:1'));
-
-    // Label/track vertical divider
     svg.appendChild(svgLine(LABEL_W, 0, LABEL_W, svgH,
       'stroke:var(--color-border);stroke-width:1'));
 
-    // Rows
     var rowIdx = 0;
     assignees.forEach(function (assignee) {
-      // Group header
       var gy = HDR_H + rowIdx * ROW_H;
       svg.appendChild(svgRect(0, gy, svgW, ROW_H, 'fill:var(--color-surface)'));
       svg.appendChild(svgText(8, gy + ROW_H * 0.65,
@@ -155,24 +236,24 @@
 
       byAssignee[assignee].forEach(function (task) {
         var ry  = HDR_H + rowIdx * ROW_H;
-        var s   = parseDate(task.start_date);
-        var e   = parseDate(task.end_date);
-        var bx  = LABEL_W + daysBetween(minDate, s) * PX_DAY;
-        var bw  = Math.max(4, daysBetween(s, e) * PX_DAY);
+        var s   = task._startDate;
+        var e   = task._endDate;
+        // Clamp bar to viewport edges
+        var cs  = s < viewStart ? viewStart : s;
+        var ce  = e > viewEnd   ? viewEnd   : e;
+        var bx  = LABEL_W + daysBetween(viewStart, cs) * pxDay;
+        var bw  = Math.max(4, daysBetween(cs, ce) * pxDay);
         var clr = task.color || '#7aa2d4';
 
-        // Task label (truncated)
         var lbl = task.title.length > 22 ? task.title.slice(0, 20) + '…' : task.title;
         svg.appendChild(svgText(LABEL_W - 8, ry + ROW_H * 0.65, lbl,
           'fill:var(--color-text);font-size:12px;text-anchor:end'));
 
-        // Bar
         var bar = svgRect(bx, ry + ROW_H * 0.2, bw, ROW_H * 0.6,
           'fill:' + clr + ';opacity:0.88;rx:3');
         bar.setAttribute('rx', 3);
         svg.appendChild(bar);
 
-        // Row divider
         svg.appendChild(svgLine(0, ry + ROW_H, svgW, ry + ROW_H,
           'stroke:var(--color-border);stroke-width:0.5'));
 
@@ -181,17 +262,24 @@
     });
 
     // Today line — drawn last so it sits on top of all bars
-    var now = new Date();
-    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    if (today >= minDate && today <= maxDate) {
-      var tx = LABEL_W + daysBetween(minDate, today) * PX_DAY;
+    var today = todayDate();
+    if (today >= viewStart && today <= viewEnd) {
+      var tx = LABEL_W + daysBetween(viewStart, today) * pxDay;
       svg.appendChild(svgLine(tx, HDR_H, tx, svgH,
         'stroke:#e05252;stroke-width:2;opacity:0.85'));
     }
+  }
 
-    var wrapper = document.createElement('div');
-    wrapper.className = 'gv-scroll';
-    wrapper.appendChild(svg);
-    mount.appendChild(wrapper);
+  window.initGantt = function (mountId, tasks) {
+    var mount = document.getElementById(mountId);
+    if (!mount) return;
+
+    // Pre-parse dates once; used for rendering and slide boundary checks
+    tasks.forEach(function (t) {
+      t._startDate = parseDate(t.start_date);
+      t._endDate   = parseDate(t.end_date);
+    });
+
+    renderGantt(mount, tasks, todayViewStart(DEFAULT_RANGE_DAYS), DEFAULT_RANGE_DAYS);
   };
 }());
