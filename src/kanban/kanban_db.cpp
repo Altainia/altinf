@@ -21,16 +21,19 @@ kanban_db::kanban_db(const std::string& db_path)
 		// Tables already exist. Add new columns if they are missing (idempotent).
 	}
 
-	// Ensure new columns exist on pre-existing databases. SQLite ignores
-	// ADD COLUMN if a migration already added it on a prior startup.
+	// Ensure new columns exist on pre-existing databases.
+	// Each ALTER TABLE needs its own transaction; SQLite will error (caught) if
+	// the column already exists, which is the idempotent-migration behaviour we want.
 	try
 	{
+		Wt::Dbo::Transaction t{m_dbo};
 		m_dbo.execute("ALTER TABLE team ADD COLUMN org_id INTEGER NOT NULL DEFAULT 0");
 	}
 	catch(...)
 	{}
 	try
 	{
+		Wt::Dbo::Transaction t{m_dbo};
 		m_dbo.execute("ALTER TABLE team_member ADD COLUMN is_lead INTEGER NOT NULL DEFAULT 0");
 	}
 	catch(...)
