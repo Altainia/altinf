@@ -46,7 +46,9 @@ struct sql_value_traits<permission::flags, void>
 		long long raw = 0;
 		const bool ok = stmt->getResult(col, &raw);
 		if(ok)
+		{
 			v = permission::flags::from_value(static_cast<permission::flags::value_type>(raw));
+		}
 		return ok;
 	}
 };

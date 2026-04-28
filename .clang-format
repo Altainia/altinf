@@ -47,6 +47,7 @@ ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ConstructorInitializerIndentWidth: 2
 ContinuationIndentWidth: 2
 Cpp11BracedListStyle: true
+InsertBraces: true
 FixNamespaceComments: false
 IncludeBlocks: Regroup
 IncludeCategories:

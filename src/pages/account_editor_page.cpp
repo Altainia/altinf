@@ -131,13 +131,21 @@ void account_editor_page::save()
 
 	permission::flags perms;
 	if(m_perm_admin->isChecked())
+	{
 		perms |= permission::admin;
+	}
 	if(m_perm_manage_users->isChecked())
+	{
 		perms |= permission::manage_users;
+	}
 	if(m_perm_post_write->isChecked())
+	{
 		perms |= permission::post_write;
+	}
 	if(m_perm_gantt_write->isChecked())
+	{
 		perms |= permission::gantt_write;
+	}
 
 	if(m_existing)
 	{
