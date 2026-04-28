@@ -280,6 +280,98 @@ test('default selected range is 13', function () {
   assertEq(+sel.value, 13, 'default selected range');
 });
 
+// ── Fade gradients ────────────────────────────────────────────────────────────
+
+console.log('\nFade gradients');
+
+test('left-clipped bar gets a gradient with opacity-0 first stop', function () {
+  const dom = makeGanttDOM(WIDE);
+  dom.window.initGantt('mount', [makeTask(1, -30, 5)]);
+  const svg = getSvg(dom);
+  assert(svg, 'SVG not found');
+  const grads = Array.from(svg.querySelectorAll('defs linearGradient'));
+  assert(grads.length > 0, 'expected a gradient for left-clipped bar');
+  const stops = Array.from(grads[0].querySelectorAll('stop'));
+  assert((stops[0].getAttribute('style') || '').includes('stop-opacity:0'),
+    'first stop should be opacity 0 for left fade');
+});
+
+test('right-clipped bar gets a gradient with opacity-0 last stop', function () {
+  const dom = makeGanttDOM(WIDE);
+  dom.window.initGantt('mount', [makeTask(1, -2, 40)]);
+  const svg = getSvg(dom);
+  assert(svg, 'SVG not found');
+  const grads = Array.from(svg.querySelectorAll('defs linearGradient'));
+  assert(grads.length > 0, 'expected a gradient for right-clipped bar');
+  const stops = Array.from(grads[0].querySelectorAll('stop'));
+  assert((stops[stops.length - 1].getAttribute('style') || '').includes('stop-opacity:0'),
+    'last stop should be opacity 0 for right fade');
+});
+
+test('unclipped bar has no gradient', function () {
+  const dom = makeGanttDOM(WIDE);
+  dom.window.initGantt('mount', [makeTask(1, 0, 5)]);
+  const svg = getSvg(dom);
+  assert(svg, 'SVG not found');
+  const grads = svg.querySelectorAll('defs linearGradient');
+  assertEq(grads.length, 0, 'no gradient for unclipped bar');
+});
+
+test('no-start task always has a left-fade gradient', function () {
+  const dom = makeGanttDOM(WIDE);
+  // no start_date, end within view — left side is unbounded, so it fades
+  dom.window.initGantt('mount', [makeTask(1, null, 5)]);
+  const svg = getSvg(dom);
+  assert(svg, 'SVG not found');
+  const grads = Array.from(svg.querySelectorAll('defs linearGradient'));
+  assert(grads.length > 0, 'expected a gradient for no-start bar');
+  const stops = Array.from(grads[0].querySelectorAll('stop'));
+  assert((stops[0].getAttribute('style') || '').includes('stop-opacity:0'),
+    'first stop should be opacity 0 for unbounded left');
+});
+
+test('no-end task always has a right-fade gradient', function () {
+  const dom = makeGanttDOM(WIDE);
+  // start within view, no end_date — right side is unbounded, so it fades
+  dom.window.initGantt('mount', [makeTask(1, -2, null)]);
+  const svg = getSvg(dom);
+  assert(svg, 'SVG not found');
+  const grads = Array.from(svg.querySelectorAll('defs linearGradient'));
+  assert(grads.length > 0, 'expected a gradient for no-end bar');
+  const stops = Array.from(grads[0].querySelectorAll('stop'));
+  assert((stops[stops.length - 1].getAttribute('style') || '').includes('stop-opacity:0'),
+    'last stop should be opacity 0 for unbounded right');
+});
+
+test('no-start task with right-clipped real end gets fades on both sides', function () {
+  const dom = makeGanttDOM(WIDE);
+  // no start (left fade) + end clipped 40 days out (right fade)
+  dom.window.initGantt('mount', [makeTask(1, null, 40)]);
+  const svg = getSvg(dom);
+  assert(svg, 'SVG not found');
+  const grads = Array.from(svg.querySelectorAll('defs linearGradient'));
+  assert(grads.length > 0, 'expected a gradient');
+  const stops = Array.from(grads[0].querySelectorAll('stop'));
+  assert((stops[0].getAttribute('style') || '').includes('stop-opacity:0'),
+    'first stop should be opacity 0 (unbounded left)');
+  assert((stops[stops.length - 1].getAttribute('style') || '').includes('stop-opacity:0'),
+    'last stop should be opacity 0 (right fade)');
+});
+
+test('no-start no-end task is rendered with fades on both sides', function () {
+  const dom = makeGanttDOM(WIDE);
+  dom.window.initGantt('mount', [makeTask(1, null, null)]);
+  const svg = getSvg(dom);
+  assert(svg, 'SVG element not found — task should be rendered');
+  const grads = Array.from(svg.querySelectorAll('defs linearGradient'));
+  assert(grads.length > 0, 'expected a gradient for no-date task');
+  const stops = Array.from(grads[0].querySelectorAll('stop'));
+  assert((stops[0].getAttribute('style') || '').includes('stop-opacity:0'),
+    'first stop should be opacity 0 (left fade)');
+  assert((stops[stops.length - 1].getAttribute('style') || '').includes('stop-opacity:0'),
+    'last stop should be opacity 0 (right fade)');
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 
 console.log('\n' + (failed ? '✗' : '✓') + ' ' + passed + ' passed, ' + failed + ' failed\n');

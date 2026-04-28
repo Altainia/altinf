@@ -8,6 +8,7 @@
   var DEFAULT_RANGE_DAYS = 13;
   var DEFAULT_PAST_DAYS  = 4;
   var RANGE_OPTIONS      = [7, 13, 21, 30, 60];
+  var FADE_PX            = 24;   // max fade width in SVG units at a clipped edge
 
   function svgEl(tag) {
     return document.createElementNS('http://www.w3.org/2000/svg', tag);
@@ -145,9 +146,15 @@
     });
 
     // ── Task filtering and grouping ──────────────────────────────────────────────
+    // Tasks with no dates at all are always visible (they span the whole viewport
+    // with fades on both sides). Partial-date tasks are shown extending to the
+    // viewport edge on the dateless side, with a fade there too.
     var renderTasks = tasks.filter(function (t) {
-      return t._startDate && t._endDate &&
-             t._startDate < viewEnd && t._endDate > viewStart;
+      var s = t._startDate, e = t._endDate;
+      if (!s && !e) return true;
+      if (s && e)   return s < viewEnd && e > viewStart;
+      if (s)        return s < viewEnd;
+      return e > viewStart;
     });
 
     if (!renderTasks.length) {
@@ -206,6 +213,9 @@
     var pxDay = (svgW - LABEL_W) / rangeDays;
 
     // ── Draw SVG contents ────────────────────────────────────────────────────────
+    var defs = svgEl('defs');
+    svg.appendChild(defs);
+
     svg.appendChild(svgRect(0, 0, svgW, svgH, 'fill:var(--color-bg)'));
 
     // Week grid lines + date labels in header
@@ -238,19 +248,61 @@
         var ry  = HDR_H + rowIdx * ROW_H;
         var s   = task._startDate;
         var e   = task._endDate;
-        // Clamp bar to viewport edges
-        var cs  = s < viewStart ? viewStart : s;
-        var ce  = e > viewEnd   ? viewEnd   : e;
+        // Clamp bar to viewport edges; null date means the bar extends to that edge
+        var cs  = (s && s > viewStart) ? s : viewStart;
+        var ce  = (e && e < viewEnd)   ? e : viewEnd;
         var bx  = LABEL_W + daysBetween(viewStart, cs) * pxDay;
         var bw  = Math.max(4, daysBetween(cs, ce) * pxDay);
         var clr = task.color || '#7aa2d4';
+
+        // Fade at any edge where the bar is unbounded: either because the task
+        // has no date on that side, or because the real date is clipped off-screen.
+        var fadeL = !s || s < viewStart;
+        var fadeR = !e || e > viewEnd;
 
         var lbl = task.title.length > 22 ? task.title.slice(0, 20) + '…' : task.title;
         svg.appendChild(svgText(LABEL_W - 8, ry + ROW_H * 0.65, lbl,
           'fill:var(--color-text);font-size:12px;text-anchor:end'));
 
+        var barFill;
+        if (fadeL || fadeR) {
+          var gradId  = 'grd-' + rowIdx;
+          var grad    = svgEl('linearGradient');
+          grad.setAttribute('id', gradId);
+          grad.setAttribute('gradientUnits', 'userSpaceOnUse');
+          grad.setAttribute('x1', bx);
+          grad.setAttribute('y1', 0);
+          grad.setAttribute('x2', bx + bw);
+          grad.setAttribute('y2', 0);
+
+          var fadePx   = Math.min(FADE_PX, bw * 0.35);
+          var stopData = [];
+          if (fadeL) {
+            stopData.push({ off: 0,             op: 0 });
+            stopData.push({ off: fadePx / bw,   op: 1 });
+          } else {
+            stopData.push({ off: 0, op: 1 });
+          }
+          if (fadeR) {
+            stopData.push({ off: 1 - fadePx / bw, op: 1 });
+            stopData.push({ off: 1,                op: 0 });
+          } else {
+            stopData.push({ off: 1, op: 1 });
+          }
+          stopData.forEach(function (sd) {
+            var stop = svgEl('stop');
+            stop.setAttribute('offset', (sd.off * 100).toFixed(1) + '%');
+            stop.setAttribute('style', 'stop-color:' + clr + ';stop-opacity:' + sd.op);
+            grad.appendChild(stop);
+          });
+          defs.appendChild(grad);
+          barFill = 'url(#' + gradId + ')';
+        } else {
+          barFill = clr;
+        }
+
         var bar = svgRect(bx, ry + ROW_H * 0.2, bw, ROW_H * 0.6,
-          'fill:' + clr + ';opacity:0.88;rx:3');
+          'fill:' + barFill + ';opacity:0.88');
         bar.setAttribute('rx', 3);
         svg.appendChild(bar);
 

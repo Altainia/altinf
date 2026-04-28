@@ -480,6 +480,8 @@ a:hover {
 }
 .editor-btn:hover {
   background: var(--color-accent-h);
+  color: var(--color-bg);
+  text-decoration: none;
 }
 
 .editor-btn-cancel {

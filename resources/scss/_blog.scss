@@ -184,7 +184,7 @@
   cursor:        pointer;
   transition:    background 0.15s;
 
-  &:hover { background: var(--color-accent-h); }
+  &:hover { background: var(--color-accent-h); color: var(--color-bg); text-decoration: none; }
 }
 
 .editor-btn-cancel {
