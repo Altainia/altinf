@@ -30,9 +30,9 @@ nav_bar::nav_bar(const session_data& session):
 	  Wt::WLink{Wt::LinkType::InternalPath, "/blog"}, "Blog");
 	blog_link->setStyleClass("nav-link");
 
-	auto* gantt_link = links->addNew<Wt::WAnchor>(
-	  Wt::WLink{Wt::LinkType::InternalPath, "/gantt"}, "Gantt");
-	gantt_link->setStyleClass("nav-link");
+	auto* board_link = links->addNew<Wt::WAnchor>(
+	  Wt::WLink{Wt::LinkType::InternalPath, "/board"}, "Board");
+	board_link->setStyleClass("nav-link");
 
 	m_auth_area = addNew<Wt::WContainerWidget>();
 	m_auth_area->setStyleClass("nav-auth");

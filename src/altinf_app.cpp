@@ -14,9 +14,9 @@
 #include "pages/account_manager_page.hpp"
 #include "pages/blog_page.hpp"
 #include "pages/blog_post_page.hpp"
-#include "pages/gantt_editor_page.hpp"
-#include "pages/gantt_list_page.hpp"
-#include "pages/gantt_view_page.hpp"
+#include "pages/kanban_board_page.hpp"
+#include "pages/kanban_task_editor_page.hpp"
+#include "pages/kanban_team_page.hpp"
 #include "pages/link_editor_page.hpp"
 #include "pages/links_page.hpp"
 #include "pages/login_page.hpp"
@@ -43,16 +43,18 @@ altinf_app::altinf_app(const Wt::WEnvironment& env):
 		{
 			throw std::runtime_error{"ALTINF_ADMIN_PASSWORD must be set on first run"};
 		}
-		constexpr auto all_perms = permission::admin | permission::post_write | permission::gantt_write | permission::manage_users;
+		constexpr auto all_perms =
+		  permission::admin | permission::post_write | permission::gantt_write |
+		  permission::manage_users;
 		m_user_db->create_user("admin", pw, all_perms);
 	}
 
 	m_posts_dir = app_root / "posts";
 	m_posts     = blog_loader{m_posts_dir}.load();
 
-	m_link_db  = std::make_unique<link_db>(db_path);
-	m_links    = m_link_db->load_all();
-	m_gantt_db = std::make_unique<gantt_db>(db_path);
+	m_link_db   = std::make_unique<link_db>(db_path);
+	m_links     = m_link_db->load_all();
+	m_kanban_db = std::make_unique<kanban_db>(db_path);
 
 	root()->setStyleClass("site-root");
 	m_nav     = root()->addNew<nav_bar>(m_session);
@@ -70,6 +72,10 @@ altinf_app::altinf_app(const Wt::WEnvironment& env):
 void altinf_app::handle_path(const std::string& path)
 {
 	m_content->clear();
+
+	// Widen the content container for board pages; restore for everything else.
+	const bool wide = path.starts_with("/board");
+	m_content->setStyleClass(wide ? "site-content site-content--wide" : "site-content");
 
 	// root
 	if(path == "/" || path.empty())
@@ -181,102 +187,82 @@ void altinf_app::handle_path(const std::string& path)
 			handle_path("/links");
 		});
 	}
-	// gantt
-	else if(path == "/gantt")
+	// board (kanban + gantt)
+	else if(path == "/board" || path == "/board/gantt")
 	{
 		if(!m_session.logged_in)
 		{
 			setInternalPath("/login", true);
 			return;
 		}
-		const auto projects =
-		  m_gantt_db->projects_visible_to(m_session.username, m_session.permissions);
-		m_content->addNew<gantt_list_page>(projects, m_session);
+		m_content->addNew<kanban_board_page>(*m_kanban_db, m_session, path == "/board/gantt");
 	}
-	else if(path.starts_with("/gantt/") && path.find('/', 7) == std::string::npos)
+	else if(path == "/board/task/new")
 	{
 		if(!m_session.logged_in)
 		{
 			setInternalPath("/login", true);
 			return;
 		}
-		long long id = 0;
+		const auto teams = m_kanban_db->all_teams();
+		if(teams.empty())
+		{
+			m_content->addNew<Wt::WText>("No team configured.", Wt::TextFormat::Plain);
+			return;
+		}
+		const long long team_id = teams[0].id;
+		if(!m_kanban_db->can_edit_board(team_id, m_session.username, m_session.permissions))
+		{
+			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
+			return;
+		}
+		const auto members = m_kanban_db->members_for_team(team_id);
+		m_content->addNew<kanban_task_editor_page>(
+		  *m_kanban_db, team_id, m_session, nullptr, members, [this] { setInternalPath("/board", true); });
+	}
+	else if(path.starts_with("/board/task/") && path.ends_with("/edit"))
+	{
+		if(!m_session.logged_in)
+		{
+			setInternalPath("/login", true);
+			return;
+		}
+		// Extract task id from "/board/task/{id}/edit"
+		const auto id_str = path.substr(12, path.size() - 12 - 5);
+		long long  id     = 0;
 		try
 		{
-			id = std::stoll(path.substr(7));
+			id = std::stoll(id_str);
 		}
 		catch(const std::exception&)
 		{
-			m_content->addNew<Wt::WText>("Invalid chart ID.", Wt::TextFormat::Plain);
+			m_content->addNew<Wt::WText>("Invalid task ID.", Wt::TextFormat::Plain);
 			return;
 		}
-		if(!m_gantt_db->can_view(id, m_session.username, m_session.permissions))
+		const auto opt = m_kanban_db->find_task(id);
+		if(!opt)
+		{
+			m_content->addNew<Wt::WText>("Task not found.", Wt::TextFormat::Plain);
+			return;
+		}
+		if(!m_kanban_db->can_edit_board(opt->team_id, m_session.username, m_session.permissions))
 		{
 			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
 			return;
 		}
-		const auto opt = m_gantt_db->find_project(id);
-		if(!opt)
-		{
-			m_content->addNew<Wt::WText>("Chart not found.", Wt::TextFormat::Plain);
-			return;
-		}
-		const auto tasks = m_gantt_db->tasks_for_project(id);
-		m_content->addNew<gantt_view_page>(*opt, tasks, m_session, [this, id]() {
-			setInternalPath("/admin/gantt/edit/" + std::to_string(id), true);
-		});
+		m_edit_task        = opt;
+		const auto members = m_kanban_db->members_for_team(opt->team_id);
+		m_content->addNew<kanban_task_editor_page>(
+		  *m_kanban_db, opt->team_id, m_session, &(*m_edit_task), members, [this] { setInternalPath("/board", true); });
 	}
-	else if(path == "/admin/gantt/new")
+	else if(path == "/admin/board/team")
 	{
 		if(!m_session.logged_in)
 		{
 			setInternalPath("/login", true);
 			return;
 		}
-		if(!m_session.permissions.has_any(permission::gantt_write) &&
-		   !m_session.permissions.has_any(permission::admin))
-		{
-			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
-			return;
-		}
-		m_content->addNew<gantt_editor_page>(
-		  *m_gantt_db, m_session, nullptr, std::vector<gantt_task_entry>{}, std::vector<std::string>{}, [this](long long id) { setInternalPath("/gantt/" + std::to_string(id), true); });
-	}
-	else if(path.starts_with("/admin/gantt/edit/"))
-	{
-		if(!m_session.logged_in)
-		{
-			setInternalPath("/login", true);
-			return;
-		}
-		long long id = 0;
-		try
-		{
-			id = std::stoll(path.substr(18));
-		}
-		catch(const std::exception&)
-		{
-			m_content->addNew<Wt::WText>("Invalid chart ID.", Wt::TextFormat::Plain);
-			return;
-		}
-		if(!m_gantt_db->can_edit(id, m_session.username, m_session.permissions))
-		{
-			m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
-			return;
-		}
-		const auto opt = m_gantt_db->find_project(id);
-		if(!opt)
-		{
-			m_content->addNew<Wt::WText>("Chart not found.", Wt::TextFormat::Plain);
-			return;
-		}
-		m_edit_project     = opt;
-		const auto tasks   = m_gantt_db->tasks_for_project(id);
-		const auto viewers = m_gantt_db->viewers_for_project(id);
-		m_content->addNew<gantt_editor_page>(
-		  *m_gantt_db, m_session, &(*m_edit_project), tasks, viewers, [this](long long saved_id) {
-			  setInternalPath("/gantt/" + std::to_string(saved_id), true);
-		  });
+		m_content->addNew<kanban_team_page>(*m_kanban_db, m_session);
 	}
 	// accounts
 	else if(path == "/admin/accounts")

@@ -33,12 +33,12 @@ target_include_directories(test_link_db PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_link_db PRIVATE Catch2::Catch2WithMain Wt::Wt wtdbo wtdbosqlite3)
 catch_discover_tests(test_link_db)
 
-# test_gantt_db
-add_executable(test_gantt_db test_gantt_db.cpp
-  ${CMAKE_SOURCE_DIR}/src/gantt/gantt_db.cpp)
-target_include_directories(test_gantt_db PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(test_gantt_db PRIVATE Catch2::Catch2WithMain Wt::Wt wtdbo wtdbosqlite3)
-catch_discover_tests(test_gantt_db)
+# test_kanban_db
+add_executable(test_kanban_db test_kanban_db.cpp
+  ${CMAKE_SOURCE_DIR}/src/kanban/kanban_db.cpp)
+target_include_directories(test_kanban_db PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_kanban_db PRIVATE Catch2::Catch2WithMain Wt::Wt wtdbo wtdbosqlite3)
+catch_discover_tests(test_kanban_db)
 
 # test_user_db — needs OpenSSL for SHA-256 and token generation
 add_executable(test_user_db test_user_db.cpp

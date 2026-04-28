@@ -11,7 +11,7 @@ test('home page shows nav brand and links', async ({ page }) => {
   await expect(page.locator('.nav-link', { hasText: 'Home' })).toBeVisible();
   await expect(page.locator('.nav-link', { hasText: 'Blog' })).toBeVisible();
   await expect(page.locator('.nav-link', { hasText: 'Links' })).toBeVisible();
-  await expect(page.locator('.nav-link', { hasText: 'Gantt' })).toBeVisible();
+  await expect(page.locator('.nav-link', { hasText: 'Board' })).toBeVisible();
 });
 
 test('home page shows welcome text', async ({ page }) => {
