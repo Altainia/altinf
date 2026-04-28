@@ -46,7 +46,7 @@ kanban_board_widget::kanban_board_widget(
   std::function<void(long long, const std::string&, int)> on_move,
   std::function<void(long long)>                          on_edit)
 {
-	Wt::WApplication::instance()->require("js/kanban.js");
+	Wt::WApplication::instance()->require("js/kanban.js?v=" BUILD_VERSION);
 
 	setStyleClass("kb-board-wrap");
 

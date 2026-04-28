@@ -180,6 +180,15 @@
       });
     });
 
+    // Today line — drawn last so it sits on top of all bars
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (today >= minDate && today <= maxDate) {
+      var tx = LABEL_W + daysBetween(minDate, today) * PX_DAY;
+      svg.appendChild(svgLine(tx, HDR_H, tx, svgH,
+        'stroke:#e05252;stroke-width:2;opacity:0.85'));
+    }
+
     var wrapper = document.createElement('div');
     wrapper.className = 'gv-scroll';
     wrapper.appendChild(svg);

@@ -41,7 +41,7 @@ static std::string date_str_gv(const Wt::WDate& d)
 
 gantt_view_widget::gantt_view_widget(std::vector<kanban_task_entry> tasks)
 {
-	Wt::WApplication::instance()->require("js/gantt.js");
+	Wt::WApplication::instance()->require("js/gantt.js?v=" BUILD_VERSION);
 
 	setStyleClass("gv-wrap");
 

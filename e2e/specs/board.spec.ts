@@ -408,6 +408,27 @@ test('Gantt view renders an SVG for tasks that have dates', async ({ page }) => 
   await expect(page.locator('.gv-scroll svg')).toBeVisible({ timeout: 15_000 });
 });
 
+test('Gantt view shows no today line when today is outside all task date ranges', async ({ page }) => {
+  await loginAndGoToBoard(page);
+  // At this point only "Board Test Task Nu" (2025-01-01–2025-01-31) has both
+  // dates set.  Today (2026-04-28) lies beyond that range, so no today line
+  // should be drawn.
+  await page.locator('.kb-tab', { hasText: 'Gantt' }).click();
+  await expect(page.locator('.gv-scroll svg')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.gv-scroll svg line[style*="e05252"]')).not.toBeAttached();
+});
+
+test('Gantt view renders today line and label when a task spans today', async ({ page }) => {
+  await loginAndGoToBoard(page);
+  // Create a task whose date range brackets today (2026-04-28).
+  await createTaskWithDates(page, 'Board Test Task Today Span', '2026-01-01', '2026-12-31');
+
+  await page.locator('.kb-tab', { hasText: 'Gantt' }).click();
+  await expect(page.locator('.gv-scroll svg')).toBeVisible({ timeout: 15_000 });
+  // Red today line.
+  await expect(page.locator('.gv-scroll svg line[style*="e05252"]')).toBeAttached();
+});
+
 // ── team management ───────────────────────────────────────────────────────────
 
 test('Manage Team link opens team management page', async ({ page }) => {

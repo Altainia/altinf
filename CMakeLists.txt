@@ -9,11 +9,18 @@ find_package(OpenSSL REQUIRED)
 find_library(CMARK_LIB cmark REQUIRED)
 find_program(SASS_EXECUTABLE sass REQUIRED)
 
+# Build timestamp used as a cache-busting query parameter on static JS assets.
+# Changes on every rebuild, so browsers always fetch the latest file after a
+# server update — no manual cache-clearing required.
+string(TIMESTAMP BUILD_TIMESTAMP "%Y%m%d%H%M%S" UTC)
+
 file(GLOB_RECURSE SOURCES src/*.cpp)
 
 add_executable(altinf ${SOURCES})
 
 target_include_directories(altinf PRIVATE src)
+
+target_compile_definitions(altinf PRIVATE BUILD_VERSION="${BUILD_TIMESTAMP}")
 
 target_link_libraries(altinf PRIVATE
   Wt::Wt Wt::HTTP wtdbo wtdbosqlite3
