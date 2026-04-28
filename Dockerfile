@@ -1,12 +1,12 @@
 # ── Stage 1: build Wt 4.13.1 from source ─────────────────────────────────────
 # This layer is cached after the first build. Updates to altinf source skip it.
-FROM ubuntu:22.04 AS wt-builder
+FROM ubuntu:24.04 AS wt-builder
 
 ARG WT_VERSION=4.13.1
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential cmake ninja-build git \
+    build-essential cmake ninja-build git ca-certificates \
     libboost-all-dev libssl-dev libsqlite3-dev zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -30,7 +30,7 @@ ARG SASS_VERSION=1.99.0
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libcmark-dev curl xz-utils \
+    libcmark-dev curl xz-utils sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # dart-sass standalone binary (only needed at build time to compile SCSS)
@@ -53,16 +53,16 @@ RUN cmake -S /src -B /src/build \
 
 
 # ── Stage 3: runtime ──────────────────────────────────────────────────────────
-FROM ubuntu:22.04 AS runtime
+FROM ubuntu:24.04 AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libboost-filesystem1.74.0 \
-    libboost-thread1.74.0 \
-    libboost-date-time1.74.0 \
-    libboost-program-options1.74.0 \
-    libboost-regex1.74.0 \
+    libboost-filesystem1.83.0 \
+    libboost-thread1.83.0 \
+    libboost-date-time1.83.0 \
+    libboost-program-options1.83.0 \
+    libboost-regex1.83.0 \
     libssl3 \
     libsqlite3-0 \
     libcmark0.30.2 \
