@@ -30,7 +30,7 @@ TEST_CASE("user_db - create user and basic queries")
 TEST_CASE("user_db - list_users reflects display_name and permissions")
 {
 	user_db        db{":memory:"};
-	constexpr auto perms = permission::admin | permission::post_write | permission::gantt_write;
+	constexpr auto perms = permission::admin | permission::post_write | permission::org_create;
 	db.create_user("alice", "pw", perms, "Alice");
 	auto users = db.list_users();
 	REQUIRE(users.size() == 1);
@@ -69,7 +69,7 @@ TEST_CASE("user_db - authenticate unknown user")
 TEST_CASE("user_db - authenticate populates session_data")
 {
 	user_db        db{":memory:"};
-	constexpr auto perms = permission::admin | permission::gantt_write;
+	constexpr auto perms = permission::admin | permission::org_create;
 	db.create_user("alice", "pw", perms, "Alice Smith");
 	session_data out;
 	REQUIRE(db.authenticate("alice", "pw", out));
@@ -98,7 +98,7 @@ TEST_CASE("user_db - delete unknown user is a no-op")
 TEST_CASE("user_db - update_user changes display_name and permissions")
 {
 	user_db        db{":memory:"};
-	constexpr auto perms = permission::admin | permission::post_write | permission::gantt_write;
+	constexpr auto perms = permission::admin | permission::post_write | permission::org_create;
 	db.create_user("alice", "pw", permission::none, "Old Name");
 	db.update_user("alice", "New Name", perms);
 	auto users = db.list_users();
