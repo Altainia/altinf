@@ -1,0 +1,163 @@
+// ── Org admin page ────────────────────────────────────────────────────────────
+
+.org-admin-page {
+  h1 { font-size: 2rem; margin-bottom: 1.5rem; }
+  h2 { font-size: 1.2rem; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+}
+
+.org-create-form { max-width: 560px; }
+
+.org-list {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.4rem;
+  margin-top:     0.5rem;
+}
+
+.org-list-row {
+  display:     flex;
+  align-items: center;
+}
+
+.org-list-link {
+  color:     var(--color-accent);
+  font-size: 0.95rem;
+  &:hover { text-decoration: underline; }
+}
+
+.org-empty-note {
+  color:     var(--color-muted);
+  font-size: 0.85rem;
+}
+
+// ── Org landing page ──────────────────────────────────────────────────────────
+
+.org-landing-page {
+  h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+  h2 {
+    font-size:      0.78rem;
+    font-weight:    700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color:          var(--color-muted);
+    border-bottom:  1px solid var(--color-border);
+    padding-bottom: 0.3rem;
+    margin-top:     1.75rem;
+    margin-bottom:  0.75rem;
+  }
+}
+
+.org-lead-actions {
+  display:   flex;
+  gap:       0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.org-team-row {
+  display:     flex;
+  align-items: center;
+  gap:         0.75rem;
+  padding:     0.4rem 0;
+  border-bottom: 1px solid var(--color-border);
+
+  &:last-child { border-bottom: none; }
+
+  &--other {
+    opacity: 0.6;
+    cursor:  default;
+  }
+}
+
+.org-team-name { font-size: 0.9rem; }
+
+.org-team-link {
+  color:     var(--color-accent);
+  font-size: 0.9rem;
+  &:hover { text-decoration: underline; }
+}
+
+// ── Org board page ────────────────────────────────────────────────────────────
+
+.org-board-page {
+  h1 { font-size: 2rem; margin-bottom: 1.25rem; }
+}
+
+.org-board-section {
+  margin-bottom: 2.5rem;
+}
+
+.org-board-team-hdr {
+  font-size:     1.1rem;
+  font-weight:   600;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.4rem;
+  border-bottom:  1px solid var(--color-border);
+  color:          var(--color-text);
+}
+
+// ── Notifications page ────────────────────────────────────────────────────────
+
+.notifications-page {
+  h1 { font-size: 2rem; margin-bottom: 1.25rem; }
+}
+
+.notif-list {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.5rem;
+  max-width:      680px;
+}
+
+.notif-empty {
+  color:     var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.notif-row {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.35rem;
+  padding:        0.75rem 1rem;
+  border:         1px solid var(--color-border);
+  border-radius:  var(--radius);
+  background:     var(--color-surface);
+
+  &--unread {
+    border-left: 3px solid var(--color-accent);
+  }
+
+  &--read {
+    opacity: 0.65;
+  }
+}
+
+.notif-body {
+  display:     flex;
+  align-items: baseline;
+  gap:         1rem;
+  flex-wrap:   wrap;
+}
+
+.notif-msg {
+  flex:      1;
+  font-size: 0.9rem;
+}
+
+.notif-time {
+  font-size:  0.75rem;
+  color:      var(--color-muted);
+  white-space: nowrap;
+}
+
+.notif-link {
+  font-size: 0.82rem;
+  color:     var(--color-accent);
+  &:hover { text-decoration: underline; }
+}
+
+.notif-actions {
+  display: flex;
+  gap:     0.5rem;
+  flex-wrap: wrap;
+}

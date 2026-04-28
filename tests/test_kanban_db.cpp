@@ -23,21 +23,43 @@ static kanban_task_entry make_task(long long          team_id,
 
 // ---- teams ----
 
-TEST_CASE("kanban_db - default team created on construction")
+TEST_CASE("kanban_db - create team with org_id")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("Engineering", 1);
+	CHECK(tid > 0);
+	const auto t = db.find_team(tid);
+	REQUIRE(t.has_value());
+	CHECK(t->name == "Engineering");
+	CHECK(t->org_id == 1);
+}
+
+TEST_CASE("kanban_db - teams_for_org")
 {
 	kanban_db db{":memory:"};
-	auto      teams = db.all_teams();
-	REQUIRE(teams.size() == 1);
-	CHECK(teams[0].name == "Team");
-	CHECK(teams[0].id > 0);
+	db.create_team("Alpha", 10);
+	db.create_team("Beta", 10);
+	db.create_team("Gamma", 20);
+	const auto org10 = db.teams_for_org(10);
+	REQUIRE(org10.size() == 2);
+	const auto org20 = db.teams_for_org(20);
+	REQUIRE(org20.size() == 1);
 }
 
 TEST_CASE("kanban_db - rename team")
 {
-	kanban_db  db{":memory:"};
-	const auto t = db.all_teams()[0];
-	db.rename_team(t.id, "Engineering");
-	CHECK(db.find_team(t.id)->name == "Engineering");
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("Old", 1);
+	db.rename_team(tid, "New");
+	CHECK(db.find_team(tid)->name == "New");
+}
+
+TEST_CASE("kanban_db - set_team_org")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.set_team_org(tid, 99);
+	CHECK(db.find_team(tid)->org_id == 99);
 }
 
 TEST_CASE("kanban_db - find_team missing returns nullopt")
@@ -46,22 +68,33 @@ TEST_CASE("kanban_db - find_team missing returns nullopt")
 	CHECK(!db.find_team(9999).has_value());
 }
 
+TEST_CASE("kanban_db - delete_team removes members and tasks")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	db.add_task(make_task(tid, "Chore"));
+	db.delete_team(tid);
+	CHECK(!db.find_team(tid).has_value());
+	CHECK(db.members_for_team(tid).empty());
+	CHECK(db.tasks_for_team(tid).empty());
+}
+
 // ---- members ----
 
 TEST_CASE("kanban_db - add and list members")
 {
 	kanban_db       db{":memory:"};
-	const long long tid = db.all_teams()[0].id;
+	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	db.add_member(tid, "bob");
-	auto members = db.members_for_team(tid);
-	REQUIRE(members.size() == 2);
+	CHECK(db.members_for_team(tid).size() == 2);
 }
 
 TEST_CASE("kanban_db - add_member is idempotent")
 {
 	kanban_db       db{":memory:"};
-	const long long tid = db.all_teams()[0].id;
+	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	db.add_member(tid, "alice");
 	CHECK(db.members_for_team(tid).size() == 1);
@@ -70,22 +103,53 @@ TEST_CASE("kanban_db - add_member is idempotent")
 TEST_CASE("kanban_db - remove member")
 {
 	kanban_db       db{":memory:"};
-	const long long tid = db.all_teams()[0].id;
+	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	db.add_member(tid, "bob");
 	db.remove_member(tid, "alice");
-	auto members = db.members_for_team(tid);
-	REQUIRE(members.size() == 1);
-	CHECK(members[0] == "bob");
+	const auto m = db.members_for_team(tid);
+	REQUIRE(m.size() == 1);
+	CHECK(m[0] == "bob");
 }
 
 TEST_CASE("kanban_db - is_member")
 {
 	kanban_db       db{":memory:"};
-	const long long tid = db.all_teams()[0].id;
+	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	CHECK(db.is_member(tid, "alice"));
 	CHECK(!db.is_member(tid, "stranger"));
+}
+
+TEST_CASE("kanban_db - team lead role")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	CHECK(!db.is_team_lead(tid, "alice"));
+	db.set_team_lead(tid, "alice", true);
+	CHECK(db.is_team_lead(tid, "alice"));
+	db.set_team_lead(tid, "alice", false);
+	CHECK(!db.is_team_lead(tid, "alice"));
+}
+
+TEST_CASE("kanban_db - team_member_entries includes is_lead flag")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	db.add_member(tid, "bob");
+	db.set_team_lead(tid, "alice", true);
+	const auto entries = db.team_member_entries(tid);
+	REQUIRE(entries.size() == 2);
+	const auto alice_it = std::find_if(
+	  entries.begin(), entries.end(), [](const team_member_entry& e) { return e.username == "alice"; });
+	REQUIRE(alice_it != entries.end());
+	CHECK(alice_it->is_lead);
+	const auto bob_it = std::find_if(
+	  entries.begin(), entries.end(), [](const team_member_entry& e) { return e.username == "bob"; });
+	REQUIRE(bob_it != entries.end());
+	CHECK(!bob_it->is_lead);
 }
 
 // ---- tasks ----
@@ -93,21 +157,21 @@ TEST_CASE("kanban_db - is_member")
 TEST_CASE("kanban_db - add task and retrieve for team")
 {
 	kanban_db       db{":memory:"};
-	const long long tid = db.all_teams()[0].id;
+	const long long tid = db.create_team("T", 1);
 	db.add_task(make_task(tid, "Alpha", "todo", 1));
 	db.add_task(make_task(tid, "Beta", "todo", 0));
-	auto tasks = db.tasks_for_team(tid);
+	const auto tasks = db.tasks_for_team(tid);
 	REQUIRE(tasks.size() == 2);
-	CHECK(tasks[0].title == "Beta"); // sort_order 0 first
+	CHECK(tasks[0].title == "Beta");
 	CHECK(tasks[1].title == "Alpha");
 }
 
 TEST_CASE("kanban_db - find_task")
 {
 	kanban_db       db{":memory:"};
-	const long long tid = db.all_teams()[0].id;
-	long long       id  = db.add_task(make_task(tid, "My Task"));
-	auto            opt = db.find_task(id);
+	const long long tid = db.create_team("T", 1);
+	const long long id  = db.add_task(make_task(tid, "My Task"));
+	const auto      opt = db.find_task(id);
 	REQUIRE(opt.has_value());
 	CHECK(opt->title == "My Task");
 }
@@ -121,13 +185,13 @@ TEST_CASE("kanban_db - find_task missing returns nullopt")
 TEST_CASE("kanban_db - update task")
 {
 	kanban_db       db{":memory:"};
-	const long long tid  = db.all_teams()[0].id;
-	long long       id   = db.add_task(make_task(tid, "Original"));
+	const long long tid  = db.create_team("T", 1);
+	const long long id   = db.add_task(make_task(tid, "Original"));
 	auto            task = *db.find_task(id);
 	task.title           = "Updated";
 	task.color           = "#ff0000";
 	db.update_task(task);
-	auto updated = db.find_task(id);
+	const auto updated = db.find_task(id);
 	CHECK(updated->title == "Updated");
 	CHECK(updated->color == "#ff0000");
 }
@@ -135,10 +199,10 @@ TEST_CASE("kanban_db - update task")
 TEST_CASE("kanban_db - update_task_status")
 {
 	kanban_db       db{":memory:"};
-	const long long tid = db.all_teams()[0].id;
-	long long       id  = db.add_task(make_task(tid, "T", "todo"));
+	const long long tid = db.create_team("T", 1);
+	const long long id  = db.add_task(make_task(tid, "T", "todo"));
 	db.update_task_status(id, "done", 5);
-	auto opt = db.find_task(id);
+	const auto opt = db.find_task(id);
 	REQUIRE(opt.has_value());
 	CHECK(opt->status == "done");
 	CHECK(opt->sort_order == 5);
@@ -147,11 +211,11 @@ TEST_CASE("kanban_db - update_task_status")
 TEST_CASE("kanban_db - delete task")
 {
 	kanban_db       db{":memory:"};
-	const long long tid = db.all_teams()[0].id;
-	long long       id  = db.add_task(make_task(tid, "To Delete"));
+	const long long tid = db.create_team("T", 1);
+	const long long id  = db.add_task(make_task(tid, "To Delete"));
 	db.add_task(make_task(tid, "To Keep"));
 	db.delete_task(id);
-	auto tasks = db.tasks_for_team(tid);
+	const auto tasks = db.tasks_for_team(tid);
 	REQUIRE(tasks.size() == 1);
 	CHECK(tasks[0].title == "To Keep");
 }
@@ -159,8 +223,38 @@ TEST_CASE("kanban_db - delete task")
 TEST_CASE("kanban_db - tasks_for_team empty when no tasks")
 {
 	kanban_db       db{":memory:"};
-	const long long tid = db.all_teams()[0].id;
+	const long long tid = db.create_team("T", 1);
 	CHECK(db.tasks_for_team(tid).empty());
+}
+
+TEST_CASE("kanban_db - self_assign succeeds on unassigned task")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	const long long id = db.add_task(make_task(tid, "Work"));
+	CHECK(db.self_assign(id, "alice"));
+	CHECK(db.find_task(id)->assigned_to == "alice");
+}
+
+TEST_CASE("kanban_db - self_assign fails when already assigned")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	db.add_member(tid, "bob");
+	auto t             = make_task(tid, "Work");
+	t.assigned_to      = "alice";
+	const long long id = db.add_task(t);
+	CHECK(!db.self_assign(id, "bob"));
+}
+
+TEST_CASE("kanban_db - self_assign fails for non-member")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	const long long id  = db.add_task(make_task(tid, "Work"));
+	CHECK(!db.self_assign(id, "stranger"));
 }
 
 // ---- permissions ----
@@ -168,26 +262,57 @@ TEST_CASE("kanban_db - tasks_for_team empty when no tasks")
 TEST_CASE("kanban_db - can_view_board: admin bypasses membership")
 {
 	kanban_db       db{":memory:"};
-	const long long tid = db.all_teams()[0].id;
+	const long long tid = db.create_team("T", 1);
 	CHECK(db.can_view_board(tid, "anyone", permission::admin));
+}
+
+TEST_CASE("kanban_db - can_view_board: org_lead bypasses membership")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	CHECK(db.can_view_board(tid, "lead", permission::none, /*is_org_lead=*/true));
 }
 
 TEST_CASE("kanban_db - can_view_board: member can view, non-member cannot")
 {
 	kanban_db       db{":memory:"};
-	const long long tid = db.all_teams()[0].id;
+	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	CHECK(db.can_view_board(tid, "alice", permission::none));
 	CHECK(!db.can_view_board(tid, "stranger", permission::none));
 }
 
-TEST_CASE("kanban_db - can_edit_board: requires gantt_write + membership")
+TEST_CASE("kanban_db - can_edit_board: org_lead has edit rights")
 {
 	kanban_db       db{":memory:"};
-	const long long tid = db.all_teams()[0].id;
+	const long long tid = db.create_team("T", 1);
+	CHECK(db.can_edit_board(tid, "lead", permission::none,
+	                        /*is_org_lead=*/true,
+	                        /*is_team_lead=*/false));
+}
+
+TEST_CASE("kanban_db - can_edit_board: team_lead has edit rights")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
-	CHECK(db.can_edit_board(tid, "alice", permission::gantt_write));
+	db.set_team_lead(tid, "alice", true);
+	CHECK(db.can_edit_board(tid, "alice", permission::none,
+	                        /*is_org_lead=*/false,
+	                        /*is_team_lead=*/true));
+}
+
+TEST_CASE("kanban_db - can_edit_board: plain member cannot edit")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
 	CHECK(!db.can_edit_board(tid, "alice", permission::none));
-	CHECK(!db.can_edit_board(tid, "bob", permission::gantt_write));
+}
+
+TEST_CASE("kanban_db - can_edit_board: admin always can edit")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
 	CHECK(db.can_edit_board(tid, "anyone", permission::admin));
 }

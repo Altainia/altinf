@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <cstdio>
 
+#include "org/org.hpp"
+
 const std::vector<std::string> kanban_task_editor_page::k_status_vals = {
   "todo",
   "in_progress",
@@ -21,22 +23,34 @@ const std::vector<std::string> kanban_task_editor_page::k_status_labels = {
   "Review",
   "Done"};
 
-kanban_task_editor_page::kanban_task_editor_page(kanban_db&                      db,
-                                                 long long                       team_id,
-                                                 const session_data&             session,
-                                                 const kanban_task_entry*        existing,
-                                                 const std::vector<std::string>& members,
-                                                 std::function<void()>           on_save):
+kanban_task_editor_page::kanban_task_editor_page(
+  kanban_db&                      db,
+  org_db&                         odb,
+  long long                       team_id,
+  const session_data&             session,
+  bool                            is_lead,
+  const kanban_task_entry*        existing,
+  const std::vector<std::string>& members,
+  std::function<void()>           on_save):
   m_db{db},
+  m_odb{odb},
   m_team_id{team_id},
+  m_username{session.username},
+  m_is_lead{is_lead},
   m_existing{existing},
   m_on_save{std::move(on_save)}
 {
 	setStyleClass("page kb-editor-page");
 
-	const bool is_new = (existing == nullptr);
+	const bool        is_new           = (existing == nullptr);
+	const std::string current_assignee = existing ? existing->assigned_to : "";
+	const bool        locked_out =
+	  !is_lead && !current_assignee.empty() &&
+	  current_assignee != session.username;
+
 	addNew<Wt::WText>(
-	  is_new ? "<h1>New Task</h1>" : "<h1>Edit Task</h1>", Wt::TextFormat::UnsafeXHTML);
+	  is_new ? "<h1>New Task</h1>" : "<h1>Edit Task</h1>",
+	  Wt::TextFormat::UnsafeXHTML);
 
 	auto* form = addNew<Wt::WContainerWidget>();
 	form->setStyleClass("kb-editor-form");
@@ -48,13 +62,18 @@ kanban_task_editor_page::kanban_task_editor_page(kanban_db&                     
 	m_title->setPlaceholderText("Task title");
 	m_title->setStyleClass("editor-field");
 	if(existing)
+	{
 		m_title->setText(existing->title);
+	}
+	m_title->setReadOnly(!is_lead && existing != nullptr);
 
 	m_description = form->addNew<Wt::WTextArea>();
 	m_description->setPlaceholderText("Description (optional)");
 	m_description->setStyleClass("editor-field kb-desc-field");
 	if(existing)
+	{
 		m_description->setText(existing->description);
+	}
 
 	// ── Assignment & status ───────────────────────────────────────────────────
 	form->addNew<Wt::WText>("<h2>Assignment</h2>", Wt::TextFormat::UnsafeXHTML);
@@ -69,14 +88,18 @@ kanban_task_editor_page::kanban_task_editor_page(kanban_db&                     
 	m_status = status_wrap->addNew<Wt::WComboBox>();
 	m_status->setStyleClass("editor-field");
 	for(const auto& lbl: k_status_labels)
+	{
 		m_status->addItem(lbl);
+	}
 	if(existing)
 	{
 		const auto it =
 		  std::find(k_status_vals.begin(), k_status_vals.end(), existing->status);
 		if(it != k_status_vals.end())
+		{
 			m_status->setCurrentIndex(
 			  static_cast<int>(std::distance(k_status_vals.begin(), it)));
+		}
 	}
 
 	auto* assignee_wrap = row->addNew<Wt::WContainerWidget>();
@@ -85,15 +108,44 @@ kanban_task_editor_page::kanban_task_editor_page(kanban_db&                     
 	  ->setStyleClass("kb-field-label");
 	m_assigned_to = assignee_wrap->addNew<Wt::WComboBox>();
 	m_assigned_to->setStyleClass("editor-field");
+
+	// Build the assignee dropdown based on permission level.
+	m_assignee_values.push_back(""); // index 0 = unassigned
 	m_assigned_to->addItem("(unassigned)");
-	for(const auto& m: members)
-		m_assigned_to->addItem(m);
+
+	if(is_lead)
+	{
+		// Full member list.
+		for(const auto& m: members)
+		{
+			m_assignee_values.push_back(m);
+			m_assigned_to->addItem(m);
+		}
+	}
+	else
+	{
+		// Only the current user can appear as an option.
+		m_assignee_values.push_back(session.username);
+		m_assigned_to->addItem(session.username);
+	}
+
+	// Set current selection.
 	if(existing && !existing->assigned_to.empty())
 	{
-		const auto it = std::find(members.begin(), members.end(), existing->assigned_to);
-		if(it != members.end())
+		const auto it = std::find(
+		  m_assignee_values.begin(), m_assignee_values.end(), existing->assigned_to);
+		if(it != m_assignee_values.end())
+		{
 			m_assigned_to->setCurrentIndex(
-			  static_cast<int>(std::distance(members.begin(), it)) + 1);
+			  static_cast<int>(std::distance(m_assignee_values.begin(), it)));
+		}
+	}
+
+	// Disable the dropdown if the task is assigned to someone else and user
+	// is not a lead — they cannot touch the assignment.
+	if(locked_out)
+	{
+		m_assigned_to->setDisabled(true);
 	}
 
 	// ── Dates & color ─────────────────────────────────────────────────────────
@@ -113,7 +165,9 @@ kanban_task_editor_page::kanban_task_editor_page(kanban_db&                     
 	m_start_date->setStyleClass("editor-field");
 	m_start_date->changed().connect([] {});
 	if(existing && existing->start_date.isValid())
+	{
 		m_start_date->setDate(existing->start_date);
+	}
 	auto* clear_start = start_row->addNew<Wt::WPushButton>("Clear");
 	clear_start->setStyleClass("kb-date-clear");
 	clear_start->clicked().connect([this] { m_start_date->setText(Wt::WString{}); });
@@ -129,7 +183,9 @@ kanban_task_editor_page::kanban_task_editor_page(kanban_db&                     
 	m_end_date->setStyleClass("editor-field");
 	m_end_date->changed().connect([] {});
 	if(existing && existing->end_date.isValid())
+	{
 		m_end_date->setDate(existing->end_date);
+	}
 	auto* clear_end = end_row->addNew<Wt::WPushButton>("Clear");
 	clear_end->setStyleClass("kb-date-clear");
 	clear_end->clicked().connect([this] { m_end_date->setText(Wt::WString{}); });
@@ -141,10 +197,13 @@ kanban_task_editor_page::kanban_task_editor_page(kanban_db&                     
 	m_color = color_wrap->addNew<Wt::WColorPicker>();
 	m_color->setStyleClass("kb-color-picker");
 	{
-		const std::string hex = (existing && !existing->color.empty()) ? existing->color : "#7aa2d4";
-		int               cr{0x7a}, cg{0xa2}, cb{0xd4};
+		const std::string hex =
+		  (existing && !existing->color.empty()) ? existing->color : "#7aa2d4";
+		int cr{0x7a}, cg{0xa2}, cb{0xd4};
 		if(hex.size() == 7 && hex[0] == '#')
+		{
 			std::sscanf(hex.c_str() + 1, "%02x%02x%02x", &cr, &cg, &cb);
+		}
 		m_color->setColor(Wt::WColor(cr, cg, cb));
 	}
 
@@ -155,24 +214,27 @@ kanban_task_editor_page::kanban_task_editor_page(kanban_db&                     
 	auto* btn_row = form->addNew<Wt::WContainerWidget>();
 	btn_row->setStyleClass("editor-btn-row");
 
-	auto* save_btn = btn_row->addNew<Wt::WPushButton>(is_new ? "Create Task" : "Save Changes");
+	auto* save_btn =
+	  btn_row->addNew<Wt::WPushButton>(is_new ? "Create Task" : "Save Changes");
 	save_btn->setStyleClass("editor-btn");
-	save_btn->clicked().connect([this]() { save(); });
+	save_btn->clicked().connect([this] { save(); });
 
-	if(!is_new)
+	// Delete only for leads editing existing tasks.
+	if(!is_new && is_lead)
 	{
 		auto* del_btn = btn_row->addNew<Wt::WPushButton>("Delete");
 		del_btn->setStyleClass("editor-btn editor-btn-danger");
 		del_btn->clicked().connect(
-		  [this]() {
+		  [this] {
 			  m_db.delete_task(m_existing->id);
 			  m_on_save();
 		  });
 	}
 
-	auto* cancel = btn_row->addNew<Wt::WAnchor>(
-	  Wt::WLink{Wt::LinkType::InternalPath, "/board"}, "Cancel");
-	cancel->setStyleClass("editor-btn editor-btn-cancel");
+	const std::string back_url = "/board/" + std::to_string(team_id);
+	btn_row->addNew<Wt::WAnchor>(
+	         Wt::WLink{Wt::LinkType::InternalPath, back_url}, "Cancel")
+	  ->setStyleClass("editor-btn editor-btn-cancel");
 }
 
 void kanban_task_editor_page::save()
@@ -184,13 +246,29 @@ void kanban_task_editor_page::save()
 		return;
 	}
 
-	const int         si = m_status->currentIndex();
-	const std::string status =
-	  (si >= 0 && si < static_cast<int>(k_status_vals.size())) ? k_status_vals[si] : "todo";
+	const int         si     = m_status->currentIndex();
+	const std::string status = (si >= 0 && si < static_cast<int>(k_status_vals.size())) ? k_status_vals[si] : "todo";
 
 	const int         ai = m_assigned_to->currentIndex();
-	const std::string assignee =
-	  (ai > 0 && ai <= static_cast<int>(m_assigned_to->count() - 1)) ? m_assigned_to->itemText(ai).toUTF8() : "";
+	const std::string new_assignee =
+	  (ai >= 0 && ai < static_cast<int>(m_assignee_values.size())) ? m_assignee_values[ai] : "";
+
+	// Assignment lock — enforced server-side even if the UI disables the widget.
+	const std::string old_assignee = m_existing ? m_existing->assigned_to : "";
+	if(!m_is_lead && new_assignee != old_assignee)
+	{
+		// A non-lead may only unassign themselves; they cannot assign to others.
+		if(new_assignee != "" && new_assignee != m_username)
+		{
+			m_status_msg->setText("You cannot assign this task to another user.");
+			return;
+		}
+		if(!old_assignee.empty() && old_assignee != m_username)
+		{
+			m_status_msg->setText("This task is already assigned to someone else.");
+			return;
+		}
+	}
 
 	const auto wc = m_color->color();
 	char       cbuf[8];
@@ -201,12 +279,16 @@ void kanban_task_editor_page::save()
 	t.status      = status;
 	t.title       = title;
 	t.description = m_description->text().toUTF8();
-	t.assigned_to = assignee;
+	t.assigned_to = new_assignee;
 	t.color       = cbuf;
 	if(const auto d = m_start_date->date(); d.isValid())
+	{
 		t.start_date = d;
+	}
 	if(const auto d = m_end_date->date(); d.isValid())
+	{
 		t.end_date = d;
+	}
 
 	if(m_existing)
 	{
@@ -216,7 +298,18 @@ void kanban_task_editor_page::save()
 	}
 	else
 	{
-		m_db.add_task(t);
+		t.id = m_db.add_task(t);
+	}
+
+	// Fire a task_assigned notification if the assignee changed to a new person.
+	if(!new_assignee.empty() && new_assignee != old_assignee &&
+	   new_assignee != m_username)
+	{
+		const auto team = m_db.find_team(m_team_id);
+		m_odb.push_notification(
+		  new_assignee,
+		  "task_assigned",
+		  make_task_assigned_payload(t.id, title, m_team_id, team ? team->name : ""));
 	}
 
 	m_on_save();

@@ -40,6 +40,13 @@ target_include_directories(test_kanban_db PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_kanban_db PRIVATE Catch2::Catch2WithMain Wt::Wt wtdbo wtdbosqlite3)
 catch_discover_tests(test_kanban_db)
 
+# test_org_db
+add_executable(test_org_db test_org_db.cpp
+  ${CMAKE_SOURCE_DIR}/src/org/org_db.cpp)
+target_include_directories(test_org_db PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_org_db PRIVATE Catch2::Catch2WithMain Wt::Wt wtdbo wtdbosqlite3)
+catch_discover_tests(test_org_db)
+
 # test_gantt (JavaScript — requires Node.js)
 find_program(NODE_EXECUTABLE node)
 if(NODE_EXECUTABLE)

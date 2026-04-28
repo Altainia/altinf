@@ -346,6 +346,29 @@
   &:hover { background: #922; }
 }
 
+// ── Org manage — team blocks ──────────────────────────────────────────────────
+
+.kb-teams-container {
+  display:        flex;
+  flex-direction: column;
+  gap:            1.5rem;
+  margin-top:     0.5rem;
+}
+
+.kb-team-block {
+  border:        1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding:       1rem 1.25rem;
+  background:    var(--color-surface);
+}
+
+.kb-lead-check {
+  accent-color: var(--color-accent);
+  width:        15px;
+  height:       15px;
+  cursor:       pointer;
+}
+
 // ── Team management page ──────────────────────────────────────────────────────
 
 .kb-team-page {

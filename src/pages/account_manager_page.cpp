@@ -28,9 +28,9 @@ static std::string permissions_label(permission::flags perms)
 	{
 		parts.emplace_back("Write Posts");
 	}
-	if(perms.has_any(permission::gantt_write))
+	if(perms.has_any(permission::org_create))
 	{
-		parts.emplace_back("Write Gantt");
+		parts.emplace_back("Create Orgs");
 	}
 	if(parts.empty())
 	{

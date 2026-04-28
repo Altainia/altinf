@@ -179,6 +179,98 @@ a:hover {
   text-decoration: none;
 }
 
+.nav-org-area {
+  position: relative;
+}
+
+.nav-org-area--multi:hover .nav-org-dropdown {
+  display: flex;
+}
+
+.nav-org-link {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+.nav-org-link:hover {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.nav-org-dropdown {
+  display: none;
+  flex-direction: column;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 180px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.35rem 0;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.nav-org-item {
+  display: block;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.88rem;
+  color: var(--color-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+}
+.nav-org-item:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.nav-org-item--active {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.nav-bell-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-muted);
+  text-decoration: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.nav-bell-link:hover {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.nav-bell {
+  display: inline-block;
+}
+
+.nav-bell-badge {
+  display: none;
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 8px;
+}
+.nav-bell-badge--visible {
+  display: block;
+}
+
 .site-footer {
   padding: 0.75rem 1.5rem;
   text-align: center;
@@ -977,6 +1069,27 @@ a:hover {
   background: #922;
 }
 
+.kb-teams-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.kb-team-block {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  background: var(--color-surface);
+}
+
+.kb-lead-check {
+  accent-color: var(--color-accent);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
 .kb-team-page {
   padding-top: 2rem;
 }
@@ -1166,4 +1279,176 @@ a:hover {
   font-size: 0.85rem;
   margin-top: 0.5rem;
   width: 100%;
+}
+
+.org-admin-page h1 {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+}
+.org-admin-page h2 {
+  font-size: 1.2rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.org-create-form {
+  max-width: 560px;
+}
+
+.org-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.org-list-row {
+  display: flex;
+  align-items: center;
+}
+
+.org-list-link {
+  color: var(--color-accent);
+  font-size: 0.95rem;
+}
+.org-list-link:hover {
+  text-decoration: underline;
+}
+
+.org-empty-note {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+.org-landing-page h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+.org-landing-page h2 {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-muted);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.3rem;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.org-lead-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.org-team-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.org-team-row:last-child {
+  border-bottom: none;
+}
+.org-team-row--other {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.org-team-name {
+  font-size: 0.9rem;
+}
+
+.org-team-link {
+  color: var(--color-accent);
+  font-size: 0.9rem;
+}
+.org-team-link:hover {
+  text-decoration: underline;
+}
+
+.org-board-page h1 {
+  font-size: 2rem;
+  margin-bottom: 1.25rem;
+}
+
+.org-board-section {
+  margin-bottom: 2.5rem;
+}
+
+.org-board-team-hdr {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.notifications-page h1 {
+  font-size: 2rem;
+  margin-bottom: 1.25rem;
+}
+
+.notif-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 680px;
+}
+
+.notif-empty {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.notif-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+.notif-row--unread {
+  border-left: 3px solid var(--color-accent);
+}
+.notif-row--read {
+  opacity: 0.65;
+}
+
+.notif-body {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.notif-msg {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.notif-time {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.notif-link {
+  font-size: 0.82rem;
+  color: var(--color-accent);
+}
+.notif-link:hover {
+  text-decoration: underline;
+}
+
+.notif-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }

@@ -68,8 +68,8 @@ account_editor_page::account_editor_page(user_db*              db,
 	m_perm_post_write = perms_section->addNew<Wt::WCheckBox>("Write Posts");
 	m_perm_post_write->setChecked(cur_perms.has_any(permission::post_write));
 
-	m_perm_gantt_write = perms_section->addNew<Wt::WCheckBox>("Write Gantt");
-	m_perm_gantt_write->setChecked(cur_perms.has_any(permission::gantt_write));
+	m_perm_org_create = perms_section->addNew<Wt::WCheckBox>("Create Orgs");
+	m_perm_org_create->setChecked(cur_perms.has_any(permission::org_create));
 
 	m_status = form->addNew<Wt::WText>("", Wt::TextFormat::Plain);
 	m_status->setStyleClass("editor-status");
@@ -142,9 +142,9 @@ void account_editor_page::save()
 	{
 		perms |= permission::post_write;
 	}
-	if(m_perm_gantt_write->isChecked())
+	if(m_perm_org_create->isChecked())
 	{
-		perms |= permission::gantt_write;
+		perms |= permission::org_create;
 	}
 
 	if(m_existing)

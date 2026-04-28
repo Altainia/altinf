@@ -1,127 +1,300 @@
 #include "kanban_team_page.hpp"
 
 #include <Wt/WAnchor.h>
+#include <Wt/WCheckBox.h>
 #include <Wt/WLink.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
-#include <algorithm>
-
-#include "auth/permission.hpp"
-
-kanban_team_page::kanban_team_page(kanban_db& db, const session_data& session):
-  m_db{db}
+kanban_team_page::kanban_team_page(org_db&             odb,
+                                   kanban_db&          kdb,
+                                   long long           org_id,
+                                   const session_data& session):
+  m_odb{odb},
+  m_kdb{kdb},
+  m_org_id{org_id},
+  m_session{session}
 {
 	setStyleClass("page kb-team-page");
 
-	if(!session.permissions.has_any(permission::admin))
+	const auto org = odb.find_org(org_id);
+	if(!org)
 	{
-		addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
+		addNew<Wt::WText>("Organisation not found.", Wt::TextFormat::Plain);
 		return;
 	}
 
-	const auto teams = db.all_teams();
-	if(teams.empty())
-	{
-		addNew<Wt::WText>("No team configured.", Wt::TextFormat::Plain);
-		return;
-	}
+	addNew<Wt::WText>("<h1>Manage: " + org->name + "</h1>",
+	                  Wt::TextFormat::UnsafeXHTML);
 
-	m_team_id = teams[0].id;
-
-	addNew<Wt::WText>("<h1>Manage Team</h1>", Wt::TextFormat::UnsafeXHTML);
-
-	auto* form = addNew<Wt::WContainerWidget>();
-	form->setStyleClass("kb-team-form");
-
-	// ── Team name ─────────────────────────────────────────────────────────────
-	form->addNew<Wt::WText>("<h2>Team Name</h2>", Wt::TextFormat::UnsafeXHTML);
-
-	auto* name_row = form->addNew<Wt::WContainerWidget>();
-	name_row->setStyleClass("kb-team-name-row");
-
-	auto* name_input = name_row->addNew<Wt::WLineEdit>();
-	name_input->setStyleClass("editor-field");
-	name_input->setText(teams[0].name);
-
-	auto* rename_btn = name_row->addNew<Wt::WPushButton>("Save Name");
-	rename_btn->setStyleClass("editor-btn");
-	rename_btn->clicked().connect(
-	  [this, name_input]() {
-		  const std::string n = name_input->text().toUTF8();
-		  if(!n.empty())
-			  m_db.rename_team(m_team_id, n);
-	  });
+	addNew<Wt::WAnchor>(
+	  Wt::WLink{Wt::LinkType::InternalPath, "/org/" + std::to_string(org_id)},
+	  "\xe2\x86\x90 Back to organisation")
+	  ->setStyleClass("kb-back-link");
 
 	// ── Members ───────────────────────────────────────────────────────────────
-	form->addNew<Wt::WText>("<h2>Members</h2>", Wt::TextFormat::UnsafeXHTML);
-	form->addNew<Wt::WText>(
-	      "Members with the Board permission can create and edit tasks.",
-	      Wt::TextFormat::Plain)
-	  ->setStyleClass("kb-team-note");
+	addNew<Wt::WText>("<h2>Members</h2>", Wt::TextFormat::UnsafeXHTML);
+	m_members_section = addNew<Wt::WContainerWidget>();
+	m_members_section->setStyleClass("kb-members-container");
+	refresh_members();
 
-	m_members_container = form->addNew<Wt::WContainerWidget>();
-	m_members_container->setStyleClass("kb-members-container");
+	// ── Pending invites ───────────────────────────────────────────────────────
+	addNew<Wt::WText>("<h2>Pending invites</h2>", Wt::TextFormat::UnsafeXHTML);
+	m_pending_section = addNew<Wt::WContainerWidget>();
+	m_pending_section->setStyleClass("kb-members-container");
+	refresh_pending();
 
-	for(const auto& u: db.members_for_team(m_team_id))
-		add_member_row(u);
+	// ── Invite form ───────────────────────────────────────────────────────────
+	addNew<Wt::WText>("<h2>Invite user</h2>", Wt::TextFormat::UnsafeXHTML);
 
-	auto* add_row = form->addNew<Wt::WContainerWidget>();
+	auto* invite_row = addNew<Wt::WContainerWidget>();
+	invite_row->setStyleClass("kb-member-add-row");
+
+	m_invite_input = invite_row->addNew<Wt::WLineEdit>();
+	m_invite_input->setPlaceholderText("Username");
+	m_invite_input->setStyleClass("editor-field kb-member-input");
+
+	m_invite_lead = invite_row->addNew<Wt::WCheckBox>("Invite as lead");
+	m_invite_lead->setStyleClass("kb-lead-check");
+
+	auto* invite_btn = invite_row->addNew<Wt::WPushButton>("Send invite");
+	invite_btn->setStyleClass("editor-btn");
+	invite_btn->clicked().connect(
+	  [this] {
+		  const std::string u = m_invite_input->text().toUTF8();
+		  if(u.empty())
+		  {
+			  m_invite_msg->setText("Enter a username.");
+			  return;
+		  }
+		  m_odb.invite_to_org(m_org_id, u, m_invite_lead->isChecked());
+		  m_invite_input->setText("");
+		  m_invite_lead->setChecked(false);
+		  m_invite_msg->setText("Invite sent to " + u + ".");
+		  refresh_pending();
+	  });
+
+	m_invite_msg = addNew<Wt::WText>("", Wt::TextFormat::Plain);
+	m_invite_msg->setStyleClass("editor-status");
+
+	// ── Teams ─────────────────────────────────────────────────────────────────
+	addNew<Wt::WText>("<h2>Teams</h2>", Wt::TextFormat::UnsafeXHTML);
+	m_teams_section = addNew<Wt::WContainerWidget>();
+	m_teams_section->setStyleClass("kb-teams-container");
+	refresh_teams();
+
+	// ── New team form ─────────────────────────────────────────────────────────
+	addNew<Wt::WText>("<h2>Create team</h2>", Wt::TextFormat::UnsafeXHTML);
+
+	auto* new_team_row = addNew<Wt::WContainerWidget>();
+	new_team_row->setStyleClass("kb-member-add-row");
+
+	m_new_team_input = new_team_row->addNew<Wt::WLineEdit>();
+	m_new_team_input->setPlaceholderText("Team name");
+	m_new_team_input->setStyleClass("editor-field");
+
+	auto* new_team_btn = new_team_row->addNew<Wt::WPushButton>("Create");
+	new_team_btn->setStyleClass("editor-btn");
+	new_team_btn->clicked().connect(
+	  [this] {
+		  const std::string name = m_new_team_input->text().toUTF8();
+		  if(name.empty())
+		  {
+			  return;
+		  }
+		  m_kdb.create_team(name, m_org_id);
+		  m_new_team_input->setText("");
+		  refresh_teams();
+	  });
+}
+
+void kanban_team_page::refresh_members()
+{
+	m_members_section->clear();
+	const auto members = m_odb.org_members(m_org_id);
+	if(members.empty())
+	{
+		m_members_section->addNew<Wt::WText>("No active members.",
+		                                     Wt::TextFormat::Plain)
+		  ->setStyleClass("org-empty-note");
+		return;
+	}
+	for(const auto& m: members)
+	{
+		auto* row = m_members_section->addNew<Wt::WContainerWidget>();
+		row->setStyleClass("kb-member-row");
+
+		row->addNew<Wt::WText>(m.username + (m.is_lead ? " (lead)" : ""),
+		                       Wt::TextFormat::Plain)
+		  ->setStyleClass("kb-member-name");
+
+		// Lead toggle — blocked server-side if it would leave 0 leads.
+		const std::string toggle_label = m.is_lead ? "Demote" : "Make lead";
+		auto*             toggle       = row->addNew<Wt::WPushButton>(toggle_label);
+		toggle->setStyleClass("link-action-btn");
+		toggle->clicked().connect(
+		  [this, uid = m.username, currently_lead = m.is_lead] {
+			  if(!m_odb.set_org_lead(m_org_id, uid, !currently_lead))
+			  {
+				  m_invite_msg->setText(
+				    "Cannot demote: organisation must have at least one lead.");
+			  }
+			  else
+			  {
+				  m_invite_msg->setText("");
+			  }
+			  refresh_members();
+		  });
+
+		// Remove — blocked server-side if last lead.
+		auto* del = row->addNew<Wt::WPushButton>("Remove");
+		del->setStyleClass("link-action-btn link-delete-btn");
+		del->clicked().connect(
+		  [this, uid = m.username] {
+			  if(!m_odb.remove_org_member(m_org_id, uid))
+			  {
+				  m_invite_msg->setText(
+				    "Cannot remove: organisation must have at least one lead.");
+			  }
+			  else
+			  {
+				  m_invite_msg->setText("");
+			  }
+			  refresh_members();
+		  });
+	}
+}
+
+void kanban_team_page::refresh_pending()
+{
+	m_pending_section->clear();
+	const auto pending = m_odb.org_pending(m_org_id);
+	if(pending.empty())
+	{
+		m_pending_section->addNew<Wt::WText>("No pending invites.",
+		                                     Wt::TextFormat::Plain)
+		  ->setStyleClass("org-empty-note");
+		return;
+	}
+	for(const auto& p: pending)
+	{
+		auto* row = m_pending_section->addNew<Wt::WContainerWidget>();
+		row->setStyleClass("kb-member-row");
+
+		row->addNew<Wt::WText>(p.username + (p.is_lead ? " (invited as lead)" : ""),
+		                       Wt::TextFormat::Plain)
+		  ->setStyleClass("kb-member-name");
+
+		auto* withdraw = row->addNew<Wt::WPushButton>("Withdraw");
+		withdraw->setStyleClass("link-action-btn link-delete-btn");
+		withdraw->clicked().connect(
+		  [this, uid = p.username] {
+			  m_odb.remove_org_member(m_org_id, uid);
+			  refresh_pending();
+		  });
+	}
+}
+
+void kanban_team_page::refresh_teams()
+{
+	m_teams_section->clear();
+	const auto teams = m_kdb.teams_for_org(m_org_id);
+	if(teams.empty())
+	{
+		m_teams_section->addNew<Wt::WText>("No teams yet.", Wt::TextFormat::Plain)
+		  ->setStyleClass("org-empty-note");
+		return;
+	}
+	for(const auto& t: teams)
+	{
+		build_team_block(m_teams_section, t);
+	}
+}
+
+void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
+                                        const team_entry&     team)
+{
+	auto* block = parent->addNew<Wt::WContainerWidget>();
+	block->setStyleClass("kb-team-block");
+
+	// Team header with rename.
+	auto* hdr = block->addNew<Wt::WContainerWidget>();
+	hdr->setStyleClass("kb-team-name-row");
+
+	auto* name_input = hdr->addNew<Wt::WLineEdit>();
+	name_input->setText(team.name);
+	name_input->setStyleClass("editor-field");
+
+	auto* rename_btn = hdr->addNew<Wt::WPushButton>("Rename");
+	rename_btn->setStyleClass("editor-btn");
+	rename_btn->clicked().connect(
+	  [this, tid = team.id, name_input] {
+		  const std::string n = name_input->text().toUTF8();
+		  if(!n.empty())
+		  {
+			  m_kdb.rename_team(tid, n);
+		  }
+	  });
+
+	auto* del_team = hdr->addNew<Wt::WPushButton>("Delete team");
+	del_team->setStyleClass("link-action-btn link-delete-btn");
+	del_team->clicked().connect(
+	  [this, tid = team.id] {
+		  m_kdb.delete_team(tid);
+		  refresh_teams();
+	  });
+
+	// Members of this team.
+	auto* mem_list = block->addNew<Wt::WContainerWidget>();
+	mem_list->setStyleClass("kb-members-container");
+
+	const auto members = m_kdb.team_member_entries(team.id);
+	for(const auto& m: members)
+	{
+		auto* row = mem_list->addNew<Wt::WContainerWidget>();
+		row->setStyleClass("kb-member-row");
+
+		row->addNew<Wt::WText>(m.username + (m.is_lead ? " (lead)" : ""),
+		                       Wt::TextFormat::Plain)
+		  ->setStyleClass("kb-member-name");
+
+		const std::string lead_label = m.is_lead ? "Remove lead" : "Make lead";
+		auto*             lead_btn   = row->addNew<Wt::WPushButton>(lead_label);
+		lead_btn->setStyleClass("link-action-btn");
+		lead_btn->clicked().connect(
+		  [this, tid = team.id, uid = m.username, is_lead = m.is_lead] {
+			  m_kdb.set_team_lead(tid, uid, !is_lead);
+			  refresh_teams();
+		  });
+
+		auto* rem = row->addNew<Wt::WPushButton>("Remove");
+		rem->setStyleClass("link-action-btn link-delete-btn");
+		rem->clicked().connect(
+		  [this, tid = team.id, uid = m.username] {
+			  m_kdb.remove_member(tid, uid);
+			  refresh_teams();
+		  });
+	}
+
+	// Add-member-to-team form.
+	auto* add_row = block->addNew<Wt::WContainerWidget>();
 	add_row->setStyleClass("kb-member-add-row");
 
-	m_member_input = add_row->addNew<Wt::WLineEdit>();
-	m_member_input->setPlaceholderText("Username");
-	m_member_input->setStyleClass("editor-field kb-member-input");
+	auto* add_input = add_row->addNew<Wt::WLineEdit>();
+	add_input->setPlaceholderText("Username");
+	add_input->setStyleClass("editor-field kb-member-input");
 
-	auto* add_btn = add_row->addNew<Wt::WPushButton>("Add Member");
+	auto* add_btn = add_row->addNew<Wt::WPushButton>("Add to team");
 	add_btn->setStyleClass("editor-btn editor-btn-cancel");
 	add_btn->clicked().connect(
-	  [this]() {
-		  const std::string u = m_member_input->text().toUTF8();
+	  [this, tid = team.id, add_input] {
+		  const std::string u = add_input->text().toUTF8();
 		  if(u.empty())
+		  {
 			  return;
-		  for(const auto& r: m_member_rows)
-			  if(r.username == u)
-				  return;
-		  m_db.add_member(m_team_id, u);
-		  add_member_row(u);
-		  m_member_input->setText("");
+		  }
+		  m_kdb.add_member(tid, u);
+		  add_input->setText("");
+		  refresh_teams();
 	  });
-
-	// ── Footer ────────────────────────────────────────────────────────────────
-	auto* back = form->addNew<Wt::WAnchor>(
-	  Wt::WLink{Wt::LinkType::InternalPath, "/board"}, "← Back to Board");
-	back->setStyleClass("kb-back-link");
-}
-
-void kanban_team_page::add_member_row(const std::string& username)
-{
-	auto* row = m_members_container->addNew<Wt::WContainerWidget>();
-	row->setStyleClass("kb-member-row");
-
-	member_row r;
-	r.container = row;
-	r.username  = username;
-
-	row->addNew<Wt::WText>(username, Wt::TextFormat::Plain)->setStyleClass("kb-member-name");
-
-	auto* del_btn = row->addNew<Wt::WPushButton>("Remove");
-	del_btn->setStyleClass("link-action-btn link-delete-btn");
-	del_btn->clicked().connect(
-	  [this, row, username]() {
-		  m_db.remove_member(m_team_id, username);
-		  remove_member_row(row);
-	  });
-
-	m_member_rows.push_back(std::move(r));
-}
-
-void kanban_team_page::remove_member_row(Wt::WContainerWidget* c)
-{
-	m_member_rows.erase(
-	  std::remove_if(m_member_rows.begin(),
-	                 m_member_rows.end(),
-	                 [c](const member_row& r) { return r.container == c; }),
-	  m_member_rows.end());
-	m_members_container->removeWidget(c);
 }

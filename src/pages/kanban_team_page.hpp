@@ -1,32 +1,39 @@
 #pragma once
 
 #include "auth/session_data.hpp"
-#include "kanban/kanban.hpp"
 #include "kanban/kanban_db.hpp"
+#include "org/org_db.hpp"
 
+#include <Wt/WCheckBox.h>
 #include <Wt/WContainerWidget.h>
 #include <Wt/WLineEdit.h>
 #include <Wt/WText.h>
 
+// Org management page — org leads reach this at /org/{id}/manage.
 class kanban_team_page: public Wt::WContainerWidget
 {
 public:
-	kanban_team_page(kanban_db& db, const session_data& session);
+	kanban_team_page(org_db&             odb,
+	                 kanban_db&          kdb,
+	                 long long           org_id,
+	                 const session_data& session);
 
 private:
-	kanban_db&            m_db;
-	long long             m_team_id{0};
-	Wt::WContainerWidget* m_members_container{nullptr};
-	Wt::WLineEdit*        m_member_input{nullptr};
-	Wt::WText*            m_status_msg{nullptr};
+	org_db&               m_odb;
+	kanban_db&            m_kdb;
+	long long             m_org_id;
+	const session_data&   m_session;
 
-	struct member_row
-	{
-		Wt::WContainerWidget* container{nullptr};
-		std::string           username;
-	};
-	std::vector<member_row> m_member_rows;
+	Wt::WContainerWidget* m_members_section{nullptr};
+	Wt::WContainerWidget* m_pending_section{nullptr};
+	Wt::WLineEdit*        m_invite_input{nullptr};
+	Wt::WCheckBox*        m_invite_lead{nullptr};
+	Wt::WText*            m_invite_msg{nullptr};
+	Wt::WContainerWidget* m_teams_section{nullptr};
+	Wt::WLineEdit*        m_new_team_input{nullptr};
 
-	void add_member_row(const std::string& username);
-	void remove_member_row(Wt::WContainerWidget* c);
+	void refresh_members();
+	void refresh_pending();
+	void refresh_teams();
+	void build_team_block(Wt::WContainerWidget* parent, const team_entry& team);
 };
