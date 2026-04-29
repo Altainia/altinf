@@ -166,7 +166,9 @@ void kanban_team_page::refresh_members()
 			  }
 			  else
 			  {
+				  m_kdb.remove_member_from_org_teams(m_org_id, uid);
 				  m_invite_msg->setText("");
+				  refresh_teams();
 			  }
 			  refresh_members();
 		  });

@@ -199,6 +199,25 @@ void kanban_db::remove_member(long long team_id, const std::string& username)
 	}
 }
 
+void kanban_db::remove_member_from_org_teams(long long org_id, const std::string& username)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           teams =
+	  m_dbo.find<team_record>().where("org_id = ?").bind(org_id).resultList();
+	for(const auto& team: teams)
+	{
+		const auto rows = m_dbo.find<team_member_record>()
+		                    .where("team_id = ? AND username = ?")
+		                    .bind(team.id())
+		                    .bind(username)
+		                    .resultList();
+		if(!rows.empty())
+		{
+			(*rows.begin()).remove();
+		}
+	}
+}
+
 void kanban_db::set_team_lead(long long team_id, const std::string& username, bool is_lead)
 {
 	Wt::Dbo::Transaction t{m_dbo};
