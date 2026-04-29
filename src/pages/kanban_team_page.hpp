@@ -11,6 +11,7 @@
 #include <Wt/WText.h>
 
 // Org management page — org leads reach this at /org/{id}/manage.
+// back_url overrides the default "Back to organisation" link destination.
 class kanban_team_page: public Wt::WContainerWidget
 {
 public:
@@ -18,7 +19,8 @@ public:
 	                 kanban_db&          kdb,
 	                 user_db&            udb,
 	                 long long           org_id,
-	                 const session_data& session);
+	                 const session_data& session,
+	                 const std::string&  back_url = {});
 
 private:
 	org_db&               m_odb;

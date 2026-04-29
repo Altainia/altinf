@@ -18,11 +18,13 @@
 #include <vector>
 
 class nav_bar;
+class notifications_page;
 
 class altinf_app: public Wt::WApplication
 {
 public:
 	explicit altinf_app(const Wt::WEnvironment& env);
+	~altinf_app() override;
 
 private:
 	session_data                     m_session;
@@ -38,12 +40,14 @@ private:
 	std::optional<user_entry>        m_edit_user;
 	nav_bar*                         m_nav{nullptr};
 	Wt::WContainerWidget*            m_content{nullptr};
+	notifications_page*              m_notifications_page{nullptr};
 
 	void handle_path(const std::string& path);
 	void reload_posts();
 	void reload_links();
 	void show_forbidden();
 	void show_not_found(const std::string& msg = "Page not found.");
+	void register_with_hub();
 
 	// Compute lead status for a team, given a pre-resolved org lead flag.
 	bool resolve_is_org_lead(long long org_id);

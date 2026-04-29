@@ -332,6 +332,22 @@
       t._endDate   = parseDate(t.end_date);
     });
 
-    renderGantt(mount, tasks, todayViewStart(DEFAULT_RANGE_DAYS), DEFAULT_RANGE_DAYS);
+    // Use a today-centred view when today falls within any task's date range;
+    // otherwise open at the earliest task start so past/future boards show
+    // their tasks immediately without the today line.
+    var ranged = tasks.filter(function (t) { return t._startDate && t._endDate; });
+    var today  = todayDate();
+    var defaultStart;
+    if (ranged.length > 0) {
+      var minStart = ranged.reduce(function (m, t) { return t._startDate < m ? t._startDate : m; }, ranged[0]._startDate);
+      var maxEnd   = ranged.reduce(function (m, t) { return t._endDate   > m ? t._endDate   : m; }, ranged[0]._endDate);
+      defaultStart = (today >= minStart && today <= maxEnd)
+                   ? todayViewStart(DEFAULT_RANGE_DAYS)
+                   : minStart;
+    } else {
+      defaultStart = todayViewStart(DEFAULT_RANGE_DAYS);
+    }
+
+    renderGantt(mount, tasks, defaultStart, DEFAULT_RANGE_DAYS);
   };
 }());

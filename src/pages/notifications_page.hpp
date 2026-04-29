@@ -20,5 +20,7 @@ private:
 	Wt::WContainerWidget* m_list{nullptr};
 
 	void add_dismiss(Wt::WContainerWidget* parent, long long nid);
+
+public:
 	void refresh();
 };

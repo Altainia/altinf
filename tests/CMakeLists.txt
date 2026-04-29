@@ -58,6 +58,13 @@ else()
   message(STATUS "Node.js not found — skipping gantt JS tests")
 endif()
 
+# test_notification_hub — notification_hub with injected synchronous dispatcher
+add_executable(test_notification_hub test_notification_hub.cpp
+  ${CMAKE_SOURCE_DIR}/src/widgets/notification_hub.cpp)
+target_include_directories(test_notification_hub PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_notification_hub PRIVATE Catch2::Catch2WithMain Wt::Wt)
+catch_discover_tests(test_notification_hub)
+
 # test_user_db — needs OpenSSL for SHA-256 and token generation
 add_executable(test_user_db test_user_db.cpp
   ${CMAKE_SOURCE_DIR}/src/auth/user_db.cpp)

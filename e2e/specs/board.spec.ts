@@ -16,12 +16,42 @@ async function login(page: Page) {
 
 async function loginAndGoToBoard(page: Page) {
   await login(page);
-  // Use the nav link so we stay in the same Wt session.
-  await page.locator('.nav-link', { hasText: 'Board' }).click();
+  // Navigate explicitly via the Orgs admin page to avoid last_org interference
+  // from concurrently-running notification tests that also log in as admin.
+  await page.locator('.nav-link', { hasText: 'Orgs' }).click();
+  await expect(page.locator('.org-admin-page')).toBeVisible();
+  await page.locator('.org-list-link', { hasText: 'BoardTestOrg' }).click();
+  await expect(page.locator('.org-landing-page')).toBeVisible();
+  await page.locator('.org-team-link').first().click();
   await expect(page.locator('.kb-page')).toBeVisible();
   // Wait for the JS board to initialise — initKanban() sets .kb-board on the mount div.
   await expect(page.locator('.kb-board')).toBeVisible();
 }
+
+// ── setup ─────────────────────────────────────────────────────────────────────
+
+test.beforeAll(async ({ browser }) => {
+  const page = await browser.newPage();
+  await login(page);
+
+  // Create the test org.
+  await page.locator('.nav-link', { hasText: 'Orgs' }).click();
+  await expect(page.locator('.org-admin-page')).toBeVisible();
+  await page.locator('input[placeholder="Organisation name"]').fill('BoardTestOrg');
+  await page.locator('.org-create-form .editor-btn').click();
+  await expect(page.locator('.org-list-link', { hasText: 'BoardTestOrg' })).toBeVisible();
+
+  // Navigate to the org manage page and create a team.
+  await page.locator('.org-list-link', { hasText: 'BoardTestOrg' }).click();
+  await expect(page.locator('.org-landing-page')).toBeVisible();
+  await page.getByRole('link', { name: 'Manage organisation' }).click();
+  await expect(page.locator('.kb-team-page')).toBeVisible();
+  await page.locator('input[placeholder="Team name"]').fill('Test Team');
+  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(page.locator('.kb-team-block')).toBeVisible();
+
+  await page.close();
+});
 
 /** Create a task with only a title and wait until the board is back. */
 async function createTask(page: Page, title: string) {
@@ -55,16 +85,21 @@ async function createTaskWithDates(page: Page, title: string, startDate: string,
 // ── access control ────────────────────────────────────────────────────────────
 
 test('unauthenticated visit to /board redirects to login', async ({ page }) => {
-  await page.goto('/?_=/board');
+  await page.goto('/?_=/board/1');
   await expect(page.locator('.login-form')).toBeVisible();
 });
 
 // ── board structure ───────────────────────────────────────────────────────────
 
-test('board page is reachable via nav link after login', async ({ page }) => {
+test('board page is reachable via org nav link after login', async ({ page }) => {
   await login(page);
-  await expect(page.locator('.nav-link', { hasText: 'Board' })).toBeVisible();
-  await page.locator('.nav-link', { hasText: 'Board' }).click();
+  // Boards are accessed through the Orgs page; there is no standalone 'Board' link.
+  // Navigate by name to be robust against last_org changes from concurrent tests.
+  await page.locator('.nav-link', { hasText: 'Orgs' }).click();
+  await expect(page.locator('.org-admin-page')).toBeVisible();
+  await page.locator('.org-list-link', { hasText: 'BoardTestOrg' }).click();
+  await expect(page.locator('.org-landing-page')).toBeVisible();
+  await page.locator('.org-team-link').first().click();
   await expect(page.locator('.kb-page')).toBeVisible();
 });
 
@@ -461,19 +496,34 @@ test('team name can be renamed and the new name appears on the board', async ({ 
 test('member can be added to the team', async ({ page }) => {
   await loginAndGoToBoard(page);
   await page.locator('.kb-manage-link').click();
+  await expect(page.locator('.kb-team-page')).toBeVisible();
 
-  await page.locator('.kb-member-input').fill('admin');
-  await page.locator('.kb-member-add-row .editor-btn-cancel').click();
-  await expect(page.locator('.kb-member-name', { hasText: 'admin' })).toBeVisible();
+  // Scope to the team block — the org-members section also has .kb-member-row for admin.
+  const teamMemberRow = page.locator('.kb-team-block .kb-member-row', { hasText: 'admin' });
+
+  // Remove admin from the team first so the "Add to team" button is guaranteed present.
+  if (await teamMemberRow.isVisible()) {
+    await teamMemberRow.locator('button', { hasText: 'Remove' }).click();
+    await expect(teamMemberRow).not.toBeVisible();
+  }
+
+  // "Add to team" combo auto-selects admin (the only available org member).
+  await page.locator('.kb-team-block .kb-member-add-row .editor-btn-cancel').click();
+  await expect(teamMemberRow).toBeVisible();
 });
 
 test('added member appears in the Assigned to dropdown', async ({ page }) => {
   await loginAndGoToBoard(page);
 
-  // Ensure admin is a member (idempotent — add_member is a no-op if already present).
+  // Ensure admin is a team member.  Scope to .kb-team-block to avoid matching
+  // the org-members section row which also contains 'admin'.
   await page.locator('.kb-manage-link').click();
-  await page.locator('.kb-member-input').fill('admin');
-  await page.locator('.kb-member-add-row .editor-btn-cancel').click();
+  await expect(page.locator('.kb-team-page')).toBeVisible();
+  const teamMemberRow = page.locator('.kb-team-block .kb-member-row', { hasText: 'admin' });
+  if (!(await teamMemberRow.isVisible())) {
+    await page.locator('.kb-team-block .kb-member-add-row .editor-btn-cancel').click();
+    await expect(teamMemberRow).toBeVisible();
+  }
   await page.locator('.kb-back-link').click();
   await expect(page.locator('.kb-board')).toBeVisible();
 
@@ -487,17 +537,19 @@ test('added member appears in the Assigned to dropdown', async ({ page }) => {
 test('member can be removed from the team', async ({ page }) => {
   await loginAndGoToBoard(page);
   await page.locator('.kb-manage-link').click();
+  await expect(page.locator('.kb-team-page')).toBeVisible();
 
-  // Ensure admin is present first so we have something to remove.
-  const memberRow = page.locator('.kb-member-row', { hasText: 'admin' });
-  if (!(await memberRow.isVisible())) {
-    await page.locator('.kb-member-input').fill('admin');
-    await page.locator('.kb-member-add-row .editor-btn-cancel').click();
-    await expect(memberRow).toBeVisible();
+  // Scope to .kb-team-block to avoid matching the org-members section row.
+  const teamMemberRow = page.locator('.kb-team-block .kb-member-row', { hasText: 'admin' });
+
+  // Ensure admin is on the team first so we have something to remove.
+  if (!(await teamMemberRow.isVisible())) {
+    await page.locator('.kb-team-block .kb-member-add-row .editor-btn-cancel').click();
+    await expect(teamMemberRow).toBeVisible();
   }
 
-  await memberRow.locator('button', { hasText: 'Remove' }).click();
-  await expect(memberRow).not.toBeVisible();
+  await teamMemberRow.locator('button', { hasText: 'Remove' }).click();
+  await expect(teamMemberRow).not.toBeVisible();
 });
 
 test('team page back-to-board link returns to the board', async ({ page }) => {

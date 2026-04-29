@@ -28,6 +28,7 @@
 #include "pages/post_editor_page.hpp"
 #include "widgets/footer.hpp"
 #include "widgets/nav_bar.hpp"
+#include "widgets/notification_hub.hpp"
 
 // Parse a decimal integer from path[offset] up to the next '/' or end.
 static std::optional<long long> parse_id(const std::string& path, size_t offset)
@@ -55,10 +56,19 @@ static std::string suffix_after_id(const std::string& path, size_t offset)
 	return (slash == std::string::npos) ? "" : path.substr(slash);
 }
 
+altinf_app::~altinf_app()
+{
+	if(m_session.logged_in)
+	{
+		notification_hub::instance().deregister_session(m_session.username, sessionId());
+	}
+}
+
 altinf_app::altinf_app(const Wt::WEnvironment& env):
   Wt::WApplication{env}
 {
 	setTitle("AltInf");
+	enableUpdates(true);
 	useStyleSheet(Wt::WLink{"css/altinf.css"});
 
 	const auto app_root = std::filesystem::path{appRoot()};
@@ -98,6 +108,21 @@ altinf_app::altinf_app(const Wt::WEnvironment& env):
 	handle_path(internalPath());
 }
 
+void altinf_app::register_with_hub()
+{
+	notification_hub::instance().register_session(
+	  m_session.username,
+	  sessionId(),
+	  [this] {
+		  m_nav->refresh_bell();
+		  if(m_notifications_page)
+		  {
+			  m_notifications_page->refresh();
+		  }
+		  triggerUpdate();
+	  });
+}
+
 bool altinf_app::resolve_is_org_lead(long long org_id)
 {
 	if(m_session.permissions.has_any(permission::admin))
@@ -124,6 +149,7 @@ void altinf_app::show_not_found(const std::string& msg)
 void altinf_app::handle_path(const std::string& path)
 {
 	m_content->clear();
+	m_notifications_page = nullptr;
 
 	const bool wide = path.starts_with("/board/") ||
 	                  (path.starts_with("/org/") && path.find("/board") != std::string::npos);
@@ -325,6 +351,16 @@ void altinf_app::handle_path(const std::string& path)
 				  setInternalPath("/board/" + std::to_string(team_id), true);
 			  });
 		}
+		else if(suffix == "/manage")
+		{
+			if(!is_lead)
+			{
+				show_forbidden();
+				return;
+			}
+			m_content->addNew<kanban_team_page>(
+			  *m_org_db, *m_kanban_db, *m_user_db, team->org_id, m_session, "/board/" + std::to_string(team_id));
+		}
 		else
 		{
 			show_not_found();
@@ -413,7 +449,7 @@ void altinf_app::handle_path(const std::string& path)
 			setInternalPath("/login", true);
 			return;
 		}
-		m_content->addNew<notifications_page>(
+		m_notifications_page = m_content->addNew<notifications_page>(
 		  *m_org_db, m_session, [this] { m_nav->refresh_bell(); });
 	}
 	// ── Accounts ──────────────────────────────────────────────────────────────
@@ -490,11 +526,13 @@ void altinf_app::handle_path(const std::string& path)
 	{
 		m_content->addNew<login_page>(*m_user_db, m_session, [this] {
 			m_nav->update();
+			register_with_hub();
 			setInternalPath("/", true);
 		});
 	}
 	else if(path == "/logout")
 	{
+		notification_hub::instance().deregister_session(m_session.username, sessionId());
 		m_session = session_data{};
 		m_nav->update();
 		setInternalPath("/", true);

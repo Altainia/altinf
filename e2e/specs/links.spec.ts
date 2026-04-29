@@ -40,7 +40,7 @@ test('Add Link button navigates to link editor', async ({ page }) => {
   await expect(page.locator('.link-editor-page')).toBeVisible();
 });
 
-test('board page redirects to login when not logged in', async ({ page }) => {
-  await page.goto('/?_=/board');
+test('notifications page redirects to login when not logged in', async ({ page }) => {
+  await page.goto('/?_=/notifications');
   await expect(page.locator('.login-form')).toBeVisible();
 });

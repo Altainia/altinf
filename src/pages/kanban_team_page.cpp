@@ -8,12 +8,14 @@
 #include <Wt/WText.h>
 
 #include "org/org.hpp"
+#include "widgets/notification_hub.hpp"
 
 kanban_team_page::kanban_team_page(org_db&             odb,
                                    kanban_db&          kdb,
                                    user_db&            udb,
                                    long long           org_id,
-                                   const session_data& session):
+                                   const session_data& session,
+                                   const std::string&  back_url):
   m_odb{odb},
   m_kdb{kdb},
   m_udb{udb},
@@ -34,9 +36,10 @@ kanban_team_page::kanban_team_page(org_db&             odb,
 	addNew<Wt::WText>("<h1>Manage: " + org->name + "</h1>",
 	                  Wt::TextFormat::UnsafeXHTML);
 
+	const std::string effective_back = back_url.empty() ? "/org/" + std::to_string(org_id) : back_url;
 	addNew<Wt::WAnchor>(
-	  Wt::WLink{Wt::LinkType::InternalPath, "/org/" + std::to_string(org_id)},
-	  "\xe2\x86\x90 Back to organisation")
+	  Wt::WLink{Wt::LinkType::InternalPath, effective_back},
+	  "\xe2\x86\x90 Back")
 	  ->setStyleClass("kb-back-link");
 
 	// ── Members ───────────────────────────────────────────────────────────────
@@ -80,6 +83,7 @@ kanban_team_page::kanban_team_page(org_db&             odb,
 			  return;
 		  }
 		  m_odb.invite_to_org(m_org_id, u, m_invite_lead->isChecked());
+		  notification_hub::instance().notify_user(u);
 		  m_invite_input->setText("");
 		  m_invite_lead->setChecked(false);
 		  m_invite_msg->setText("Invite sent to " + u + ".");
@@ -157,6 +161,7 @@ void kanban_team_page::refresh_members()
 				    currently_lead ? "org_lead_demoted" : "org_lead_promoted";
 				  m_odb.push_notification(
 				    uid, type, make_org_event_payload(m_org_id, m_org_name));
+				  notification_hub::instance().notify_user(uid);
 				  m_invite_msg->setText("");
 			  }
 			  refresh_members();
@@ -176,6 +181,7 @@ void kanban_team_page::refresh_members()
 			  {
 				  m_odb.push_notification(
 				    uid, "org_removed", make_org_event_payload(m_org_id, m_org_name));
+				  notification_hub::instance().notify_user(uid);
 				  m_kdb.remove_member_from_org_teams(m_org_id, uid);
 				  m_invite_msg->setText("");
 				  refresh_teams();
@@ -210,6 +216,7 @@ void kanban_team_page::refresh_pending()
 		withdraw->clicked().connect(
 		  [this, uid = p.username] {
 			  m_odb.rescind_invite_notification(m_org_id, uid);
+			  notification_hub::instance().notify_user(uid);
 			  m_odb.remove_org_member(m_org_id, uid);
 			  refresh_pending();
 		  });
@@ -288,6 +295,7 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 			  const std::string type =
 			    is_lead ? "team_lead_demoted" : "team_lead_promoted";
 			  m_odb.push_notification(uid, type, make_team_lead_payload(tid, tname));
+			  notification_hub::instance().notify_user(uid);
 			  refresh_teams();
 		  });
 
@@ -298,6 +306,7 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 			  m_kdb.remove_member(tid, uid);
 			  m_odb.push_notification(
 			    uid, "team_removed", make_team_event_payload(tid, tname, m_org_id, m_org_name));
+			  notification_hub::instance().notify_user(uid);
 			  refresh_teams();
 		  });
 	}
@@ -352,6 +361,7 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 			  m_kdb.add_member(tid, u);
 			  m_odb.push_notification(
 			    u, "team_added", make_team_event_payload(tid, tname, m_org_id, m_org_name));
+			  notification_hub::instance().notify_user(u);
 			  refresh_teams();
 		  });
 	}

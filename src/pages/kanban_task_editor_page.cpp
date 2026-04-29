@@ -11,6 +11,7 @@
 #include <cstdio>
 
 #include "org/org.hpp"
+#include "widgets/notification_hub.hpp"
 
 const std::vector<std::string> kanban_task_editor_page::k_status_vals = {
   "todo",
@@ -310,6 +311,7 @@ void kanban_task_editor_page::save()
 		  new_assignee,
 		  "task_assigned",
 		  make_task_assigned_payload(t.id, title, m_team_id, team ? team->name : ""));
+		notification_hub::instance().notify_user(new_assignee);
 	}
 
 	m_on_save();
