@@ -252,7 +252,6 @@ a:hover {
 }
 
 .nav-bell-badge {
-  display: none;
   position: absolute;
   top: -5px;
   right: -7px;
@@ -266,9 +265,6 @@ a:hover {
   line-height: 16px;
   text-align: center;
   border-radius: 8px;
-}
-.nav-bell-badge--visible {
-  display: block;
 }
 
 .site-footer {
