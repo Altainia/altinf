@@ -2,16 +2,19 @@
 
 #include <Wt/WAnchor.h>
 #include <Wt/WCheckBox.h>
+#include <Wt/WComboBox.h>
 #include <Wt/WLink.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
 kanban_team_page::kanban_team_page(org_db&             odb,
                                    kanban_db&          kdb,
+                                   user_db&            udb,
                                    long long           org_id,
                                    const session_data& session):
   m_odb{odb},
   m_kdb{kdb},
+  m_udb{udb},
   m_org_id{org_id},
   m_session{session}
 {
@@ -65,6 +68,11 @@ kanban_team_page::kanban_team_page(org_db&             odb,
 		  if(u.empty())
 		  {
 			  m_invite_msg->setText("Enter a username.");
+			  return;
+		  }
+		  if(!m_udb.username_exists(u))
+		  {
+			  m_invite_msg->setText("User \"" + u + "\" does not exist.");
 			  return;
 		  }
 		  m_odb.invite_to_org(m_org_id, u, m_invite_lead->isChecked());
@@ -276,25 +284,55 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 		  });
 	}
 
-	// Add-member-to-team form.
+	// Add-member-to-team form — only org members not already on this team.
+	const auto               org_members = m_odb.org_members(m_org_id);
+	std::vector<std::string> available;
+	for(const auto& om: org_members)
+	{
+		bool already_on = false;
+		for(const auto& tm: members)
+		{
+			if(tm.username == om.username)
+			{
+				already_on = true;
+				break;
+			}
+		}
+		if(!already_on)
+		{
+			available.push_back(om.username);
+		}
+	}
+
 	auto* add_row = block->addNew<Wt::WContainerWidget>();
 	add_row->setStyleClass("kb-member-add-row");
 
-	auto* add_input = add_row->addNew<Wt::WLineEdit>();
-	add_input->setPlaceholderText("Username");
-	add_input->setStyleClass("editor-field kb-member-input");
+	if(available.empty())
+	{
+		add_row->addNew<Wt::WText>("All org members are on this team.",
+		                           Wt::TextFormat::Plain)
+		  ->setStyleClass("kb-team-note");
+	}
+	else
+	{
+		auto* combo = add_row->addNew<Wt::WComboBox>();
+		combo->setStyleClass("gv-range-select");
+		for(const auto& u: available)
+		{
+			combo->addItem(u);
+		}
 
-	auto* add_btn = add_row->addNew<Wt::WPushButton>("Add to team");
-	add_btn->setStyleClass("editor-btn editor-btn-cancel");
-	add_btn->clicked().connect(
-	  [this, tid = team.id, add_input] {
-		  const std::string u = add_input->text().toUTF8();
-		  if(u.empty())
-		  {
-			  return;
-		  }
-		  m_kdb.add_member(tid, u);
-		  add_input->setText("");
-		  refresh_teams();
-	  });
+		auto* add_btn = add_row->addNew<Wt::WPushButton>("Add to team");
+		add_btn->setStyleClass("editor-btn editor-btn-cancel");
+		add_btn->clicked().connect(
+		  [this, tid = team.id, combo] {
+			  const std::string u = combo->currentText().toUTF8();
+			  if(u.empty())
+			  {
+				  return;
+			  }
+			  m_kdb.add_member(tid, u);
+			  refresh_teams();
+		  });
+	}
 }

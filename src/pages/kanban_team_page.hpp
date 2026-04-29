@@ -1,6 +1,7 @@
 #pragma once
 
 #include "auth/session_data.hpp"
+#include "auth/user_db.hpp"
 #include "kanban/kanban_db.hpp"
 #include "org/org_db.hpp"
 
@@ -15,12 +16,14 @@ class kanban_team_page: public Wt::WContainerWidget
 public:
 	kanban_team_page(org_db&             odb,
 	                 kanban_db&          kdb,
+	                 user_db&            udb,
 	                 long long           org_id,
 	                 const session_data& session);
 
 private:
 	org_db&               m_odb;
 	kanban_db&            m_kdb;
+	user_db&              m_udb;
 	long long             m_org_id;
 	const session_data&   m_session;
 

@@ -382,7 +382,7 @@ void altinf_app::handle_path(const std::string& path)
 				return;
 			}
 			m_content->addNew<kanban_team_page>(
-			  *m_org_db, *m_kanban_db, org_id, m_session);
+			  *m_org_db, *m_kanban_db, *m_user_db, org_id, m_session);
 		}
 		else
 		{
