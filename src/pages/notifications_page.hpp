@@ -19,5 +19,6 @@ private:
 	std::function<void()> m_on_read;
 	Wt::WContainerWidget* m_list{nullptr};
 
+	void add_dismiss(Wt::WContainerWidget* parent, long long nid);
 	void refresh();
 };

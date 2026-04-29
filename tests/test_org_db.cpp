@@ -292,3 +292,59 @@ TEST_CASE("org_db - remove_user_from_all_orgs also removes pending invites")
 
 	CHECK(db.org_pending(oid).empty());
 }
+
+// ---- rescind_invite_notification ----
+
+TEST_CASE("org_db - rescind_invite_notification updates payload and keeps unread")
+{
+	org_db          db{":memory:"};
+	const long long oid = db.create_org("Acme", "alice");
+	db.invite_to_org(oid, "bob", false);
+	REQUIRE(db.unread_count("bob") == 1);
+
+	db.rescind_invite_notification(oid, "bob");
+
+	const auto notifs = db.notifications_for_user("bob");
+	REQUIRE(notifs.size() == 1);
+	CHECK(!notifs[0].is_read);
+	CHECK(json_long(notifs[0].payload, "rescinded") == 1);
+	CHECK(db.unread_count("bob") == 1); // still counts as unread
+}
+
+TEST_CASE("org_db - rescind_invite_notification is no-op if notification already read")
+{
+	org_db          db{":memory:"};
+	const long long oid = db.create_org("Acme", "alice");
+	db.invite_to_org(oid, "bob", false);
+	const auto before = db.notifications_for_user("bob");
+	REQUIRE(before.size() == 1);
+	db.mark_read(before[0].id);
+
+	db.rescind_invite_notification(oid, "bob");
+
+	// Payload must not have been rewritten since notification was already read.
+	const auto after = db.notifications_for_user("bob");
+	CHECK(json_long(after[0].payload, "rescinded") == 0);
+}
+
+TEST_CASE("org_db - rescind_invite_notification does not affect other users")
+{
+	org_db          db{":memory:"};
+	const long long oid = db.create_org("Acme", "alice");
+	db.invite_to_org(oid, "bob", false);
+	db.invite_to_org(oid, "carol", false);
+
+	db.rescind_invite_notification(oid, "bob");
+
+	const auto carol_notifs = db.notifications_for_user("carol");
+	REQUIRE(carol_notifs.size() == 1);
+	CHECK(json_long(carol_notifs[0].payload, "rescinded") == 0);
+}
+
+TEST_CASE("org_db - rescind_invite_notification on nonexistent notification is a no-op")
+{
+	org_db          db{":memory:"};
+	const long long oid = db.create_org("X", "alice");
+	// No invite sent to bob — should not throw.
+	CHECK_NOTHROW(db.rescind_invite_notification(oid, "bob"));
+}

@@ -25,6 +25,7 @@ private:
 	kanban_db&            m_kdb;
 	user_db&              m_udb;
 	long long             m_org_id;
+	std::string           m_org_name;
 	const session_data&   m_session;
 
 	Wt::WContainerWidget* m_members_section{nullptr};

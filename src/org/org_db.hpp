@@ -25,6 +25,8 @@ public:
 	void decline_invite(long long org_id, const std::string& username);
 	// Returns false if removal would leave the org with 0 leads.
 	bool remove_org_member(long long org_id, const std::string& username);
+	// Updates the unread org_invite notification for this user+org to rescinded state.
+	void rescind_invite_notification(long long org_id, const std::string& username);
 	// Unconditionally removes all org and notification rows for a deleted user.
 	void remove_user_from_all_orgs(const std::string& username);
 	// Returns false if demotion would leave the org with 0 leads.

@@ -209,6 +209,34 @@ bool org_db::remove_org_member(long long org_id, const std::string& username)
 	return true;
 }
 
+void org_db::rescind_invite_notification(long long org_id, const std::string& username)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto orgs =
+	  m_dbo.find<org_record>().where("id = ?").bind(org_id).resultList();
+	if(orgs.empty())
+	{
+		return;
+	}
+	const std::string org_name = (*orgs.begin())->name;
+
+	// Find the unread org_invite notification for this user+org and rewrite payload.
+	const auto notifs = m_dbo.find<notification_record>()
+	                      .where("username = ? AND type = 'org_invite' AND is_read = 0")
+	                      .bind(username)
+	                      .resultList();
+	for(const auto& n: notifs)
+	{
+		if(json_long(n->payload, "org_id") == org_id)
+		{
+			Wt::Dbo::ptr<notification_record> row = n;
+			row.modify()->payload                 = make_org_invite_rescinded_payload(org_id, org_name);
+			break;
+		}
+	}
+}
+
 void org_db::remove_user_from_all_orgs(const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};

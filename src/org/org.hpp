@@ -101,6 +101,39 @@ inline std::string make_org_invite_payload(long long org_id, const std::string& 
 	       ",\"org_name\":\"" + org_name + "\"}";
 }
 
+inline std::string make_org_invite_rescinded_payload(long long org_id, const std::string& org_name)
+{
+	return "{\"org_id\":" + std::to_string(org_id) +
+	       ",\"org_name\":\"" + org_name + "\"" +
+	       ",\"rescinded\":1}";
+}
+
+// Shared payload for org_removed, org_lead_promoted, org_lead_demoted.
+inline std::string make_org_event_payload(long long org_id, const std::string& org_name)
+{
+	return "{\"org_id\":" + std::to_string(org_id) +
+	       ",\"org_name\":\"" + org_name + "\"}";
+}
+
+// Shared payload for team_added, team_removed.
+inline std::string make_team_event_payload(long long          team_id,
+                                           const std::string& team_name,
+                                           long long          org_id,
+                                           const std::string& org_name)
+{
+	return "{\"team_id\":" + std::to_string(team_id) +
+	       ",\"team_name\":\"" + team_name + "\"" +
+	       ",\"org_id\":" + std::to_string(org_id) +
+	       ",\"org_name\":\"" + org_name + "\"}";
+}
+
+// Shared payload for team_lead_promoted, team_lead_demoted.
+inline std::string make_team_lead_payload(long long team_id, const std::string& team_name)
+{
+	return "{\"team_id\":" + std::to_string(team_id) +
+	       ",\"team_name\":\"" + team_name + "\"}";
+}
+
 inline std::string make_task_assigned_payload(long long          task_id,
                                                const std::string& task_title,
                                                long long          team_id,

@@ -7,6 +7,8 @@
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
+#include "org/org.hpp"
+
 kanban_team_page::kanban_team_page(org_db&             odb,
                                    kanban_db&          kdb,
                                    user_db&            udb,
@@ -26,6 +28,8 @@ kanban_team_page::kanban_team_page(org_db&             odb,
 		addNew<Wt::WText>("Organisation not found.", Wt::TextFormat::Plain);
 		return;
 	}
+
+	m_org_name = org->name;
 
 	addNew<Wt::WText>("<h1>Manage: " + org->name + "</h1>",
 	                  Wt::TextFormat::UnsafeXHTML);
@@ -149,6 +153,10 @@ void kanban_team_page::refresh_members()
 			  }
 			  else
 			  {
+				  const std::string type =
+				    currently_lead ? "org_lead_demoted" : "org_lead_promoted";
+				  m_odb.push_notification(
+				    uid, type, make_org_event_payload(m_org_id, m_org_name));
 				  m_invite_msg->setText("");
 			  }
 			  refresh_members();
@@ -166,6 +174,8 @@ void kanban_team_page::refresh_members()
 			  }
 			  else
 			  {
+				  m_odb.push_notification(
+				    uid, "org_removed", make_org_event_payload(m_org_id, m_org_name));
 				  m_kdb.remove_member_from_org_teams(m_org_id, uid);
 				  m_invite_msg->setText("");
 				  refresh_teams();
@@ -199,6 +209,7 @@ void kanban_team_page::refresh_pending()
 		withdraw->setStyleClass("link-action-btn link-delete-btn");
 		withdraw->clicked().connect(
 		  [this, uid = p.username] {
+			  m_odb.rescind_invite_notification(m_org_id, uid);
 			  m_odb.remove_org_member(m_org_id, uid);
 			  refresh_pending();
 		  });
@@ -272,16 +283,21 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 		auto*             lead_btn   = row->addNew<Wt::WPushButton>(lead_label);
 		lead_btn->setStyleClass("link-action-btn");
 		lead_btn->clicked().connect(
-		  [this, tid = team.id, uid = m.username, is_lead = m.is_lead] {
+		  [this, tid = team.id, tname = team.name, uid = m.username, is_lead = m.is_lead] {
 			  m_kdb.set_team_lead(tid, uid, !is_lead);
+			  const std::string type =
+			    is_lead ? "team_lead_demoted" : "team_lead_promoted";
+			  m_odb.push_notification(uid, type, make_team_lead_payload(tid, tname));
 			  refresh_teams();
 		  });
 
 		auto* rem = row->addNew<Wt::WPushButton>("Remove");
 		rem->setStyleClass("link-action-btn link-delete-btn");
 		rem->clicked().connect(
-		  [this, tid = team.id, uid = m.username] {
+		  [this, tid = team.id, tname = team.name, uid = m.username] {
 			  m_kdb.remove_member(tid, uid);
+			  m_odb.push_notification(
+			    uid, "team_removed", make_team_event_payload(tid, tname, m_org_id, m_org_name));
 			  refresh_teams();
 		  });
 	}
@@ -327,13 +343,15 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 		auto* add_btn = add_row->addNew<Wt::WPushButton>("Add to team");
 		add_btn->setStyleClass("editor-btn editor-btn-cancel");
 		add_btn->clicked().connect(
-		  [this, tid = team.id, combo] {
+		  [this, tid = team.id, tname = team.name, combo] {
 			  const std::string u = combo->currentText().toUTF8();
 			  if(u.empty())
 			  {
 				  return;
 			  }
 			  m_kdb.add_member(tid, u);
+			  m_odb.push_notification(
+			    u, "team_added", make_team_event_payload(tid, tname, m_org_id, m_org_name));
 			  refresh_teams();
 		  });
 	}
