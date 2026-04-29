@@ -1084,9 +1084,18 @@ a:hover {
 }
 
 .kb-lead-check {
-  accent-color: var(--color-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+.kb-lead-check input[type=checkbox] {
+  flex-shrink: 0;
   width: 15px;
   height: 15px;
+  accent-color: var(--color-accent);
   cursor: pointer;
 }
 
