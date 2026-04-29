@@ -7,9 +7,12 @@
 
 #include "org/org.hpp"
 
-notifications_page::notifications_page(org_db& odb, const session_data& session):
+notifications_page::notifications_page(org_db&               odb,
+                                       const session_data&   session,
+                                       std::function<void()> on_read):
   m_db{odb},
-  m_session{session}
+  m_session{session},
+  m_on_read{std::move(on_read)}
 {
 	setStyleClass("page notifications-page");
 	addNew<Wt::WText>("<h1>Notifications</h1>", Wt::TextFormat::UnsafeXHTML);
@@ -62,6 +65,10 @@ void notifications_page::refresh()
 				  [this, nid = n.id, org_id] {
 					  m_db.accept_invite(org_id, m_session.username);
 					  m_db.mark_read(nid);
+					  if(m_on_read)
+					  {
+						  m_on_read();
+					  }
 					  refresh();
 				  });
 
@@ -71,6 +78,10 @@ void notifications_page::refresh()
 				  [this, nid = n.id, org_id] {
 					  m_db.decline_invite(org_id, m_session.username);
 					  m_db.mark_read(nid);
+					  if(m_on_read)
+					  {
+						  m_on_read();
+					  }
 					  refresh();
 				  });
 			}
@@ -105,6 +116,10 @@ void notifications_page::refresh()
 				dismiss->clicked().connect(
 				  [this, nid = n.id] {
 					  m_db.mark_read(nid);
+					  if(m_on_read)
+					  {
+						  m_on_read();
+					  }
 					  refresh();
 				  });
 			}
@@ -123,6 +138,10 @@ void notifications_page::refresh()
 				dismiss->clicked().connect(
 				  [this, nid = n.id] {
 					  m_db.mark_read(nid);
+					  if(m_on_read)
+					  {
+						  m_on_read();
+					  }
 					  refresh();
 				  });
 			}

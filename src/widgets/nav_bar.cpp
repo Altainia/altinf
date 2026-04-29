@@ -137,11 +137,19 @@ void nav_bar::update()
 	if(m_org_db)
 	{
 		const int count = m_org_db->unread_count(m_session.username);
-		m_auth_area->addNew<notification_bell>(count);
+		m_bell          = m_auth_area->addNew<notification_bell>(count);
 	}
 
 	// ── Logout ────────────────────────────────────────────────────────────────
 	m_auth_area->addNew<Wt::WAnchor>(
 	             Wt::WLink{Wt::LinkType::InternalPath, "/logout"}, "Logout")
 	  ->setStyleClass("nav-link nav-logout");
+}
+
+void nav_bar::refresh_bell()
+{
+	if(m_bell && m_org_db)
+	{
+		m_bell->set_count(m_org_db->unread_count(m_session.username));
+	}
 }

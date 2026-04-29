@@ -413,7 +413,8 @@ void altinf_app::handle_path(const std::string& path)
 			setInternalPath("/login", true);
 			return;
 		}
-		m_content->addNew<notifications_page>(*m_org_db, m_session);
+		m_content->addNew<notifications_page>(
+		  *m_org_db, m_session, [this] { m_nav->refresh_bell(); });
 	}
 	// ── Accounts ──────────────────────────────────────────────────────────────
 	else if(path == "/admin/accounts")
