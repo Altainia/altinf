@@ -230,3 +230,65 @@ TEST_CASE("org_db - set_last_org overwrites previous value")
 	db.set_last_org("alice", oid2);
 	CHECK(*db.get_last_org("alice") == oid2);
 }
+
+// ---- remove_user_from_all_orgs ----
+
+TEST_CASE("org_db - remove_user_from_all_orgs clears all memberships")
+{
+	org_db          db{":memory:"};
+	const long long oid1 = db.create_org("A", "alice");
+	const long long oid2 = db.create_org("B", "alice");
+	db.invite_to_org(oid1, "bob", false);
+	db.accept_invite(oid1, "bob");
+	db.invite_to_org(oid2, "bob", false);
+	db.accept_invite(oid2, "bob");
+	REQUIRE(db.orgs_for_user("bob").size() == 2);
+
+	db.remove_user_from_all_orgs("bob");
+
+	CHECK(db.orgs_for_user("bob").empty());
+	CHECK(!db.is_org_member(oid1, "bob"));
+	CHECK(!db.is_org_member(oid2, "bob"));
+}
+
+TEST_CASE("org_db - remove_user_from_all_orgs clears notifications")
+{
+	org_db          db{":memory:"};
+	const long long oid = db.create_org("A", "alice");
+	db.invite_to_org(oid, "bob", false); // creates one notification
+	db.push_notification("bob", "task_assigned", "{}");
+	REQUIRE(db.unread_count("bob") == 2);
+
+	db.remove_user_from_all_orgs("bob");
+
+	CHECK(db.unread_count("bob") == 0);
+	CHECK(db.notifications_for_user("bob").empty());
+}
+
+TEST_CASE("org_db - remove_user_from_all_orgs does not affect other users")
+{
+	org_db          db{":memory:"};
+	const long long oid = db.create_org("A", "alice");
+	db.invite_to_org(oid, "bob", false);
+	db.accept_invite(oid, "bob");
+	db.push_notification("alice", "task_assigned", "{}");
+
+	db.remove_user_from_all_orgs("bob");
+
+	// alice's membership and notification survive
+	CHECK(db.is_org_member(oid, "alice"));
+	CHECK(db.unread_count("alice") == 1);
+}
+
+TEST_CASE("org_db - remove_user_from_all_orgs also removes pending invites")
+{
+	org_db          db{":memory:"};
+	const long long oid = db.create_org("A", "alice");
+	db.invite_to_org(oid, "bob", false);
+	// bob has not accepted; still pending
+	REQUIRE(db.org_pending(oid).size() == 1);
+
+	db.remove_user_from_all_orgs("bob");
+
+	CHECK(db.org_pending(oid).empty());
+}

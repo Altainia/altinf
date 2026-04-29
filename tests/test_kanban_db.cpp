@@ -316,3 +316,64 @@ TEST_CASE("kanban_db - can_edit_board: admin always can edit")
 	const long long tid = db.create_team("T", 1);
 	CHECK(db.can_edit_board(tid, "anyone", permission::admin));
 }
+
+// ---- remove_member_from_org_teams ----
+
+TEST_CASE("kanban_db - remove_member_from_org_teams removes from all org teams")
+{
+	kanban_db       db{":memory:"};
+	const long long tid1 = db.create_team("T1", 1);
+	const long long tid2 = db.create_team("T2", 1);
+	db.add_member(tid1, "bob");
+	db.add_member(tid2, "bob");
+	db.add_member(tid1, "alice");
+
+	db.remove_member_from_org_teams(1, "bob");
+
+	CHECK(!db.is_member(tid1, "bob"));
+	CHECK(!db.is_member(tid2, "bob"));
+	CHECK(db.is_member(tid1, "alice")); // unaffected
+}
+
+TEST_CASE("kanban_db - remove_member_from_org_teams does not touch other orgs")
+{
+	kanban_db       db{":memory:"};
+	const long long tid_org1 = db.create_team("T1", 1);
+	const long long tid_org2 = db.create_team("T2", 2);
+	db.add_member(tid_org1, "bob");
+	db.add_member(tid_org2, "bob");
+
+	db.remove_member_from_org_teams(1, "bob");
+
+	CHECK(!db.is_member(tid_org1, "bob"));
+	CHECK(db.is_member(tid_org2, "bob")); // org 2 unaffected
+}
+
+// ---- remove_member_from_all_teams ----
+
+TEST_CASE("kanban_db - remove_member_from_all_teams removes from every team")
+{
+	kanban_db       db{":memory:"};
+	const long long tid1 = db.create_team("T1", 1);
+	const long long tid2 = db.create_team("T2", 2);
+	db.add_member(tid1, "bob");
+	db.add_member(tid2, "bob");
+	db.add_member(tid1, "alice");
+
+	db.remove_member_from_all_teams("bob");
+
+	CHECK(!db.is_member(tid1, "bob"));
+	CHECK(!db.is_member(tid2, "bob"));
+	CHECK(db.is_member(tid1, "alice")); // unaffected
+}
+
+TEST_CASE("kanban_db - remove_member_from_all_teams on non-member is a no-op")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+
+	db.remove_member_from_all_teams("nobody");
+
+	CHECK(db.is_member(tid, "alice"));
+}
