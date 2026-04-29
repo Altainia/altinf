@@ -218,6 +218,20 @@ void kanban_db::remove_member_from_org_teams(long long org_id, const std::string
 	}
 }
 
+void kanban_db::remove_member_from_all_teams(const std::string& username)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           rows = m_dbo.find<team_member_record>()
+	                    .where("username = ?")
+	                    .bind(username)
+	                    .resultList();
+	for(const auto& r: rows)
+	{
+		Wt::Dbo::ptr<team_member_record> row = r;
+		row.remove();
+	}
+}
+
 void kanban_db::set_team_lead(long long team_id, const std::string& username, bool is_lead)
 {
 	Wt::Dbo::Transaction t{m_dbo};

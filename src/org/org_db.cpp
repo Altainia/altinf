@@ -209,6 +209,31 @@ bool org_db::remove_org_member(long long org_id, const std::string& username)
 	return true;
 }
 
+void org_db::remove_user_from_all_orgs(const std::string& username)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto memberships = m_dbo.find<org_member_record>()
+	                           .where("username = ?")
+	                           .bind(username)
+	                           .resultList();
+	for(const auto& r: memberships)
+	{
+		Wt::Dbo::ptr<org_member_record> row = r;
+		row.remove();
+	}
+
+	const auto notifs = m_dbo.find<notification_record>()
+	                      .where("username = ?")
+	                      .bind(username)
+	                      .resultList();
+	for(const auto& r: notifs)
+	{
+		Wt::Dbo::ptr<notification_record> row = r;
+		row.remove();
+	}
+}
+
 bool org_db::set_org_lead(long long org_id, const std::string& username, bool is_lead)
 {
 	Wt::Dbo::Transaction t{m_dbo};

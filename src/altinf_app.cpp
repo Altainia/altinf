@@ -437,6 +437,8 @@ void altinf_app::handle_path(const std::string& path)
 				  return;
 			  }
 			  m_user_db->delete_user(username);
+			  m_org_db->remove_user_from_all_orgs(username);
+			  m_kanban_db->remove_member_from_all_teams(username);
 			  handle_path("/admin/accounts");
 		  });
 	}

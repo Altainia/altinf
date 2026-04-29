@@ -28,6 +28,7 @@ public:
 	void                           remove_member(long long team_id, const std::string& username);
 	void                           remove_member_from_org_teams(long long          org_id,
 	                                                            const std::string& username);
+	void                           remove_member_from_all_teams(const std::string& username);
 	void                           set_team_lead(long long team_id,
 	                                             const std::string& username,
 	                                             bool               is_lead);
