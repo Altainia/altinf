@@ -27,8 +27,8 @@
 #include "pages/org_landing_page.hpp"
 #include "pages/post_editor_page.hpp"
 #include "widgets/footer.hpp"
+#include "widgets/live_hub.hpp"
 #include "widgets/nav_bar.hpp"
-#include "widgets/notification_hub.hpp"
 
 // Parse a decimal integer from path[offset] up to the next '/' or end.
 static std::optional<long long> parse_id(const std::string& path, size_t offset)
@@ -60,7 +60,7 @@ altinf_app::~altinf_app()
 {
 	if(m_session.logged_in)
 	{
-		notification_hub::instance().deregister_session(m_session.username, sessionId());
+		live_hub::instance().unsubscribe("user:" + m_session.username, sessionId());
 	}
 }
 
@@ -110,11 +110,11 @@ altinf_app::altinf_app(const Wt::WEnvironment& env):
 
 void altinf_app::register_with_hub()
 {
-	notification_hub::instance().register_session(
-	  m_session.username,
+	live_hub::instance().subscribe(
+	  "user:" + m_session.username,
 	  sessionId(),
 	  [this] {
-		  m_nav->refresh_bell();
+		  m_nav->update();
 		  if(m_notifications_page)
 		  {
 			  m_notifications_page->refresh();
@@ -532,7 +532,7 @@ void altinf_app::handle_path(const std::string& path)
 	}
 	else if(path == "/logout")
 	{
-		notification_hub::instance().deregister_session(m_session.username, sessionId());
+		live_hub::instance().unsubscribe("user:" + m_session.username, sessionId());
 		m_session = session_data{};
 		m_nav->update();
 		setInternalPath("/", true);
