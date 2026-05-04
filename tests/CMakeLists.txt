@@ -58,7 +58,7 @@ else()
   message(STATUS "Node.js not found — skipping gantt JS tests")
 endif()
 
-# test_live_hub - live_hub with injected synchronous dispatcher
+# test_live_hub — live_hub with injected synchronous dispatcher
 add_executable(test_live_hub test_live_hub.cpp
   ${CMAKE_SOURCE_DIR}/src/widgets/live_hub.cpp)
 target_include_directories(test_live_hub PRIVATE ${CMAKE_SOURCE_DIR}/src)
