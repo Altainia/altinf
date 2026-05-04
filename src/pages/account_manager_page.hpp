@@ -11,12 +11,18 @@
 class account_manager_page: public Wt::WContainerWidget
 {
 public:
-	account_manager_page(user_db&                                db,
-	                     const session_data&                     session,
-	                     std::function<void(const std::string&)> on_delete);
+    account_manager_page(user_db&                                db,
+                         const session_data&                     session,
+                         std::function<void(const std::string&)> on_delete);
+
+    ~account_manager_page() override;
 
 private:
-	user_db&                                m_db;
-	const session_data&                     m_session;
-	std::function<void(const std::string&)> m_on_delete;
+    user_db&                                m_db;
+    const session_data&                     m_session;
+    std::function<void(const std::string&)> m_on_delete;
+    std::string                             m_session_id;
+
+    void render();
+    void refresh();
 };

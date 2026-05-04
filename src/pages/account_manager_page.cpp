@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "auth/permission.hpp"
+#include "widgets/live_hub.hpp"
 
 static std::string permissions_label(permission::flags perms)
 {
@@ -57,7 +58,25 @@ account_manager_page::account_manager_page(
   m_on_delete{std::move(on_delete)}
 {
 	setStyleClass("page account-manager-page");
+	render();
 
+	m_session_id = Wt::WApplication::instance()->sessionId();
+	live_hub::instance().subscribe(
+	  "accounts",
+	  m_session_id,
+	  [this] { refresh(); Wt::WApplication::instance()->triggerUpdate(); });
+}
+
+account_manager_page::~account_manager_page()
+{
+	if(!m_session_id.empty())
+	{
+		live_hub::instance().unsubscribe("accounts", m_session_id);
+	}
+}
+
+void account_manager_page::render()
+{
 	addNew<Wt::WText>("<h1>Accounts</h1>", Wt::TextFormat::UnsafeXHTML);
 
 	auto* new_btn = addNew<Wt::WPushButton>("New User");
@@ -129,4 +148,10 @@ account_manager_page::account_manager_page(
 			});
 		}
 	}
+}
+
+void account_manager_page::refresh()
+{
+	clear();
+	render();
 }
