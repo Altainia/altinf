@@ -64,11 +64,18 @@ account_manager_page::account_manager_page(
 	live_hub::instance().subscribe(
 	  "accounts",
 	  m_session_id,
-	  [this] { refresh(); Wt::WApplication::instance()->triggerUpdate(); });
+	  [this, alive = m_alive] {
+		  if(*alive)
+		  {
+			  refresh();
+			  Wt::WApplication::instance()->triggerUpdate();
+		  }
+	  });
 }
 
 account_manager_page::~account_manager_page()
 {
+	*m_alive = false;
 	if(!m_session_id.empty())
 	{
 		live_hub::instance().unsubscribe("accounts", m_session_id);

@@ -255,12 +255,19 @@ kanban_task_editor_page::kanban_task_editor_page(
 		live_hub::instance().subscribe(
 		  "task:" + std::to_string(m_task_id),
 		  m_session_id,
-		  [this] { mark_stale(); Wt::WApplication::instance()->triggerUpdate(); });
+		  [this, alive = m_alive] {
+			  if(*alive)
+			  {
+				  mark_stale();
+				  Wt::WApplication::instance()->triggerUpdate();
+			  }
+		  });
 	}
 }
 
 kanban_task_editor_page::~kanban_task_editor_page()
 {
+	*m_alive = false;
 	if(m_task_id != 0)
 	{
 		live_hub::instance().unsubscribe(

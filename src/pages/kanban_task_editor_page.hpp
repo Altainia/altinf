@@ -15,6 +15,7 @@
 #include <Wt/WTextArea.h>
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -41,8 +42,9 @@ private:
     const kanban_task_entry* m_existing;
     std::function<void()>    m_on_save;
 
-    long long          m_task_id{0};
-    std::string        m_session_id;
+    long long             m_task_id{0};
+    std::string           m_session_id;
+    std::shared_ptr<bool> m_alive{std::make_shared<bool>(true)};
 
     Wt::WLineEdit*    m_title{nullptr};
     Wt::WTextArea*    m_description{nullptr};

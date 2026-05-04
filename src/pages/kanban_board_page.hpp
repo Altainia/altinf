@@ -7,6 +7,7 @@
 
 #include <Wt/WContainerWidget.h>
 
+#include <memory>
 #include <string>
 
 class kanban_board_page: public Wt::WContainerWidget
@@ -26,6 +27,7 @@ private:
     bool                 m_is_lead{false};
     bool                 m_show_gantt{false};
     std::string          m_session_id;
+    std::shared_ptr<bool> m_alive{std::make_shared<bool>(true)};
     kanban_board_widget* m_board_widget{nullptr};
     gantt_view_widget*   m_gantt_widget{nullptr};
 

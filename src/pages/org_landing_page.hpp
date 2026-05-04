@@ -6,6 +6,7 @@
 
 #include <Wt/WContainerWidget.h>
 
+#include <memory>
 #include <string>
 
 class org_landing_page: public Wt::WContainerWidget
@@ -26,6 +27,7 @@ private:
     const session_data& m_session;
     bool                m_is_org_lead;
     std::string         m_session_id;
+    std::shared_ptr<bool> m_alive{std::make_shared<bool>(true)};
 
     void render();
     void refresh();

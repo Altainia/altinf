@@ -6,6 +6,7 @@
 #include <Wt/WContainerWidget.h>
 
 #include <functional>
+#include <memory>
 #include <string>
 
 class account_manager_page: public Wt::WContainerWidget
@@ -22,6 +23,7 @@ private:
     const session_data&                     m_session;
     std::function<void(const std::string&)> m_on_delete;
     std::string                             m_session_id;
+    std::shared_ptr<bool>                   m_alive{std::make_shared<bool>(true)};
 
     void render();
     void refresh();

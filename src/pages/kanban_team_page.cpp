@@ -130,11 +130,18 @@ kanban_team_page::kanban_team_page(org_db&             odb,
 	live_hub::instance().subscribe(
 	  "org:" + std::to_string(m_org_id),
 	  m_session_id,
-	  [this] { refresh(); Wt::WApplication::instance()->triggerUpdate(); });
+	  [this, alive = m_alive] {
+		  if(*alive)
+		  {
+			  refresh();
+			  Wt::WApplication::instance()->triggerUpdate();
+		  }
+	  });
 }
 
 kanban_team_page::~kanban_team_page()
 {
+	*m_alive = false;
 	if(!m_session_id.empty())
 	{
 		live_hub::instance().unsubscribe(

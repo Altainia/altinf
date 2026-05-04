@@ -5,6 +5,7 @@
 #include <Wt/WLineEdit.h>
 #include <Wt/WText.h>
 
+#include <memory>
 #include <string>
 
 #include "auth/session_data.hpp"
@@ -33,7 +34,8 @@ private:
 	long long           m_org_id;
 	std::string         m_org_name;
 	const session_data& m_session;
-	std::string         m_session_id;
+	std::string           m_session_id;
+	std::shared_ptr<bool> m_alive{std::make_shared<bool>(true)};
 
 	Wt::WContainerWidget* m_members_section{nullptr};
 	Wt::WContainerWidget* m_pending_section{nullptr};
