@@ -204,3 +204,46 @@ test('gantt: task deleted by A disappears from B gantt view', async ({ browser }
   await ctxA.close();
   await ctxB.close();
 });
+
+test('gantt: date change by A updates bar on B gantt view', async ({ browser }) => {
+  const ctxA = await browser.newContext();
+  const ctxB = await browser.newContext();
+  const pageA = await ctxA.newPage();
+  const pageB = await ctxB.newPage();
+
+  await loginAs(pageA, 'admin', 'testpass');
+  await loginAs(pageB, 'admin', 'testpass');
+  await navigateToBoard(pageA, 'LiveBoardOrg');
+
+  // A creates DateTask with a short initial date range
+  await pageA.locator('.kb-new-btn').click();
+  await expect(pageA.locator('.kb-editor-page')).toBeVisible();
+  await pageA.locator('input[placeholder="Task title"]').fill('DateTask');
+  const startInput = pageA.locator('.kb-editor-field-wrap').filter({ hasText: 'Start date' }).locator('input').first();
+  const endInput   = pageA.locator('.kb-editor-field-wrap').filter({ hasText: 'End date' }).locator('input').first();
+  await startInput.fill('2025-03-01');
+  await startInput.press('Tab');
+  await endInput.fill('2025-03-02');
+  await endInput.press('Tab');
+  await pageA.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+  await pageA.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
+  await expect(pageA.locator('.kb-board')).toBeVisible();
+
+  // B navigates to the Gantt and sees DateTask
+  await navigateToGantt(pageB, 'LiveBoardOrg');
+  await expect(pageB.locator('.gv-scroll svg text', { hasText: 'DateTask' })).toBeVisible();
+
+  // A edits DateTask and extends the end date to widen the bar
+  await openTaskEditor(pageA, 'DateTask');
+  const endInputEdit = pageA.locator('.kb-editor-field-wrap').filter({ hasText: 'End date' }).locator('input').first();
+  await endInputEdit.fill('2025-03-31');
+  await endInputEdit.press('Tab');
+  await pageA.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+  await saveTaskEditor(pageA);
+
+  // B's Gantt re-renders via live push — DateTask bar should still be visible
+  await expect(pageB.locator('.gv-scroll svg text', { hasText: 'DateTask' })).toBeVisible();
+
+  await ctxA.close();
+  await ctxB.close();
+});
