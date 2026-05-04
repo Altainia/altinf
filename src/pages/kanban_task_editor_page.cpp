@@ -229,7 +229,16 @@ kanban_task_editor_page::kanban_task_editor_page(
 		m_del_btn->setStyleClass("editor-btn editor-btn-danger");
 		m_del_btn->clicked().connect(
 		  [this] {
-			  m_db.delete_task(m_existing->id);
+			  const long long tid = m_existing->id;
+			  if(m_task_id != 0)
+			  {
+				  live_hub::instance().unsubscribe(
+				    "task:" + std::to_string(m_task_id), m_session_id);
+				  m_task_id = 0;
+			  }
+			  m_db.delete_task(tid);
+			  live_hub::instance().broadcast("team:" + std::to_string(m_team_id));
+			  live_hub::instance().broadcast("task:" + std::to_string(tid));
 			  m_on_save();
 		  });
 	}
@@ -355,6 +364,19 @@ void kanban_task_editor_page::save()
 		  "task_assigned",
 		  make_task_assigned_payload(t.id, title, m_team_id, team ? team->name : ""));
 		live_hub::instance().broadcast("user:" + new_assignee);
+	}
+
+	if(m_task_id != 0)
+	{
+		live_hub::instance().unsubscribe(
+		  "task:" + std::to_string(m_task_id), m_session_id);
+		m_task_id = 0;
+	}
+
+	live_hub::instance().broadcast("team:" + std::to_string(m_team_id));
+	if(m_existing)
+	{
+		live_hub::instance().broadcast("task:" + std::to_string(m_existing->id));
 	}
 
 	m_on_save();
