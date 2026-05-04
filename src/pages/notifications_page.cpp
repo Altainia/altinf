@@ -103,7 +103,7 @@ void notifications_page::refresh()
 			else
 			{
 				const std::string msg =
-				  "You have been invited to join the organisation \"" + org_name +
+				  "You have been invited to join the organization \"" + org_name +
 				  "\".";
 				body->addNew<Wt::WText>(msg, Wt::TextFormat::Plain)
 				  ->setStyleClass("notif-msg");
@@ -179,7 +179,7 @@ void notifications_page::refresh()
 		{
 			const std::string org_name = json_str(n.payload, "org_name");
 			body->addNew<Wt::WText>(
-			      "You have been removed from the organisation \"" + org_name + "\".",
+			      "You have been removed from the organization \"" + org_name + "\".",
 			      Wt::TextFormat::Plain)
 			  ->setStyleClass("notif-msg");
 			body->addNew<Wt::WText>(" \xe2\x80\x94 " + n.created_at,

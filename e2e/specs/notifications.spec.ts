@@ -40,7 +40,7 @@ async function createUser(page: Page, username: string, password: string) {
 async function createOrg(page: Page, orgName: string) {
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
-  await page.locator('input[placeholder="Organisation name"]').fill(orgName);
+  await page.locator('input[placeholder="Organization name"]').fill(orgName);
   await page.locator('.org-create-form .editor-btn').click();
   // Use exact-match regex to avoid PushTestOrg matching PushTestOrg2.
   await expect(page.locator('.org-list-link', { hasText: new RegExp(`^${orgName}$`) })).toBeVisible();
@@ -53,7 +53,7 @@ async function navigateToOrgManage(page: Page, orgName: string) {
   // Exact-match regex prevents 'PushTestOrg' from also matching 'PushTestOrg2'.
   await page.locator('.org-list-link', { hasText: new RegExp(`^${orgName}$`) }).click();
   await expect(page.locator('.org-landing-page')).toBeVisible();
-  await page.getByRole('link', { name: 'Manage organisation' }).click();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
 }
 

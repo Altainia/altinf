@@ -41,11 +41,11 @@ test.beforeAll(async ({ browser }) => {
 
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
-  await page.locator('input[placeholder="Organisation name"]').fill('LiveBoardOrg');
+  await page.locator('input[placeholder="Organization name"]').fill('LiveBoardOrg');
   await page.locator('.org-create-form .editor-btn').click();
   await expect(page.locator('.org-list-link', { hasText: /^LiveBoardOrg$/ })).toBeVisible();
   await page.locator('.org-list-link', { hasText: /^LiveBoardOrg$/ }).click();
-  await page.getByRole('link', { name: 'Manage organisation' }).click();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
   await page.locator('input[placeholder="Team name"]').fill('LiveBoardTeam');
   await page.getByRole('button', { name: 'Create' }).click();

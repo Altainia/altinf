@@ -17,7 +17,7 @@ org_board_page::org_board_page(org_db&             odb,
 	const auto org = odb.find_org(org_id);
 	if(!org)
 	{
-		addNew<Wt::WText>("Organisation not found.", Wt::TextFormat::Plain);
+		addNew<Wt::WText>("Organization not found.", Wt::TextFormat::Plain);
 		return;
 	}
 
@@ -28,13 +28,13 @@ org_board_page::org_board_page(org_db&             odb,
 	                       Wt::TextFormat::UnsafeXHTML);
 	hdr->addNew<Wt::WAnchor>(
 	     Wt::WLink{Wt::LinkType::InternalPath, "/org/" + std::to_string(org_id)},
-	     "\xe2\x86\x90 Back to organisation")
+	     "\xe2\x86\x90 Back to organization")
 	  ->setStyleClass("kb-back-link");
 
 	const auto teams = kdb.teams_for_org(org_id);
 	if(teams.empty())
 	{
-		addNew<Wt::WText>("No teams in this organisation yet.", Wt::TextFormat::Plain)
+		addNew<Wt::WText>("No teams in this organization yet.", Wt::TextFormat::Plain)
 		  ->setStyleClass("org-empty-note");
 		return;
 	}

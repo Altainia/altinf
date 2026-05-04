@@ -49,7 +49,7 @@ void org_landing_page::render()
 	const auto org = m_odb.find_org(m_org_id);
 	if(!org)
 	{
-		addNew<Wt::WText>("Organisation not found.", Wt::TextFormat::Plain);
+		addNew<Wt::WText>("Organization not found.", Wt::TextFormat::Plain);
 		return;
 	}
 
@@ -63,7 +63,7 @@ void org_landing_page::render()
 		actions->addNew<Wt::WAnchor>(
 		         Wt::WLink{Wt::LinkType::InternalPath,
 		                   "/org/" + std::to_string(m_org_id) + "/manage"},
-		         "Manage organisation")
+		         "Manage organization")
 		  ->setStyleClass("editor-btn");
 
 		actions->addNew<Wt::WAnchor>(
@@ -96,7 +96,7 @@ void org_landing_page::render()
 	}
 	if(!has_own)
 	{
-		addNew<Wt::WText>("You are not a member of any team in this organisation.",
+		addNew<Wt::WText>("You are not a member of any team in this organization.",
 		                  Wt::TextFormat::Plain)
 		  ->setStyleClass("org-empty-note");
 	}

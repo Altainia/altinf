@@ -366,7 +366,7 @@ void altinf_app::handle_path(const std::string& path)
 			show_not_found();
 		}
 	}
-	// ── Organisation routes (/org/{org_id}[/board|/manage]) ──────────────────
+	// ── Organization routes (/org/{org_id}[/board|/manage]) ──────────────────
 	else if(path.starts_with("/org/"))
 	{
 		if(!m_session.logged_in)

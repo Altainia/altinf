@@ -997,7 +997,7 @@ The toggle lambda currently reads:
 if(!m_odb.set_org_lead(m_org_id, uid, !currently_lead))
 {
     m_invite_msg->setText(
-      "Cannot demote: organisation must have at least one lead.");
+      "Cannot demote: organization must have at least one lead.");
 }
 else
 {
@@ -1270,7 +1270,7 @@ void org_landing_page::render()
     const auto org = m_odb.find_org(m_org_id);
     if(!org)
     {
-        addNew<Wt::WText>("Organisation not found.", Wt::TextFormat::Plain);
+        addNew<Wt::WText>("Organization not found.", Wt::TextFormat::Plain);
         return;
     }
 
@@ -1284,7 +1284,7 @@ void org_landing_page::render()
         actions->addNew<Wt::WAnchor>(
                  Wt::WLink{Wt::LinkType::InternalPath,
                            "/org/" + std::to_string(m_org_id) + "/manage"},
-                 "Manage organisation")
+                 "Manage organization")
           ->setStyleClass("editor-btn");
 
         actions->addNew<Wt::WAnchor>(
@@ -1317,7 +1317,7 @@ void org_landing_page::render()
     }
     if(!has_own)
     {
-        addNew<Wt::WText>("You are not a member of any team in this organisation.",
+        addNew<Wt::WText>("You are not a member of any team in this organization.",
                           Wt::TextFormat::Plain)
           ->setStyleClass("org-empty-note");
     }
@@ -2150,11 +2150,11 @@ test.beforeAll(async ({ browser }) => {
   // Create org and team for board live tests.
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
-  await page.locator('input[placeholder="Organisation name"]').fill('LiveBoardOrg');
+  await page.locator('input[placeholder="Organization name"]').fill('LiveBoardOrg');
   await page.locator('.org-create-form .editor-btn').click();
   await expect(page.locator('.org-list-link', { hasText: /^LiveBoardOrg$/ })).toBeVisible();
   await page.locator('.org-list-link', { hasText: /^LiveBoardOrg$/ }).click();
-  await page.getByRole('link', { name: 'Manage organisation' }).click();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
   await page.locator('input[placeholder="Team name"]').fill('LiveBoardTeam');
   await page.getByRole('button', { name: 'Create' }).click();
@@ -2396,11 +2396,11 @@ test.beforeAll(async ({ browser }) => {
   // Create org, team, and a task for conflict tests.
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
-  await page.locator('input[placeholder="Organisation name"]').fill('LiveEditorOrg');
+  await page.locator('input[placeholder="Organization name"]').fill('LiveEditorOrg');
   await page.locator('.org-create-form .editor-btn').click();
   await expect(page.locator('.org-list-link', { hasText: /^LiveEditorOrg$/ })).toBeVisible();
   await page.locator('.org-list-link', { hasText: /^LiveEditorOrg$/ }).click();
-  await page.getByRole('link', { name: 'Manage organisation' }).click();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
   await page.locator('input[placeholder="Team name"]').fill('EditorTeam');
   await page.getByRole('button', { name: 'Create' }).click();
@@ -2522,7 +2522,7 @@ async function goToManage(page: Page) {
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
   await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).click();
-  await page.getByRole('link', { name: 'Manage organisation' }).click();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
 }
 
@@ -2545,13 +2545,13 @@ test.beforeAll(async ({ browser }) => {
 
   // Create the org.
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
-  await page.locator('input[placeholder="Organisation name"]').fill(ORG);
+  await page.locator('input[placeholder="Organization name"]').fill(ORG);
   await page.locator('.org-create-form .editor-btn').click();
   await expect(page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) })).toBeVisible();
 
   // Invite bob as a lead so he can also navigate to the manage page.
   await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).click();
-  await page.getByRole('link', { name: 'Manage organisation' }).click();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
   await page.locator('.kb-member-input').fill('bob');
   await page.locator('.kb-lead-check').click();
@@ -2978,7 +2978,7 @@ async function goToLanding(page: Page) {
 
 async function goToManage(page: Page) {
   await goToLanding(page);
-  await page.getByRole('link', { name: 'Manage organisation' }).click();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
 }
 
@@ -2997,11 +2997,11 @@ test.beforeAll(async ({ browser }) => {
 
   // Create the org and invite frank.
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
-  await page.locator('input[placeholder="Organisation name"]').fill(ORG);
+  await page.locator('input[placeholder="Organization name"]').fill(ORG);
   await page.locator('.org-create-form .editor-btn').click();
   await expect(page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) })).toBeVisible();
   await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).click();
-  await page.getByRole('link', { name: 'Manage organisation' }).click();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
   await page.locator('.kb-member-input').fill('frank');
   await page.getByRole('button', { name: 'Send invite' }).click();
@@ -3181,7 +3181,7 @@ async function goToManage(page: Page) {
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
   await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).click();
-  await page.getByRole('link', { name: 'Manage organisation' }).click();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
 }
 
@@ -3200,7 +3200,7 @@ test.beforeAll(async ({ browser }) => {
 
   // Create org.
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
-  await page.locator('input[placeholder="Organisation name"]').fill(ORG);
+  await page.locator('input[placeholder="Organization name"]').fill(ORG);
   await page.locator('.org-create-form .editor-btn').click();
   await expect(page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) })).toBeVisible();
 
@@ -3361,11 +3361,11 @@ test('bell regression: invite sent to grace increments bell badge on her active 
 
   // Admin creates a new org and invites grace.
   await adminPage.locator('.nav-link', { hasText: 'Orgs' }).click();
-  await adminPage.locator('input[placeholder="Organisation name"]').fill('BellRegressionOrg');
+  await adminPage.locator('input[placeholder="Organization name"]').fill('BellRegressionOrg');
   await adminPage.locator('.org-create-form .editor-btn').click();
   await expect(adminPage.locator('.org-list-link', { hasText: /^BellRegressionOrg$/ })).toBeVisible();
   await adminPage.locator('.org-list-link', { hasText: /^BellRegressionOrg$/ }).click();
-  await adminPage.getByRole('link', { name: 'Manage organisation' }).click();
+  await adminPage.getByRole('link', { name: 'Manage organization' }).click();
   await expect(adminPage.locator('.kb-team-page')).toBeVisible();
   await adminPage.locator('.kb-member-input').fill('grace');
   await adminPage.getByRole('button', { name: 'Send invite' }).click();

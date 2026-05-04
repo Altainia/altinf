@@ -16,7 +16,7 @@ async function goToManage(page: Page) {
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
   await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).click();
-  await page.getByRole('link', { name: 'Manage organisation' }).click();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
 }
 
@@ -35,7 +35,7 @@ test.beforeAll(async ({ browser }) => {
 
   // Create org.
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
-  await page.locator('input[placeholder="Organisation name"]').fill(ORG);
+  await page.locator('input[placeholder="Organization name"]').fill(ORG);
   await page.locator('.org-create-form .editor-btn').click();
   await expect(page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) })).toBeVisible();
 
@@ -209,11 +209,11 @@ test('bell regression: invite sent to grace increments bell badge on her active 
 
   // Admin creates a new org and invites grace.
   await adminPage.locator('.nav-link', { hasText: 'Orgs' }).click();
-  await adminPage.locator('input[placeholder="Organisation name"]').fill('BellRegressionOrg');
+  await adminPage.locator('input[placeholder="Organization name"]').fill('BellRegressionOrg');
   await adminPage.locator('.org-create-form .editor-btn').click();
   await expect(adminPage.locator('.org-list-link', { hasText: /^BellRegressionOrg$/ })).toBeVisible();
   await adminPage.locator('.org-list-link', { hasText: /^BellRegressionOrg$/ }).click();
-  await adminPage.getByRole('link', { name: 'Manage organisation' }).click();
+  await adminPage.getByRole('link', { name: 'Manage organization' }).click();
   await expect(adminPage.locator('.kb-team-page')).toBeVisible();
   await adminPage.locator('.kb-member-input').fill('grace');
   await adminPage.getByRole('button', { name: 'Send invite' }).click();

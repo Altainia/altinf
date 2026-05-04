@@ -2,7 +2,7 @@
 
 #include "org/org_db.hpp"
 
-// ---- organisations ----
+// ---- organizations ----
 
 TEST_CASE("org_db - create_org makes creator an active lead")
 {

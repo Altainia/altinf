@@ -6,7 +6,7 @@
 ## Overview
 
 Replace the narrow `notification_hub` (which only pushed bell/notification-page refreshes to a
-single user) with a generalised `live_hub` keyed on channel strings. Any page that displays data
+single user) with a generalized `live_hub` keyed on channel strings. Any page that displays data
 another user can mutate subscribes to the relevant channel; mutations broadcast to all affected
 channels. The result is that every live session sees updates immediately, without a page reload.
 
@@ -256,7 +256,7 @@ Rename and update `test_notification_hub.cpp`. Use the synchronous injection hoo
 - Subscribe to `"org:5"`, broadcast `"org:6"` → callback does not fire.
 - Subscribe to `"org:5"` and `"user:alice"`, broadcast `"org:5"` → only org callback fires.
 - Subscribe same session to same channel twice → callback fires once per broadcast (or twice,
-  document the behaviour and assert it).
+  document the behavior and assert it).
 - Unsubscribe → broadcast no longer fires.
 - Two sessions subscribed to same channel → both callbacks fire on broadcast.
 

@@ -202,7 +202,7 @@ test('Next disabled when no tasks after viewport', function () {
 
 test('Prev enabled when a task starts before the viewport', function () {
   const dom = makeGanttDOM(WIDE);
-  // One task in the past; default view is today-centred so it is before viewStart
+  // One task in the past; default view is today-centered so it is before viewStart
   dom.window.initGantt('mount', [makeTask(1, -30, -20), makeTask(2, -2, 8)]);
   const prevBtn = dom.window.document.querySelector('.gv-nav .gv-btn');
   assert(!prevBtn.hasAttribute('disabled'), 'Prev should be enabled');

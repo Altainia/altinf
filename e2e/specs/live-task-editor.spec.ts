@@ -32,11 +32,11 @@ test.beforeAll(async ({ browser }) => {
   // Create org, team, and a task for conflict tests.
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
-  await page.locator('input[placeholder="Organisation name"]').fill('LiveEditorOrg');
+  await page.locator('input[placeholder="Organization name"]').fill('LiveEditorOrg');
   await page.locator('.org-create-form .editor-btn').click();
   await expect(page.locator('.org-list-link', { hasText: /^LiveEditorOrg$/ })).toBeVisible();
   await page.locator('.org-list-link', { hasText: /^LiveEditorOrg$/ }).click();
-  await page.getByRole('link', { name: 'Manage organisation' }).click();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
   await page.locator('input[placeholder="Team name"]').fill('EditorTeam');
   await page.getByRole('button', { name: 'Create' }).click();

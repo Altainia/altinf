@@ -16,7 +16,7 @@ async function goToManage(page: Page) {
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
   await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).click();
-  await page.getByRole('link', { name: 'Manage organisation' }).click();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
 }
 
@@ -39,13 +39,13 @@ test.beforeAll(async ({ browser }) => {
 
   // Create the org.
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
-  await page.locator('input[placeholder="Organisation name"]').fill(ORG);
+  await page.locator('input[placeholder="Organization name"]').fill(ORG);
   await page.locator('.org-create-form .editor-btn').click();
   await expect(page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) })).toBeVisible();
 
   // Invite bob as a lead so he can also navigate to the manage page.
   await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).click();
-  await page.getByRole('link', { name: 'Manage organisation' }).click();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
   await page.locator('.kb-member-input').fill('bob');
   await page.locator('.kb-lead-check').click();

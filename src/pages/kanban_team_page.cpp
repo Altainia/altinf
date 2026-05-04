@@ -28,7 +28,7 @@ kanban_team_page::kanban_team_page(org_db&             odb,
 	const auto org = odb.find_org(org_id);
 	if(!org)
 	{
-		addNew<Wt::WText>("Organisation not found.", Wt::TextFormat::Plain);
+		addNew<Wt::WText>("Organization not found.", Wt::TextFormat::Plain);
 		return;
 	}
 
@@ -185,7 +185,7 @@ void kanban_team_page::refresh_members()
 			  if(!m_odb.set_org_lead(m_org_id, uid, !currently_lead))
 			  {
 				  m_invite_msg->setText(
-				    "Cannot demote: organisation must have at least one lead.");
+				    "Cannot demote: organization must have at least one lead.");
 			  }
 			  else
 			  {
@@ -208,7 +208,7 @@ void kanban_team_page::refresh_members()
 			  if(!m_odb.remove_org_member(m_org_id, uid))
 			  {
 				  m_invite_msg->setText(
-				    "Cannot remove: organisation must have at least one lead.");
+				    "Cannot remove: organization must have at least one lead.");
 			  }
 			  else
 			  {

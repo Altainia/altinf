@@ -332,7 +332,7 @@
       t._endDate   = parseDate(t.end_date);
     });
 
-    // Use a today-centred view when today falls within any task's date range;
+    // Use a today-centered view when today falls within any task's date range;
     // otherwise open at the earliest task start so past/future boards show
     // their tasks immediately without the today line.
     var ranged = tasks.filter(function (t) { return t._startDate && t._endDate; });

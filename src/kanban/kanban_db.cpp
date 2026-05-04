@@ -23,7 +23,7 @@ kanban_db::kanban_db(const std::string& db_path)
 
 	// Ensure new columns exist on pre-existing databases.
 	// Each ALTER TABLE needs its own transaction; SQLite will error (caught) if
-	// the column already exists, which is the idempotent-migration behaviour we want.
+	// the column already exists, which is the idempotent-migration behavior we want.
 	try
 	{
 		Wt::Dbo::Transaction t{m_dbo};
