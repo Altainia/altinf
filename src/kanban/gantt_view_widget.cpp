@@ -50,6 +50,11 @@ gantt_view_widget::gantt_view_widget(std::vector<kanban_task_entry> tasks)
 	doJavaScript("initGantt('" + mount_id + "'," + json + ");");
 }
 
+void gantt_view_widget::refresh(std::vector<kanban_task_entry> tasks)
+{
+	doJavaScript("initGantt('" + id() + "'," + serialize_tasks(tasks) + ");");
+}
+
 std::string gantt_view_widget::serialize_tasks(const std::vector<kanban_task_entry>& tasks)
 {
 	std::ostringstream ss;

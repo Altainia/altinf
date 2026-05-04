@@ -13,6 +13,8 @@ class gantt_view_widget: public Wt::WContainerWidget
 public:
 	explicit gantt_view_widget(std::vector<kanban_task_entry> tasks);
 
+	void refresh(std::vector<kanban_task_entry> tasks);
+
 private:
 	static std::string serialize_tasks(const std::vector<kanban_task_entry>& tasks);
 };
