@@ -117,3 +117,16 @@ TEST_CASE("live_hub - broadcast can be called multiple times")
 
 	CHECK(count == 2);
 }
+
+TEST_CASE("live_hub - duplicate subscribe fires callback twice per broadcast")
+{
+	auto& hub = live_hub::instance();
+	hub.reset(sync_post());
+
+	int count = 0;
+	hub.subscribe("org:5", "sid1", [&count] { ++count; });
+	hub.subscribe("org:5", "sid1", [&count] { ++count; });
+	hub.broadcast("org:5");
+
+	CHECK(count == 2);
+}
