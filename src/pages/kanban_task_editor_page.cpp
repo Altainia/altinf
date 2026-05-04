@@ -1,6 +1,8 @@
 #include "kanban_task_editor_page.hpp"
 
+#include <Wt/Dbo/Exception.h>
 #include <Wt/WAnchor.h>
+#include <Wt/WApplication.h>
 #include <Wt/WColor.h>
 #include <Wt/WDate.h>
 #include <Wt/WLink.h>
@@ -215,17 +217,17 @@ kanban_task_editor_page::kanban_task_editor_page(
 	auto* btn_row = form->addNew<Wt::WContainerWidget>();
 	btn_row->setStyleClass("editor-btn-row");
 
-	auto* save_btn =
+	m_save_btn =
 	  btn_row->addNew<Wt::WPushButton>(is_new ? "Create Task" : "Save Changes");
-	save_btn->setStyleClass("editor-btn");
-	save_btn->clicked().connect([this] { save(); });
+	m_save_btn->setStyleClass("editor-btn");
+	m_save_btn->clicked().connect([this] { save(); });
 
 	// Delete only for leads editing existing tasks.
 	if(!is_new && is_lead)
 	{
-		auto* del_btn = btn_row->addNew<Wt::WPushButton>("Delete");
-		del_btn->setStyleClass("editor-btn editor-btn-danger");
-		del_btn->clicked().connect(
+		m_del_btn = btn_row->addNew<Wt::WPushButton>("Delete");
+		m_del_btn->setStyleClass("editor-btn editor-btn-danger");
+		m_del_btn->clicked().connect(
 		  [this] {
 			  m_db.delete_task(m_existing->id);
 			  m_on_save();
@@ -236,6 +238,39 @@ kanban_task_editor_page::kanban_task_editor_page(
 	btn_row->addNew<Wt::WAnchor>(
 	         Wt::WLink{Wt::LinkType::InternalPath, back_url}, "Cancel")
 	  ->setStyleClass("editor-btn editor-btn-cancel");
+
+	if(existing)
+	{
+		m_task_id    = existing->id;
+		m_session_id = Wt::WApplication::instance()->sessionId();
+		live_hub::instance().subscribe(
+		  "task:" + std::to_string(m_task_id),
+		  m_session_id,
+		  [this] { mark_stale(); Wt::WApplication::instance()->triggerUpdate(); });
+	}
+}
+
+kanban_task_editor_page::~kanban_task_editor_page()
+{
+	if(m_task_id != 0)
+	{
+		live_hub::instance().unsubscribe(
+		  "task:" + std::to_string(m_task_id), m_session_id);
+	}
+}
+
+void kanban_task_editor_page::mark_stale()
+{
+	m_status_msg->setText(
+	  "This task was modified by another user \xe2\x80\x94 saving is disabled.");
+	if(m_save_btn)
+	{
+		m_save_btn->setDisabled(true);
+	}
+	if(m_del_btn)
+	{
+		m_del_btn->setDisabled(true);
+	}
 }
 
 void kanban_task_editor_page::save()
@@ -295,7 +330,15 @@ void kanban_task_editor_page::save()
 	{
 		t.id         = m_existing->id;
 		t.sort_order = m_existing->sort_order;
-		m_db.update_task(t);
+		try
+		{
+			m_db.update_task(t);
+		}
+		catch(const Wt::Dbo::StaleObjectException&)
+		{
+			mark_stale();
+			return;
+		}
 	}
 	else
 	{
