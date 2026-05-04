@@ -1,33 +1,33 @@
-#include "notification_hub.hpp"
+#include "live_hub.hpp"
 
 #include <Wt/WServer.h>
 
-notification_hub& notification_hub::instance()
+live_hub& live_hub::instance()
 {
-	static notification_hub hub;
+	static live_hub hub;
 	return hub;
 }
 
-void notification_hub::reset(post_fn_t post_fn)
+void live_hub::reset(post_fn_t post_fn)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 	m_sessions.clear();
 	m_post_fn = std::move(post_fn);
 }
 
-void notification_hub::register_session(const std::string&    username,
-                                        const std::string&    session_id,
-                                        std::function<void()> update_fn)
+void live_hub::subscribe(const std::string&    channel,
+                         const std::string&    session_id,
+                         std::function<void()> update_fn)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
-	m_sessions[username].push_back({session_id, std::move(update_fn)});
+	m_sessions[channel].push_back({session_id, std::move(update_fn)});
 }
 
-void notification_hub::deregister_session(const std::string& username,
-                                          const std::string& session_id)
+void live_hub::unsubscribe(const std::string& channel,
+                           const std::string& session_id)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
-	auto                        it = m_sessions.find(username);
+	auto                        it = m_sessions.find(channel);
 	if(it == m_sessions.end())
 	{
 		return;
@@ -43,12 +43,12 @@ void notification_hub::deregister_session(const std::string& username,
 	}
 }
 
-void notification_hub::notify_user(const std::string& username)
+void live_hub::broadcast(const std::string& channel)
 {
 	std::vector<entry> entries;
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
-		auto                        it = m_sessions.find(username);
+		auto                        it = m_sessions.find(channel);
 		if(it == m_sessions.end())
 		{
 			return;
