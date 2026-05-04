@@ -11,6 +11,8 @@ const WT_CONFIG = path.join(PROJECT_ROOT, 'wt_config.xml');
 export default defineConfig({
   testDir: './specs',
   timeout: 30_000,
+  retries: 1,
+  workers: 3,
   expect: { timeout: 10_000 },
   use: {
     baseURL: `http://localhost:${PORT}`,
