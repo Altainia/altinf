@@ -1,6 +1,7 @@
 #include "kanban_team_page.hpp"
 
 #include <Wt/WAnchor.h>
+#include <Wt/WApplication.h>
 #include <Wt/WCheckBox.h>
 #include <Wt/WComboBox.h>
 #include <Wt/WLink.h>
@@ -84,6 +85,7 @@ kanban_team_page::kanban_team_page(org_db&             odb,
 		  }
 		  m_odb.invite_to_org(m_org_id, u, m_invite_lead->isChecked());
 		  live_hub::instance().broadcast("user:" + u);
+		  live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
 		  m_invite_input->setText("");
 		  m_invite_lead->setChecked(false);
 		  m_invite_msg->setText("Invite sent to " + u + ".");
@@ -119,9 +121,32 @@ kanban_team_page::kanban_team_page(org_db&             odb,
 			  return;
 		  }
 		  m_kdb.create_team(name, m_org_id);
+		  live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
 		  m_new_team_input->setText("");
 		  refresh_teams();
 	  });
+
+	m_session_id = Wt::WApplication::instance()->sessionId();
+	live_hub::instance().subscribe(
+	  "org:" + std::to_string(m_org_id),
+	  m_session_id,
+	  [this] { refresh(); Wt::WApplication::instance()->triggerUpdate(); });
+}
+
+kanban_team_page::~kanban_team_page()
+{
+	if(!m_session_id.empty())
+	{
+		live_hub::instance().unsubscribe(
+		  "org:" + std::to_string(m_org_id), m_session_id);
+	}
+}
+
+void kanban_team_page::refresh()
+{
+	refresh_members();
+	refresh_pending();
+	refresh_teams();
 }
 
 void kanban_team_page::refresh_members()
@@ -162,6 +187,7 @@ void kanban_team_page::refresh_members()
 				  m_odb.push_notification(
 				    uid, type, make_org_event_payload(m_org_id, m_org_name));
 				  live_hub::instance().broadcast("user:" + uid);
+				  live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
 				  m_invite_msg->setText("");
 			  }
 			  refresh_members();
@@ -179,11 +205,28 @@ void kanban_team_page::refresh_members()
 			  }
 			  else
 			  {
+				  const auto             org_teams = m_kdb.teams_for_org(m_org_id);
+				  std::vector<long long> member_team_ids;
+				  for(const auto& t: org_teams)
+				  {
+					  if(m_kdb.is_member(t.id, uid))
+					  {
+						  member_team_ids.push_back(t.id);
+					  }
+				  }
+
 				  m_odb.push_notification(
 				    uid, "org_removed", make_org_event_payload(m_org_id, m_org_name));
-				  live_hub::instance().broadcast("user:" + uid);
 				  m_kdb.remove_member_from_org_teams(m_org_id, uid);
 				  m_invite_msg->setText("");
+
+				  live_hub::instance().broadcast("user:" + uid);
+				  live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
+				  for(const auto tid: member_team_ids)
+				  {
+					  live_hub::instance().broadcast("team:" + std::to_string(tid));
+				  }
+
 				  refresh_teams();
 			  }
 			  refresh_members();
@@ -217,6 +260,7 @@ void kanban_team_page::refresh_pending()
 		  [this, uid = p.username] {
 			  m_odb.rescind_invite_notification(m_org_id, uid);
 			  live_hub::instance().broadcast("user:" + uid);
+			  live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
 			  m_odb.remove_org_member(m_org_id, uid);
 			  refresh_pending();
 		  });
@@ -261,6 +305,8 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 		  if(!n.empty())
 		  {
 			  m_kdb.rename_team(tid, n);
+			  live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
+			  live_hub::instance().broadcast("team:" + std::to_string(tid));
 		  }
 	  });
 
@@ -269,6 +315,7 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 	del_team->clicked().connect(
 	  [this, tid = team.id] {
 		  m_kdb.delete_team(tid);
+		  live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
 		  refresh_teams();
 	  });
 
@@ -296,6 +343,8 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 			    is_lead ? "team_lead_demoted" : "team_lead_promoted";
 			  m_odb.push_notification(uid, type, make_team_lead_payload(tid, tname));
 			  live_hub::instance().broadcast("user:" + uid);
+			  live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
+			  live_hub::instance().broadcast("team:" + std::to_string(tid));
 			  refresh_teams();
 		  });
 
@@ -307,6 +356,8 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 			  m_odb.push_notification(
 			    uid, "team_removed", make_team_event_payload(tid, tname, m_org_id, m_org_name));
 			  live_hub::instance().broadcast("user:" + uid);
+			  live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
+			  live_hub::instance().broadcast("team:" + std::to_string(tid));
 			  refresh_teams();
 		  });
 	}
@@ -362,6 +413,8 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 			  m_odb.push_notification(
 			    u, "team_added", make_team_event_payload(tid, tname, m_org_id, m_org_name));
 			  live_hub::instance().broadcast("user:" + u);
+			  live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
+			  live_hub::instance().broadcast("team:" + std::to_string(tid));
 			  refresh_teams();
 		  });
 	}
