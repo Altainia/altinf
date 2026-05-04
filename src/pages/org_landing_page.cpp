@@ -1,18 +1,45 @@
 #include "org_landing_page.hpp"
 
 #include <Wt/WAnchor.h>
+#include <Wt/WApplication.h>
 #include <Wt/WLink.h>
 #include <Wt/WText.h>
+
+#include "widgets/live_hub.hpp"
 
 org_landing_page::org_landing_page(org_db&             odb,
                                    kanban_db&          kdb,
                                    long long           org_id,
                                    const session_data& session,
-                                   bool                is_org_lead)
+                                   bool                is_org_lead):
+  m_odb{odb},
+  m_kdb{kdb},
+  m_org_id{org_id},
+  m_session{session},
+  m_is_org_lead{is_org_lead}
 {
 	setStyleClass("page org-landing-page");
+	render();
 
-	const auto org = odb.find_org(org_id);
+	m_session_id = Wt::WApplication::instance()->sessionId();
+	live_hub::instance().subscribe(
+	  "org:" + std::to_string(m_org_id),
+	  m_session_id,
+	  [this] { refresh(); Wt::WApplication::instance()->triggerUpdate(); });
+}
+
+org_landing_page::~org_landing_page()
+{
+	if(!m_session_id.empty())
+	{
+		live_hub::instance().unsubscribe(
+		  "org:" + std::to_string(m_org_id), m_session_id);
+	}
+}
+
+void org_landing_page::render()
+{
+	const auto org = m_odb.find_org(m_org_id);
 	if(!org)
 	{
 		addNew<Wt::WText>("Organisation not found.", Wt::TextFormat::Plain);
@@ -21,35 +48,33 @@ org_landing_page::org_landing_page(org_db&             odb,
 
 	addNew<Wt::WText>("<h1>" + org->name + "</h1>", Wt::TextFormat::UnsafeXHTML);
 
-	// ── Lead actions ──────────────────────────────────────────────────────────
-	if(is_org_lead)
+	if(m_is_org_lead)
 	{
 		auto* actions = addNew<Wt::WContainerWidget>();
 		actions->setStyleClass("org-lead-actions");
 
 		actions->addNew<Wt::WAnchor>(
 		         Wt::WLink{Wt::LinkType::InternalPath,
-		                   "/org/" + std::to_string(org_id) + "/manage"},
+		                   "/org/" + std::to_string(m_org_id) + "/manage"},
 		         "Manage organisation")
 		  ->setStyleClass("editor-btn");
 
 		actions->addNew<Wt::WAnchor>(
 		         Wt::WLink{Wt::LinkType::InternalPath,
-		                   "/org/" + std::to_string(org_id) + "/board"},
+		                   "/org/" + std::to_string(m_org_id) + "/board"},
 		         "View all teams\xe2\x80\x99 board")
 		  ->setStyleClass("editor-btn editor-btn-cancel");
 	}
 
-	const auto  all_teams = kdb.teams_for_org(org_id);
-	const auto& username  = session.username;
+	const auto  all_teams = m_kdb.teams_for_org(m_org_id);
+	const auto& username  = m_session.username;
 
-	// ── Your teams ────────────────────────────────────────────────────────────
 	addNew<Wt::WText>("<h2>Your teams</h2>", Wt::TextFormat::UnsafeXHTML);
 
 	bool has_own = false;
 	for(const auto& t: all_teams)
 	{
-		if(!kdb.is_member(t.id, username) && !is_org_lead)
+		if(!m_kdb.is_member(t.id, username) && !m_is_org_lead)
 		{
 			continue;
 		}
@@ -69,11 +94,10 @@ org_landing_page::org_landing_page(org_db&             odb,
 		  ->setStyleClass("org-empty-note");
 	}
 
-	// ── Other teams (for members who are not in those teams) ──────────────────
 	bool has_other = false;
 	for(const auto& t: all_teams)
 	{
-		if(kdb.is_member(t.id, username) || is_org_lead)
+		if(m_kdb.is_member(t.id, username) || m_is_org_lead)
 		{
 			continue;
 		}
@@ -87,4 +111,10 @@ org_landing_page::org_landing_page(org_db&             odb,
 		row->addNew<Wt::WText>(t.name, Wt::TextFormat::Plain)
 		  ->setStyleClass("org-team-name");
 	}
+}
+
+void org_landing_page::refresh()
+{
+	clear();
+	render();
 }
