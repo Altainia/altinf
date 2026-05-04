@@ -472,9 +472,23 @@ void altinf_app::handle_path(const std::string& path)
 			  {
 				  return;
 			  }
+			  const auto del_orgs     = m_org_db->orgs_for_user(username);
+			  const auto del_team_ids = m_kanban_db->team_ids_for_user(username);
+
 			  m_user_db->delete_user(username);
 			  m_org_db->remove_user_from_all_orgs(username);
 			  m_kanban_db->remove_member_from_all_teams(username);
+
+			  live_hub::instance().broadcast("accounts");
+			  for(const auto& org: del_orgs)
+			  {
+				  live_hub::instance().broadcast("org:" + std::to_string(org.id));
+			  }
+			  for(const auto tid: del_team_ids)
+			  {
+				  live_hub::instance().broadcast("team:" + std::to_string(tid));
+			  }
+
 			  handle_path("/admin/accounts");
 		  });
 	}

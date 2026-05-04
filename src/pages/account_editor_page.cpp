@@ -7,6 +7,7 @@
 #include <Wt/WText.h>
 
 #include "auth/permission.hpp"
+#include "widgets/live_hub.hpp"
 
 account_editor_page::account_editor_page(user_db*              db,
                                          const user_entry*     existing,
@@ -165,6 +166,7 @@ void account_editor_page::save()
 		m_db->create_user(username, password, perms, display_name);
 	}
 
+	live_hub::instance().broadcast("accounts");
 	m_on_save();
 }
 
