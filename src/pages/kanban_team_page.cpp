@@ -316,6 +316,7 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 	  [this, tid = team.id] {
 		  m_kdb.delete_team(tid);
 		  live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
+		  live_hub::instance().broadcast("team:" + std::to_string(tid));
 		  refresh_teams();
 	  });
 
