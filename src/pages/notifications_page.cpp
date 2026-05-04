@@ -6,6 +6,7 @@
 #include <Wt/WText.h>
 
 #include "org/org.hpp"
+#include "widgets/live_hub.hpp"
 
 notifications_page::notifications_page(org_db&               odb,
                                        const session_data&   session,
@@ -121,6 +122,8 @@ void notifications_page::refresh()
 					  [this, nid = n.id, org_id] {
 						  m_db.accept_invite(org_id, m_session.username);
 						  m_db.mark_read(nid);
+						  live_hub::instance().broadcast("org:" + std::to_string(org_id));
+						  live_hub::instance().broadcast("user:" + m_session.username);
 						  if(m_on_read)
 						  {
 							  m_on_read();
@@ -134,6 +137,7 @@ void notifications_page::refresh()
 					  [this, nid = n.id, org_id] {
 						  m_db.decline_invite(org_id, m_session.username);
 						  m_db.mark_read(nid);
+						  live_hub::instance().broadcast("org:" + std::to_string(org_id));
 						  if(m_on_read)
 						  {
 							  m_on_read();
