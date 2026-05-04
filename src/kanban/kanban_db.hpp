@@ -36,6 +36,7 @@ public:
 	std::vector<std::string>       members_for_team(long long team_id);
 	std::vector<team_member_entry> team_member_entries(long long team_id);
 	bool                           is_member(long long team_id, const std::string& username);
+	std::vector<long long>         team_ids_for_user(const std::string& username);
 
 	// Tasks
 	long long                        add_task(const kanban_task_entry& e);

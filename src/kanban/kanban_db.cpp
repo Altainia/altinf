@@ -300,6 +300,21 @@ bool kanban_db::is_member(long long team_id, const std::string& username)
 	return !results.empty();
 }
 
+std::vector<long long> kanban_db::team_ids_for_user(const std::string& username)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results = m_dbo.find<team_member_record>()
+	                       .where("username = ?")
+	                       .bind(username)
+	                       .resultList();
+	std::vector<long long> out;
+	for(const auto& r: results)
+	{
+		out.push_back(r->team_id);
+	}
+	return out;
+}
+
 // ---- Tasks ----
 
 long long kanban_db::add_task(const kanban_task_entry& e)
