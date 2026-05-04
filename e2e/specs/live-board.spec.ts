@@ -233,6 +233,9 @@ test('gantt: date change by A updates bar on B gantt view', async ({ browser }) 
   await navigateToGantt(pageB, 'LiveBoardOrg');
   await expect(pageB.locator('.gv-scroll svg text', { hasText: 'DateTask' })).toBeVisible();
 
+  // Snapshot B's current SVG markup before A's edit — we'll verify it changes.
+  const svgBefore = await pageB.locator('.gv-scroll svg').evaluate(el => el.outerHTML);
+
   // A edits DateTask and extends the end date to widen the bar
   await openTaskEditor(pageA, 'DateTask');
   const endInputEdit = pageA.locator('.kb-editor-field-wrap').filter({ hasText: 'End date' }).locator('input').first();
@@ -241,7 +244,13 @@ test('gantt: date change by A updates bar on B gantt view', async ({ browser }) 
   await pageA.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
   await saveTaskEditor(pageA);
 
-  // B's Gantt re-renders via live push — DateTask bar should still be visible
+  // B's Gantt must re-render via live push: wait until the SVG markup changes.
+  await pageB.waitForFunction(
+    (expected) => document.querySelector('.gv-scroll svg')?.outerHTML !== expected,
+    svgBefore,
+    { timeout: 15000 },
+  );
+  // DateTask is still present in the re-rendered Gantt (bar widened to 30 days).
   await expect(pageB.locator('.gv-scroll svg text', { hasText: 'DateTask' })).toBeVisible();
 
   await ctxA.close();
