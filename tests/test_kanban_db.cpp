@@ -16,7 +16,6 @@ static kanban_task_entry make_task(long long          team_id,
 	e.status     = status;
 	e.start_date = Wt::WDate{2024, 1, 1};
 	e.end_date   = Wt::WDate{2024, 1, 31};
-	e.color      = "#7aa2d4";
 	e.sort_order = sort;
 	return e;
 }
@@ -189,11 +188,9 @@ TEST_CASE("kanban_db - update task")
 	const long long id   = db.add_task(make_task(tid, "Original"));
 	auto            task = *db.find_task(id);
 	task.title           = "Updated";
-	task.color           = "#ff0000";
 	db.update_task(task);
 	const auto updated = db.find_task(id);
 	CHECK(updated->title == "Updated");
-	CHECK(updated->color == "#ff0000");
 }
 
 TEST_CASE("kanban_db - update_task_status")

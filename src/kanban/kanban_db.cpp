@@ -58,7 +58,7 @@ kanban_task_entry kanban_db::to_entry(const Wt::Dbo::ptr<kanban_task_record>& p)
 	e.assigned_to = p->assigned_to;
 	e.start_date  = p->start_date;
 	e.end_date    = p->end_date;
-	e.color       = p->color;
+	e.type_id     = p->type_id;
 	e.sort_order  = p->sort_order;
 	return e;
 }
@@ -328,7 +328,7 @@ long long kanban_db::add_task(const kanban_task_entry& e)
 	p.modify()->assigned_to = e.assigned_to;
 	p.modify()->start_date  = e.start_date;
 	p.modify()->end_date    = e.end_date;
-	p.modify()->color       = e.color;
+	p.modify()->type_id     = e.type_id;
 	p.modify()->sort_order  = e.sort_order;
 	m_dbo.flush();
 	return p.id();
@@ -350,7 +350,7 @@ void kanban_db::update_task(const kanban_task_entry& e)
 	p.modify()->assigned_to            = e.assigned_to;
 	p.modify()->start_date             = e.start_date;
 	p.modify()->end_date               = e.end_date;
-	p.modify()->color                  = e.color;
+	p.modify()->type_id                = e.type_id;
 	p.modify()->sort_order             = e.sort_order;
 }
 

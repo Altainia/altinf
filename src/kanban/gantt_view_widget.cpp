@@ -75,7 +75,7 @@ std::string gantt_view_widget::serialize_tasks(const std::vector<kanban_task_ent
 		   << "\"id\":" << t.id << ','
 		   << "\"title\":\"" << escape_json_gv(t.title) << "\","
 		   << "\"assigned_to\":\"" << escape_json_gv(t.assigned_to) << "\","
-		   << "\"color\":\"" << escape_json_gv(t.color) << "\","
+		   << "\"color\":\"#cccccc\","
 		   << "\"start_date\":\"" << date_str_gv(t.start_date) << "\","
 		   << "\"end_date\":\"" << date_str_gv(t.end_date) << "\""
 		   << '}';

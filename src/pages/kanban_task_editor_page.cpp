@@ -204,13 +204,7 @@ kanban_task_editor_page::kanban_task_editor_page(
 	m_color = color_wrap->addNew<Wt::WColorPicker>();
 	m_color->setStyleClass("kb-color-picker");
 	{
-		const std::string hex =
-		  (existing && !existing->color.empty()) ? existing->color : "#7aa2d4";
 		int cr{0x7a}, cg{0xa2}, cb{0xd4};
-		if(hex.size() == 7 && hex[0] == '#')
-		{
-			std::sscanf(hex.c_str() + 1, "%02x%02x%02x", &cr, &cg, &cb);
-		}
 		m_color->setColor(Wt::WColor(cr, cg, cb));
 	}
 
@@ -326,17 +320,13 @@ void kanban_task_editor_page::save()
 		}
 	}
 
-	const auto wc = m_color->color();
-	char       cbuf[8];
-	std::snprintf(cbuf, sizeof(cbuf), "#%02x%02x%02x", wc.red(), wc.green(), wc.blue());
-
 	kanban_task_entry t;
 	t.team_id     = m_team_id;
 	t.status      = status;
 	t.title       = title;
 	t.description = m_description->text().toUTF8();
 	t.assigned_to = new_assignee;
-	t.color       = cbuf;
+	t.type_id     = 0;
 	if(const auto d = m_start_date->date(); d.isValid())
 	{
 		t.start_date = d;

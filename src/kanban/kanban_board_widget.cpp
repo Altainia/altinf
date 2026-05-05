@@ -68,7 +68,9 @@ kanban_board_widget::kanban_board_widget(
 			  const auto s1 = payload.find(':', 5);
 			  const auto s2 = s1 != std::string::npos ? payload.find(':', s1 + 1) : std::string::npos;
 			  if(s1 == std::string::npos || s2 == std::string::npos)
+			  {
 				  return;
+			  }
 			  const long long   tid    = std::stoll(payload.substr(5, s1 - 5));
 			  const std::string status = payload.substr(s1 + 1, s2 - s1 - 1);
 			  const int         sort   = std::stoi(payload.substr(s2 + 1));
@@ -97,14 +99,16 @@ std::string kanban_board_widget::serialize_tasks(const std::vector<kanban_task_e
 	for(const auto& t: tasks)
 	{
 		if(!first)
+		{
 			ss << ',';
+		}
 		first = false;
 		ss << '{'
 		   << "\"id\":" << t.id << ','
 		   << "\"status\":\"" << escape_json(t.status) << "\","
 		   << "\"title\":\"" << escape_json(t.title) << "\","
 		   << "\"assigned_to\":\"" << escape_json(t.assigned_to) << "\","
-		   << "\"color\":\"" << escape_json(t.color) << "\","
+		   << "\"color\":\"#cccccc\","
 		   << "\"start_date\":\"" << date_str(t.start_date) << "\","
 		   << "\"end_date\":\"" << date_str(t.end_date) << "\""
 		   << '}';

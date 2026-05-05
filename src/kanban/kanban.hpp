@@ -36,6 +36,21 @@ struct team_member_record
 	}
 };
 
+struct task_type_record
+{
+	long long   org_id{0};
+	std::string name;
+	std::string color;
+
+	template<class Action>
+	void persist(Action& a)
+	{
+		Wt::Dbo::field(a, org_id, "org_id");
+		Wt::Dbo::field(a, name,   "name");
+		Wt::Dbo::field(a, color,  "color");
+	}
+};
+
 struct kanban_task_record
 {
 	long long   team_id{0};
@@ -45,7 +60,7 @@ struct kanban_task_record
 	std::string assigned_to;
 	Wt::WDate   start_date;
 	Wt::WDate   end_date;
-	std::string color;
+	long long   type_id{0};
 	int         sort_order{0};
 
 	template<class Action>
@@ -58,7 +73,7 @@ struct kanban_task_record
 		Wt::Dbo::field(a, assigned_to, "assigned_to");
 		Wt::Dbo::field(a, start_date,  "start_date");
 		Wt::Dbo::field(a, end_date,    "end_date");
-		Wt::Dbo::field(a, color,       "color");
+		Wt::Dbo::field(a, type_id,     "type_id");
 		Wt::Dbo::field(a, sort_order,  "sort_order");
 	}
 };
@@ -78,6 +93,14 @@ struct team_member_entry
 	bool        is_lead{false};
 };
 
+struct task_type_entry
+{
+	long long   id{0};
+	long long   org_id{0};
+	std::string name;
+	std::string color;
+};
+
 struct kanban_task_entry
 {
 	long long   id{0};
@@ -88,6 +111,6 @@ struct kanban_task_entry
 	std::string assigned_to;
 	Wt::WDate   start_date;
 	Wt::WDate   end_date;
-	std::string color;
+	long long   type_id{0};
 	int         sort_order{0};
 };
