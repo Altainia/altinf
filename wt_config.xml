@@ -5,6 +5,7 @@
       <shared-process>
         <num-processes>1</num-processes>
       </shared-process>
+      <reload-is-new-session>false</reload-is-new-session>
     </session-management>
     <max-request-size>1048576</max-request-size>
     <debug>false</debug>
