@@ -44,6 +44,9 @@ void nav_bar::update()
 
 	if(!m_session.logged_in)
 	{
+		m_auth_area->addNew<Wt::WAnchor>(
+		             Wt::WLink{Wt::LinkType::InternalPath, "/login"}, "Login")
+		  ->setStyleClass("nav-link nav-login");
 		return;
 	}
 

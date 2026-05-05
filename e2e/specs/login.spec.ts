@@ -50,3 +50,15 @@ test('logout clears session', async ({ page }) => {
   await page.locator('.nav-logout').click();
   await expect(page.locator('.nav-logout')).not.toBeVisible();
 });
+
+test('logged-out user sees login link in navbar', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.nav-login')).toBeVisible();
+  await expect(page.locator('.nav-login')).toHaveText('Login');
+});
+
+test('navbar login link navigates to login page', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.nav-login').click();
+  await expect(page.locator('.login-form')).toBeVisible();
+});
