@@ -71,6 +71,11 @@ kanban_task_entry kanban_db::to_entry(const Wt::Dbo::ptr<kanban_task_record>& p)
 	return e;
 }
 
+task_type_entry kanban_db::to_entry(const Wt::Dbo::ptr<task_type_record>& p)
+{
+	return {.id = p.id(), .org_id = p->org_id, .name = p->name, .color = p->color};
+}
+
 // ---- Teams ----
 
 long long kanban_db::create_team(const std::string& name, long long org_id)
@@ -462,4 +467,67 @@ bool kanban_db::can_edit_board(long long          team_id,
 		return true;
 	}
 	return false;
+}
+
+// ---- Task types ----
+
+long long kanban_db::create_task_type(long long          org_id,
+                                      const std::string& name,
+                                      const std::string& color)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	auto                 p = m_dbo.add(std::make_unique<task_type_record>());
+	p.modify()->org_id     = org_id;
+	p.modify()->name       = name;
+	p.modify()->color      = color;
+	m_dbo.flush();
+	return p.id();
+}
+
+void kanban_db::update_task_type(long long          id,
+                                 const std::string& name,
+                                 const std::string& color)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	auto                 p = m_dbo.load<task_type_record>(id);
+	p.modify()->name       = name;
+	p.modify()->color      = color;
+}
+
+void kanban_db::delete_task_type(long long id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	m_dbo.execute("UPDATE kanban_task SET type_id=0 WHERE type_id=?").bind(id);
+	auto p = m_dbo.load<task_type_record>(id);
+	p.remove();
+}
+
+std::vector<task_type_entry> kanban_db::types_for_org(long long org_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results = m_dbo.find<task_type_record>()
+	                       .where("org_id = ?")
+	                       .bind(org_id)
+	                       .orderBy("id")
+	                       .resultList();
+	std::vector<task_type_entry> out;
+	for(const auto& p: results)
+	{
+		out.push_back(to_entry(p));
+	}
+	return out;
+}
+
+std::optional<task_type_entry> kanban_db::find_task_type(long long id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	try
+	{
+		auto p = m_dbo.load<task_type_record>(id);
+		return to_entry(p);
+	}
+	catch(const Wt::Dbo::ObjectNotFoundException&)
+	{
+		return std::nullopt;
+	}
 }

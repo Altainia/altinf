@@ -57,9 +57,21 @@ public:
 	                    permission::flags perms, bool is_org_lead = false,
 	                    bool is_team_lead = false);
 
+	// Task types
+	long long                      create_task_type(long long          org_id,
+	                                                const std::string& name,
+	                                                const std::string& color);
+	void                           update_task_type(long long          id,
+	                                                const std::string& name,
+	                                                const std::string& color);
+	void                           delete_task_type(long long id);
+	std::vector<task_type_entry>   types_for_org(long long org_id);
+	std::optional<task_type_entry> find_task_type(long long id);
+
 private:
 	Wt::Dbo::Session m_dbo;
 
 	static team_entry        to_entry(const Wt::Dbo::ptr<team_record>& p);
 	static kanban_task_entry to_entry(const Wt::Dbo::ptr<kanban_task_record>& p);
+	static task_type_entry   to_entry(const Wt::Dbo::ptr<task_type_record>& p);
 };

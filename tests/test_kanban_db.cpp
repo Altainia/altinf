@@ -375,3 +375,106 @@ TEST_CASE("kanban_db - remove_member_from_all_teams on non-member is a no-op")
 
 	CHECK(db.is_member(tid, "alice"));
 }
+
+// ---- task types ----
+
+TEST_CASE("kanban_db - create and retrieve task type")
+{
+	kanban_db       db{":memory:"};
+	const long long id = db.create_task_type(1, "Bug Fix", "#e07b54");
+	CHECK(id > 0);
+	const auto t = db.find_task_type(id);
+	REQUIRE(t.has_value());
+	CHECK(t->name == "Bug Fix");
+	CHECK(t->color == "#e07b54");
+	CHECK(t->org_id == 1);
+}
+
+TEST_CASE("kanban_db - types_for_org returns only org types")
+{
+	kanban_db db{":memory:"};
+	db.create_task_type(1, "Bug Fix", "#e07b54");
+	db.create_task_type(1, "Feature", "#5a9e6f");
+	db.create_task_type(2, "Other", "#7aa2d4");
+	const auto org1 = db.types_for_org(1);
+	REQUIRE(org1.size() == 2);
+	const auto org2 = db.types_for_org(2);
+	REQUIRE(org2.size() == 1);
+}
+
+TEST_CASE("kanban_db - types_for_org empty when no types")
+{
+	kanban_db db{":memory:"};
+	CHECK(db.types_for_org(99).empty());
+}
+
+TEST_CASE("kanban_db - update_task_type changes name and color")
+{
+	kanban_db       db{":memory:"};
+	const long long id = db.create_task_type(1, "Old", "#aaaaaa");
+	db.update_task_type(id, "New", "#bbbbbb");
+	const auto t = db.find_task_type(id);
+	REQUIRE(t.has_value());
+	CHECK(t->name == "New");
+	CHECK(t->color == "#bbbbbb");
+}
+
+TEST_CASE("kanban_db - delete_task_type zeroes out affected tasks")
+{
+	kanban_db       db{":memory:"};
+	const long long team_id = db.create_team("T", 1);
+	const long long type_id = db.create_task_type(1, "Bug Fix", "#e07b54");
+
+	kanban_task_entry e;
+	e.team_id           = team_id;
+	e.title             = "A task";
+	e.type_id           = type_id;
+	const long long tid = db.add_task(e);
+
+	db.delete_task_type(type_id);
+
+	CHECK(!db.find_task_type(type_id).has_value());
+	CHECK(db.find_task(tid)->type_id == 0);
+}
+
+TEST_CASE("kanban_db - find_task_type missing returns nullopt")
+{
+	kanban_db db{":memory:"};
+	CHECK(!db.find_task_type(9999).has_value());
+}
+
+TEST_CASE("kanban_db - task type_id persists through add and find")
+{
+	kanban_db       db{":memory:"};
+	const long long team_id = db.create_team("T", 1);
+	const long long type_id = db.create_task_type(1, "Feature", "#5a9e6f");
+
+	kanban_task_entry e;
+	e.team_id          = team_id;
+	e.title            = "My task";
+	e.type_id          = type_id;
+	const long long id = db.add_task(e);
+
+	const auto found = db.find_task(id);
+	REQUIRE(found.has_value());
+	CHECK(found->type_id == type_id);
+}
+
+TEST_CASE("kanban_db - update_task preserves type_id change")
+{
+	kanban_db       db{":memory:"};
+	const long long team_id = db.create_team("T", 1);
+	const long long type_id = db.create_task_type(1, "Feature", "#5a9e6f");
+
+	kanban_task_entry e;
+	e.team_id          = team_id;
+	e.title            = "My task";
+	e.type_id          = 0;
+	const long long id = db.add_task(e);
+
+	auto task    = *db.find_task(id);
+	task.type_id = type_id;
+	db.update_task(task);
+
+	CHECK(db.find_task(id)->type_id == type_id);
+}
