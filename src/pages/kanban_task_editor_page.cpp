@@ -201,6 +201,7 @@ kanban_task_editor_page::kanban_task_editor_page(
 	color_wrap->setStyleClass("kb-editor-field-wrap");
 	color_wrap->addNew<Wt::WText>("Color", Wt::TextFormat::Plain)
 	  ->setStyleClass("kb-field-label");
+	// TODO(task4): replace with chip selector
 	m_color = color_wrap->addNew<Wt::WColorPicker>();
 	m_color->setStyleClass("kb-color-picker");
 	{

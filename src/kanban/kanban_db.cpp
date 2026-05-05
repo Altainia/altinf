@@ -11,6 +11,7 @@ kanban_db::kanban_db(const std::string& db_path)
 	m_dbo.mapClass<team_record>("team");
 	m_dbo.mapClass<team_member_record>("team_member");
 	m_dbo.mapClass<kanban_task_record>("kanban_task");
+	m_dbo.mapClass<task_type_record>("task_type");
 
 	try
 	{
@@ -35,6 +36,13 @@ kanban_db::kanban_db(const std::string& db_path)
 	{
 		Wt::Dbo::Transaction t{m_dbo};
 		m_dbo.execute("ALTER TABLE team_member ADD COLUMN is_lead INTEGER NOT NULL DEFAULT 0");
+	}
+	catch(...)
+	{}
+	try
+	{
+		Wt::Dbo::Transaction t{m_dbo};
+		m_dbo.execute("ALTER TABLE kanban_task ADD COLUMN type_id INTEGER NOT NULL DEFAULT 0");
 	}
 	catch(...)
 	{}

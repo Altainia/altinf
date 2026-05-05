@@ -173,6 +173,7 @@ TEST_CASE("kanban_db - find_task")
 	const auto      opt = db.find_task(id);
 	REQUIRE(opt.has_value());
 	CHECK(opt->title == "My Task");
+	CHECK(opt->type_id == 0);
 }
 
 TEST_CASE("kanban_db - find_task missing returns nullopt")
