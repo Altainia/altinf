@@ -554,14 +554,23 @@ void altinf_app::handle_path(const std::string& path)
 	else if(path == "/login")
 	{
 		m_content->addNew<login_page>(*m_user_db, m_session, [this] {
-			const auto raw_token = m_user_db->create_session_token(m_session.username);
-			m_session_token      = raw_token;
-			Wt::Http::Cookie c{"altinf_session", raw_token};
-			c.setHttpOnly(true);
-			c.setSecure(true);
-			c.setSameSite(Wt::Http::Cookie::SameSite::Strict);
-			c.setMaxAge(std::chrono::seconds{30 * 24 * 3600});
-			setCookie(c);
+			try
+			{
+				const auto raw_token = m_user_db->create_session_token(m_session.username);
+				m_session_token      = raw_token;
+				Wt::Http::Cookie c{"altinf_session", raw_token};
+				c.setHttpOnly(true);
+				c.setSecure(true);
+				c.setSameSite(Wt::Http::Cookie::SameSite::Strict);
+				c.setMaxAge(std::chrono::seconds{30 * 24 * 3600});
+				setCookie(c);
+			}
+			catch(const std::exception&)
+			{
+				m_session = session_data{};
+				setInternalPath("/login", true);
+				return;
+			}
 			m_nav->update();
 			register_with_hub();
 			setInternalPath("/", true);
