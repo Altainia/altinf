@@ -424,3 +424,38 @@ test('org manage: demote team lead updates second lead\'s page', async ({ browse
   await adminCtx.close();
   await bobCtx.close();
 });
+
+test('org manage: pressing Enter in invite input sends invite', async ({ browser }) => {
+  const ctx  = await browser.newContext();
+  const page = await ctx.newPage();
+  await loginAs(page, 'admin', 'testpass');
+
+  // Create a fresh user 'frank' for this test.
+  await page.locator('.nav-link', { hasText: 'Accounts' }).click();
+  await page.locator('.account-new-btn').click();
+  await page.locator('input[placeholder="Username (required)"]').fill('frank');
+  await page.locator('input[placeholder="Password (required)"]').fill('frankpass');
+  await page.locator('input[placeholder="Confirm password"]').fill('frankpass');
+  await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel)').click();
+  await expect(page.locator('.account-manager-page')).toBeVisible();
+
+  await goToManage(page);
+  await page.locator('.kb-member-input').fill('frank');
+  await page.locator('.kb-member-input').press('Enter');
+  await expect(page.locator('.editor-status')).toContainText('Invite sent to frank');
+
+  await ctx.close();
+});
+
+test('org manage: pressing Enter in team name input creates team', async ({ browser }) => {
+  const ctx  = await browser.newContext();
+  const page = await ctx.newPage();
+  await loginAs(page, 'admin', 'testpass');
+  await goToManage(page);
+
+  await page.locator('input[placeholder="Team name"]').fill('EnterKeyTeam');
+  await page.locator('input[placeholder="Team name"]').press('Enter');
+  await expect(page.locator('.kb-team-block input[value="EnterKeyTeam"]')).toBeVisible();
+
+  await ctx.close();
+});

@@ -70,27 +70,28 @@ kanban_team_page::kanban_team_page(org_db&             odb,
 
 	auto* invite_btn = invite_row->addNew<Wt::WPushButton>("Send invite");
 	invite_btn->setStyleClass("editor-btn");
-	invite_btn->clicked().connect(
-	  [this] {
-		  const std::string u = m_invite_input->text().toUTF8();
-		  if(u.empty())
-		  {
-			  m_invite_msg->setText("Enter a username.");
-			  return;
-		  }
-		  if(!m_udb.username_exists(u))
-		  {
-			  m_invite_msg->setText("User \"" + u + "\" does not exist.");
-			  return;
-		  }
-		  m_odb.invite_to_org(m_org_id, u, m_invite_lead->isChecked());
-		  live_hub::instance().broadcast("user:" + u);
-		  live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
-		  m_invite_input->setText("");
-		  m_invite_lead->setChecked(false);
-		  m_invite_msg->setText("Invite sent to " + u + ".");
-		  refresh_pending();
-	  });
+	auto do_invite = [this] {
+		const std::string u = m_invite_input->text().toUTF8();
+		if(u.empty())
+		{
+			m_invite_msg->setText("Enter a username.");
+			return;
+		}
+		if(!m_udb.username_exists(u))
+		{
+			m_invite_msg->setText("User \"" + u + "\" does not exist.");
+			return;
+		}
+		m_odb.invite_to_org(m_org_id, u, m_invite_lead->isChecked());
+		live_hub::instance().broadcast("user:" + u);
+		live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
+		m_invite_input->setText("");
+		m_invite_lead->setChecked(false);
+		m_invite_msg->setText("Invite sent to " + u + ".");
+		refresh_pending();
+	};
+	invite_btn->clicked().connect(do_invite);
+	m_invite_input->enterPressed().connect(do_invite);
 
 	m_invite_msg = addNew<Wt::WText>("", Wt::TextFormat::Plain);
 	m_invite_msg->setStyleClass("editor-status");
@@ -113,18 +114,19 @@ kanban_team_page::kanban_team_page(org_db&             odb,
 
 	auto* new_team_btn = new_team_row->addNew<Wt::WPushButton>("Create");
 	new_team_btn->setStyleClass("editor-btn");
-	new_team_btn->clicked().connect(
-	  [this] {
-		  const std::string name = m_new_team_input->text().toUTF8();
-		  if(name.empty())
-		  {
-			  return;
-		  }
-		  m_kdb.create_team(name, m_org_id);
-		  live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
-		  m_new_team_input->setText("");
-		  refresh_teams();
-	  });
+	auto do_create = [this] {
+		const std::string name = m_new_team_input->text().toUTF8();
+		if(name.empty())
+		{
+			return;
+		}
+		m_kdb.create_team(name, m_org_id);
+		live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
+		m_new_team_input->setText("");
+		refresh_teams();
+	};
+	new_team_btn->clicked().connect(do_create);
+	m_new_team_input->enterPressed().connect(do_create);
 
 	m_session_id = Wt::WApplication::instance()->sessionId();
 	live_hub::instance().subscribe(
