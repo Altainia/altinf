@@ -28,6 +28,7 @@ public:
 
 private:
 	session_data                     m_session;
+	std::string                      m_session_token;
 	std::unique_ptr<user_db>         m_user_db;
 	std::filesystem::path            m_posts_dir;
 	std::vector<blog_post>           m_posts;

@@ -1,9 +1,11 @@
 #include "altinf_app.hpp"
 
+#include <Wt/Http/Cookie.h>
 #include <Wt/WLink.h>
 #include <Wt/WText.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <stdexcept>
@@ -78,6 +80,14 @@ altinf_app::altinf_app(const Wt::WEnvironment& env):
 	m_kanban_db = std::make_unique<kanban_db>(db_path);
 	m_org_db    = std::make_unique<org_db>(db_path);
 
+	if(const auto* raw = env.getCookie("altinf_session"))
+	{
+		if(m_user_db->verify_session_token(*raw, m_session))
+		{
+			m_session_token = *raw;
+		}
+	}
+
 	if(!m_user_db->has_users())
 	{
 		const char* const pw = std::getenv("ALTINF_ADMIN_PASSWORD");
@@ -106,6 +116,11 @@ altinf_app::altinf_app(const Wt::WEnvironment& env):
 		handle_path(path);
 	});
 	handle_path(internalPath());
+
+	if(m_session.logged_in && !m_session_token.empty())
+	{
+		register_with_hub();
+	}
 }
 
 void altinf_app::register_with_hub()
@@ -539,6 +554,14 @@ void altinf_app::handle_path(const std::string& path)
 	else if(path == "/login")
 	{
 		m_content->addNew<login_page>(*m_user_db, m_session, [this] {
+			const auto raw_token = m_user_db->create_session_token(m_session.username);
+			m_session_token      = raw_token;
+			Wt::Http::Cookie c{"altinf_session", raw_token};
+			c.setHttpOnly(true);
+			c.setSecure(true);
+			c.setSameSite(Wt::Http::Cookie::SameSite::Strict);
+			c.setMaxAge(std::chrono::seconds{30 * 24 * 3600});
+			setCookie(c);
 			m_nav->update();
 			register_with_hub();
 			setInternalPath("/", true);
@@ -547,6 +570,12 @@ void altinf_app::handle_path(const std::string& path)
 	else if(path == "/logout")
 	{
 		live_hub::instance().unsubscribe("user:" + m_session.username, sessionId());
+		if(!m_session_token.empty())
+		{
+			m_user_db->delete_session_token(m_session_token);
+			removeCookie(Wt::Http::Cookie{"altinf_session"});
+			m_session_token.clear();
+		}
 		m_session = session_data{};
 		m_nav->update();
 		setInternalPath("/", true);
