@@ -62,6 +62,10 @@ std::string gantt_view_widget::serialize_tasks(const std::vector<kanban_task_ent
 	bool first = true;
 	for(const auto& t: tasks)
 	{
+		if(t.status == "todo" || t.status == "done")
+		{
+			continue;
+		}
 		if(!first)
 		{
 			ss << ',';

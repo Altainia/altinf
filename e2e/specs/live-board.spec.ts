@@ -168,6 +168,8 @@ test('gantt: task created with dates by A appears on B gantt view', async ({ bro
   await pageA.locator('.kb-new-btn').click();
   await expect(pageA.locator('.kb-editor-page')).toBeVisible();
   await pageA.locator('input[placeholder="Task title"]').fill('GanttTask');
+  await pageA.locator('.kb-editor-field-wrap').filter({ hasText: 'Status' })
+    .locator('select').selectOption({ label: 'In Progress' });
   const startInput = pageA.locator('.kb-editor-field-wrap').filter({ hasText: 'Start date' }).locator('input').first();
   const endInput   = pageA.locator('.kb-editor-field-wrap').filter({ hasText: 'End date' }).locator('input').first();
   await startInput.fill('2026-06-01');
@@ -219,6 +221,8 @@ test('gantt: date change by A updates bar on B gantt view', async ({ browser }) 
   await pageA.locator('.kb-new-btn').click();
   await expect(pageA.locator('.kb-editor-page')).toBeVisible();
   await pageA.locator('input[placeholder="Task title"]').fill('DateTask');
+  await pageA.locator('.kb-editor-field-wrap').filter({ hasText: 'Status' })
+    .locator('select').selectOption({ label: 'In Progress' });
   const startInput = pageA.locator('.kb-editor-field-wrap').filter({ hasText: 'Start date' }).locator('input').first();
   const endInput   = pageA.locator('.kb-editor-field-wrap').filter({ hasText: 'End date' }).locator('input').first();
   await startInput.fill('2025-03-01');
@@ -252,6 +256,54 @@ test('gantt: date change by A updates bar on B gantt view', async ({ browser }) 
   );
   // DateTask is still present in the re-rendered Gantt (bar widened to 30 days).
   await expect(pageB.locator('.gv-scroll svg text', { hasText: 'DateTask' })).toBeVisible();
+
+  await ctxA.close();
+  await ctxB.close();
+});
+
+test('gantt: dragging task to Done on board removes it from live Gantt', async ({ browser }) => {
+  // Setup: create GanttStatusTask with In Progress status and dates spanning today.
+  const setup = await browser.newContext();
+  const setupPage = await setup.newPage();
+  await loginAs(setupPage, 'admin', 'testpass');
+  await navigateToBoard(setupPage, 'LiveBoardOrg');
+  await setupPage.locator('.kb-new-btn').click();
+  await expect(setupPage.locator('.kb-editor-page')).toBeVisible();
+  await setupPage.locator('input[placeholder="Task title"]').fill('GanttStatusTask');
+  const ssStart = setupPage.locator('.kb-editor-field-wrap')
+    .filter({ hasText: 'Start date' }).locator('input').first();
+  const ssEnd = setupPage.locator('.kb-editor-field-wrap')
+    .filter({ hasText: 'End date' }).locator('input').first();
+  await ssStart.fill('2026-04-01');
+  await ssStart.press('Tab');
+  await ssEnd.fill('2026-12-31');
+  await ssEnd.press('Tab');
+  await setupPage.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+  await setupPage.locator('.kb-editor-field-wrap').filter({ hasText: 'Status' })
+    .locator('select').selectOption({ label: 'In Progress' });
+  await setupPage.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
+  await expect(setupPage.locator('.kb-board')).toBeVisible();
+  await setup.close();
+
+  const ctxA = await browser.newContext();
+  const ctxB = await browser.newContext();
+  const pageA = await ctxA.newPage();
+  const pageB = await ctxB.newPage();
+
+  await loginAs(pageA, 'admin', 'testpass');
+  await loginAs(pageB, 'admin', 'testpass');
+  await navigateToBoard(pageA, 'LiveBoardOrg');
+  await navigateToGantt(pageB, 'LiveBoardOrg');
+
+  // GanttStatusTask is in_progress with dates spanning today — visible in B's Gantt.
+  await expect(pageB.locator('.gv-scroll svg text', { hasText: 'GanttStatusTask' })).toBeVisible({ timeout: 15_000 });
+
+  // A drags GanttStatusTask to Done.
+  const card = pageA.locator('.kb-column[data-status="in_progress"] .kb-card', { hasText: 'GanttStatusTask' });
+  await card.dragTo(pageA.locator('.kb-column[data-status="done"]'));
+
+  // B's Gantt must no longer show GanttStatusTask (done tasks are filtered).
+  await expect(pageB.locator('.gv-scroll svg text', { hasText: 'GanttStatusTask' })).not.toBeVisible({ timeout: 15_000 });
 
   await ctxA.close();
   await ctxB.close();

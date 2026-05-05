@@ -419,12 +419,51 @@ test('Board tab returns from Gantt view to kanban board', async ({ page }) => {
   await expect(page.locator('.kb-board')).toBeVisible();
 });
 
+test('Gantt view hides tasks with To Do status', async ({ page }) => {
+  await loginAndGoToBoard(page);
+  // Create a task in To Do (default) status with dates spanning today.
+  await createTaskWithDates(page, 'GanttTodoFilterTask', '2026-04-01', '2026-12-31');
+  await page.locator('.kb-tab', { hasText: 'Gantt' }).click();
+  await expect(page.locator('.gv-wrap')).toBeVisible();
+  await expect(page.locator('.gv-scroll svg')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.gv-scroll svg text', { hasText: 'GanttTodoFilterTask' })).not.toBeAttached();
+});
+
+test('Gantt view hides tasks with Done status', async ({ page }) => {
+  await loginAndGoToBoard(page);
+  await page.locator('.kb-new-btn').click();
+  await expect(page.locator('.kb-editor-page')).toBeVisible();
+  await page.locator('input[placeholder="Task title"]').fill('GanttDoneFilterTask');
+  const startInput = page.locator('.kb-editor-field-wrap')
+    .filter({ hasText: 'Start date' }).locator('input').first();
+  const endInput = page.locator('.kb-editor-field-wrap')
+    .filter({ hasText: 'End date' }).locator('input').first();
+  await startInput.fill('2026-04-01');
+  await startInput.press('Tab');
+  await endInput.fill('2026-12-31');
+  await endInput.press('Tab');
+  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+  await page.locator('.kb-editor-field-wrap').filter({ hasText: 'Status' })
+    .locator('select').selectOption({ label: 'Done' });
+  await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
+  await expect(page.locator('.kb-board')).toBeVisible();
+  await expect(
+    page.locator('.kb-column[data-status="done"] .kb-card', { hasText: 'GanttDoneFilterTask' })
+  ).toBeVisible();
+  await page.locator('.kb-tab', { hasText: 'Gantt' }).click();
+  await expect(page.locator('.gv-wrap')).toBeVisible();
+  await expect(page.locator('.gv-scroll svg')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.gv-scroll svg text', { hasText: 'GanttDoneFilterTask' })).not.toBeAttached();
+});
+
 test('Gantt view renders an SVG for tasks that have dates', async ({ page }) => {
   await loginAndGoToBoard(page);
 
   // Create a task with start and end dates.
   await page.locator('.kb-new-btn').click();
   await page.locator('input[placeholder="Task title"]').fill('Board Test Task Nu');
+  await page.locator('.kb-editor-field-wrap').filter({ hasText: 'Status' })
+    .locator('select').selectOption({ label: 'In Progress' });
   const startInput = page.locator('.kb-editor-field-wrap')
     .filter({ hasText: 'Start date' }).locator('input').first();
   const endInput   = page.locator('.kb-editor-field-wrap')
@@ -455,8 +494,24 @@ test('Gantt view shows no today line when today is outside all task date ranges'
 
 test('Gantt view renders today line and label when a task spans today', async ({ page }) => {
   await loginAndGoToBoard(page);
-  // Create a task whose date range brackets today (2026-04-28).
-  await createTaskWithDates(page, 'Board Test Task Today Span', '2026-01-01', '2026-12-31');
+  // Create a task whose date range brackets today (2026-04-28), with In Progress
+  // status so it is not filtered out of the Gantt.
+  await page.locator('.kb-new-btn').click();
+  await expect(page.locator('.kb-editor-page')).toBeVisible();
+  await page.locator('input[placeholder="Task title"]').fill('Board Test Task Today Span');
+  const tsStart = page.locator('.kb-editor-field-wrap')
+    .filter({ hasText: 'Start date' }).locator('input').first();
+  const tsEnd = page.locator('.kb-editor-field-wrap')
+    .filter({ hasText: 'End date' }).locator('input').first();
+  await tsStart.fill('2026-01-01');
+  await tsStart.press('Tab');
+  await tsEnd.fill('2026-12-31');
+  await tsEnd.press('Tab');
+  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+  await page.locator('.kb-editor-field-wrap').filter({ hasText: 'Status' })
+    .locator('select').selectOption({ label: 'In Progress' });
+  await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
+  await expect(page.locator('.kb-board')).toBeVisible();
 
   await page.locator('.kb-tab', { hasText: 'Gantt' }).click();
   await expect(page.locator('.gv-scroll svg')).toBeVisible({ timeout: 15_000 });
