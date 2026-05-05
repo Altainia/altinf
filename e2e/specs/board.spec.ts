@@ -176,6 +176,18 @@ test('task editor shows Start date and End date fields', async ({ page }) => {
   await expect(page.locator('.kb-editor-field-wrap').filter({ hasText: 'End date' }).locator('input').first()).toBeVisible();
 });
 
+test('new task editor pre-fills start date with today', async ({ page }) => {
+  await loginAndGoToBoard(page);
+  await page.locator('.kb-new-btn').click();
+  await expect(page.locator('.kb-editor-page')).toBeVisible();
+  const today = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  const startInput = page.locator('.kb-editor-field-wrap')
+    .filter({ hasText: 'Start date' }).locator('input').first();
+  await expect(startInput).toHaveValue(todayStr);
+});
+
 test('submitting task without a title shows validation error', async ({ page }) => {
   await loginAndGoToBoard(page);
   await page.locator('.kb-new-btn').click();

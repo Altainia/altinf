@@ -171,6 +171,10 @@ kanban_task_editor_page::kanban_task_editor_page(
 	{
 		m_start_date->setDate(existing->start_date);
 	}
+	else if(!existing)
+	{
+		m_start_date->setDate(Wt::WDate::currentDate());
+	}
 	auto* clear_start = start_row->addNew<Wt::WPushButton>("Clear");
 	clear_start->setStyleClass("kb-date-clear");
 	clear_start->clicked().connect([this] { m_start_date->setText(Wt::WString{}); });
