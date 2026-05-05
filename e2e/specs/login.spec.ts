@@ -62,3 +62,8 @@ test('navbar login link navigates to login page', async ({ page }) => {
   await page.locator('.nav-login').click();
   await expect(page.locator('.login-form')).toBeVisible();
 });
+
+test('login page auto-focuses username field', async ({ page }) => {
+  await page.goto('/?_=/login');
+  await expect(page.locator('input[placeholder="Username"]')).toBeFocused();
+});

@@ -21,6 +21,7 @@ login_page::login_page(user_db&              db,
 	m_username = form->addNew<Wt::WLineEdit>();
 	m_username->setPlaceholderText("Username");
 	m_username->setStyleClass("login-field");
+	m_username->setFocus();
 
 	m_password = form->addNew<Wt::WPasswordEdit>();
 	m_password->setPlaceholderText("Password");
