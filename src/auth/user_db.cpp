@@ -10,6 +10,7 @@
 #include <stdexcept>
 
 #include "api_token.hpp"
+#include "session_token.hpp"
 
 static std::string sha256_hex(const std::string& input)
 {
@@ -52,6 +53,7 @@ user_db::user_db(const std::string& db_path)
 	m_dbo.setConnection(std::make_unique<Wt::Dbo::backend::Sqlite3>(db_path));
 	m_dbo.mapClass<user>("user");
 	m_dbo.mapClass<api_token>("api_token");
+	m_dbo.mapClass<session_token>("session_token");
 
 	try
 	{
@@ -63,6 +65,13 @@ user_db::user_db(const std::string& db_path)
 		Wt::Dbo::Transaction t{m_dbo};
 		m_dbo.execute(
 		  "CREATE TABLE IF NOT EXISTS \"api_token\" ("
+		  "  \"id\" integer primary key autoincrement,"
+		  "  \"version\" integer not null,"
+		  "  \"token_hash\" text not null,"
+		  "  \"username\" text not null"
+		  ")");
+		m_dbo.execute(
+		  "CREATE TABLE IF NOT EXISTS \"session_token\" ("
 		  "  \"id\" integer primary key autoincrement,"
 		  "  \"version\" integer not null,"
 		  "  \"token_hash\" text not null,"
@@ -296,4 +305,71 @@ bool user_db::verify_api_token(const std::string& raw_token, session_data& out)
 	out.permissions  = found->permissions;
 
 	return true;
+}
+
+std::string user_db::create_session_token(const std::string& username)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto users =
+	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
+	if(users.empty())
+	{
+		throw std::runtime_error{"Unknown user: " + username};
+	}
+
+	const auto raw_token = generate_raw_token();
+	const auto hash      = sha256_hex(raw_token);
+
+	auto tok                 = m_dbo.add(std::make_unique<session_token>());
+	tok.modify()->token_hash = hash;
+	tok.modify()->username   = username;
+
+	return raw_token;
+}
+
+bool user_db::verify_session_token(const std::string& raw_token, session_data& out)
+{
+	const auto hash = sha256_hex(raw_token);
+
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto tokens =
+	  m_dbo.find<session_token>().where("token_hash = ?").bind(hash).resultList();
+	if(tokens.empty())
+	{
+		return false;
+	}
+
+	const auto tok_username = (*tokens.begin())->username;
+
+	const auto users =
+	  m_dbo.find<user>().where("username = ?").bind(tok_username).resultList();
+	if(users.empty())
+	{
+		return false;
+	}
+
+	const auto found = *users.begin();
+	out.logged_in    = true;
+	out.username     = tok_username;
+	out.display_name = found->display_name;
+	out.permissions  = found->permissions;
+
+	return true;
+}
+
+void user_db::delete_session_token(const std::string& raw_token)
+{
+	const auto hash = sha256_hex(raw_token);
+
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto tokens =
+	  m_dbo.find<session_token>().where("token_hash = ?").bind(hash).resultList();
+	for(const auto& tok: tokens)
+	{
+		Wt::Dbo::ptr<session_token> p = tok;
+		p.remove();
+	}
 }

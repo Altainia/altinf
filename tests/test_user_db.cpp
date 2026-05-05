@@ -167,3 +167,53 @@ TEST_CASE("user_db - create_api_token unknown user throws")
 	user_db db{":memory:"};
 	CHECK_THROWS(db.create_api_token("nobody"));
 }
+
+TEST_CASE("user_db - create_session_token returns 64-char hex token")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none);
+	const auto tok = db.create_session_token("alice");
+	CHECK(tok.size() == 64);
+}
+
+TEST_CASE("user_db - verify_session_token populates session_data")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::admin, "Alice");
+	const auto   raw = db.create_session_token("alice");
+	session_data out;
+	REQUIRE(db.verify_session_token(raw, out));
+	CHECK(out.logged_in);
+	CHECK(out.username == "alice");
+	CHECK(out.display_name == "Alice");
+	CHECK(out.permissions == permission::admin);
+}
+
+TEST_CASE("user_db - verify_session_token bad token returns false")
+{
+	user_db      db{":memory:"};
+	session_data out;
+	CHECK(!db.verify_session_token(
+	  "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", out));
+	CHECK(!out.logged_in);
+}
+
+TEST_CASE("user_db - delete_session_token invalidates it")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none);
+	const auto   raw = db.create_session_token("alice");
+	session_data out;
+	REQUIRE(db.verify_session_token(raw, out));
+	db.delete_session_token(raw);
+	CHECK(!db.verify_session_token(raw, out));
+}
+
+TEST_CASE("user_db - delete_session_token unknown token is a no-op")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none);
+	db.create_session_token("alice");
+	db.delete_session_token(
+	  "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+}

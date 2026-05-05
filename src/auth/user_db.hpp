@@ -59,6 +59,13 @@ public:
 
 	bool verify_api_token(const std::string& raw_token, session_data& out_session);
 
+	// Returns the raw token to present once; stores only its SHA-256 hash.
+	std::string create_session_token(const std::string& username);
+
+	bool verify_session_token(const std::string& raw_token, session_data& out_session);
+
+	void delete_session_token(const std::string& raw_token);
+
 private:
 	Wt::Dbo::Session m_dbo;
 };
