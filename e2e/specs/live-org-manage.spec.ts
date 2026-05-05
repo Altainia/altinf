@@ -430,19 +430,19 @@ test('org manage: pressing Enter in invite input sends invite', async ({ browser
   const page = await ctx.newPage();
   await loginAs(page, 'admin', 'testpass');
 
-  // Create a fresh user 'frank' for this test.
+  // Create a fresh user 'hank' for this test.
   await page.locator('.nav-link', { hasText: 'Accounts' }).click();
   await page.locator('.account-new-btn').click();
-  await page.locator('input[placeholder="Username (required)"]').fill('frank');
-  await page.locator('input[placeholder="Password (required)"]').fill('frankpass');
-  await page.locator('input[placeholder="Confirm password"]').fill('frankpass');
+  await page.locator('input[placeholder="Username (required)"]').fill('hank');
+  await page.locator('input[placeholder="Password (required)"]').fill('hankpass');
+  await page.locator('input[placeholder="Confirm password"]').fill('hankpass');
   await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel)').click();
   await expect(page.locator('.account-manager-page')).toBeVisible();
 
   await goToManage(page);
-  await page.locator('.kb-member-input').fill('frank');
+  await page.locator('.kb-member-input').fill('hank');
   await page.locator('.kb-member-input').press('Enter');
-  await expect(page.locator('.editor-status')).toContainText('Invite sent to frank');
+  await expect(page.locator('.editor-status')).toContainText('Invite sent to hank');
 
   await ctx.close();
 });
