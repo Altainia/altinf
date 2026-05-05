@@ -179,6 +179,15 @@ void user_db::delete_user(const std::string& username)
 		p.remove();
 	}
 
+	// Remove session tokens
+	const auto session_toks =
+	  m_dbo.find<session_token>().where("username = ?").bind(username).resultList();
+	for(const auto& tok: session_toks)
+	{
+		Wt::Dbo::ptr<session_token> p = tok;
+		p.remove();
+	}
+
 	const auto results =
 	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
 	for(const auto& u: results)

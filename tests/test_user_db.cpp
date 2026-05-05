@@ -217,3 +217,9 @@ TEST_CASE("user_db - delete_session_token unknown token is a no-op")
 	db.delete_session_token(
 	  "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
 }
+
+TEST_CASE("user_db - create_session_token unknown user throws")
+{
+	user_db db{":memory:"};
+	CHECK_THROWS(db.create_session_token("nobody"));
+}
