@@ -5,6 +5,7 @@
 #include <Wt/WContainerWidget.h>
 
 #include <functional>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -14,18 +15,21 @@
 class kanban_board_widget: public Wt::WContainerWidget
 {
 public:
-	kanban_board_widget(std::vector<kanban_task_entry>                       tasks,
-	                    bool                                                  can_edit,
+	kanban_board_widget(std::vector<kanban_task_entry>                          tasks,
+	                    bool                                                    can_edit,
+	                    std::map<long long, std::string>                        type_colors,
 	                    std::function<void(long long, const std::string&, int)> on_move,
-	                    std::function<void(long long)>                        on_edit);
+	                    std::function<void(long long)>                          on_edit);
 
-	void refresh(std::vector<kanban_task_entry> tasks, bool can_edit);
+	void refresh(std::vector<kanban_task_entry> tasks, bool can_edit,
+	             std::map<long long, std::string> type_colors);
 
 private:
-	std::string           m_mount_id;
-	std::string           m_cb_id;
-	Wt::WContainerWidget* m_mount{nullptr};
+	std::string                      m_mount_id;
+	std::string                      m_cb_id;
+	Wt::WContainerWidget*            m_mount{nullptr};
+	std::map<long long, std::string> m_type_colors;
 
-	static std::string serialize_tasks(const std::vector<kanban_task_entry>& tasks);
-	void               init_js(const std::string& json, bool can_edit);
+	std::string serialize_tasks(const std::vector<kanban_task_entry>& tasks) const;
+	void        init_js(const std::string& json, bool can_edit);
 };

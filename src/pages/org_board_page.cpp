@@ -5,6 +5,8 @@
 #include <Wt/WLink.h>
 #include <Wt/WText.h>
 
+#include <map>
+
 #include "kanban/kanban_board_widget.hpp"
 
 org_board_page::org_board_page(org_db&             odb,
@@ -40,6 +42,12 @@ org_board_page::org_board_page(org_db&             odb,
 	}
 
 	// ── One board per team ────────────────────────────────────────────────────
+	std::map<long long, std::string> type_colors;
+	for(const auto& ty: kdb.types_for_org(org_id))
+	{
+		type_colors[ty.id] = ty.color;
+	}
+
 	for(const auto& team: teams)
 	{
 		auto* section = addNew<Wt::WContainerWidget>();
@@ -62,6 +70,7 @@ org_board_page::org_board_page(org_db&             odb,
 		auto* board = section->addNew<kanban_board_widget>(
 		  tasks,
 		  true, // is_lead — org leads always have edit rights
+		  type_colors,
 		  [&kdb, tid](long long task_id, const std::string& status, int sort) {
 			  kdb.update_task_status(task_id, status, sort);
 		  },

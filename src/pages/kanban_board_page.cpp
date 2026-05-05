@@ -5,6 +5,8 @@
 #include <Wt/WLink.h>
 #include <Wt/WText.h>
 
+#include <map>
+
 #include "kanban/gantt_view_widget.hpp"
 #include "widgets/live_hub.hpp"
 
@@ -25,6 +27,12 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 	{
 		addNew<Wt::WText>("Team not found.", Wt::TextFormat::Plain);
 		return;
+	}
+
+	m_org_id = team->org_id;
+	for(const auto& ty: db.types_for_org(m_org_id))
+	{
+		m_type_colors[ty.id] = ty.color;
 	}
 
 	const std::string team_url = "/board/" + std::to_string(team_id);
@@ -65,17 +73,18 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 
 	if(show_gantt)
 	{
-		m_gantt_widget = addNew<gantt_view_widget>(tasks);
+		m_gantt_widget = addNew<gantt_view_widget>(tasks, m_type_colors);
 	}
 	else
 	{
 		m_board_widget = addNew<kanban_board_widget>(
 		  tasks,
 		  m_is_lead,
+		  m_type_colors,
 		  [this](long long tid, const std::string& status, int sort) {
 			  m_db.update_task_status(tid, status, sort);
 			  live_hub::instance().broadcast("team:" + std::to_string(m_team_id));
-			  m_board_widget->refresh(m_db.tasks_for_team(m_team_id), m_is_lead);
+			  m_board_widget->refresh(m_db.tasks_for_team(m_team_id), m_is_lead, m_type_colors);
 		  },
 		  [this](long long tid) {
 			  Wt::WApplication::instance()->setInternalPath(
@@ -97,6 +106,16 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 			  Wt::WApplication::instance()->triggerUpdate();
 		  }
 	  });
+	live_hub::instance().subscribe(
+	  "org:" + std::to_string(m_org_id) + ":types",
+	  m_session_id,
+	  [this, alive = m_alive] {
+		  if(*alive)
+		  {
+			  refresh();
+			  Wt::WApplication::instance()->triggerUpdate();
+		  }
+	  });
 }
 
 kanban_board_page::~kanban_board_page()
@@ -106,18 +125,29 @@ kanban_board_page::~kanban_board_page()
 	{
 		live_hub::instance().unsubscribe(
 		  "team:" + std::to_string(m_team_id), m_session_id);
+		if(m_org_id != 0)
+		{
+			live_hub::instance().unsubscribe(
+			  "org:" + std::to_string(m_org_id) + ":types", m_session_id);
+		}
 	}
 }
 
 void kanban_board_page::refresh()
 {
+	m_type_colors.clear();
+	for(const auto& ty: m_db.types_for_org(m_org_id))
+	{
+		m_type_colors[ty.id] = ty.color;
+	}
+
 	const auto tasks = m_db.tasks_for_team(m_team_id);
 	if(m_show_gantt && m_gantt_widget)
 	{
-		m_gantt_widget->refresh(tasks);
+		m_gantt_widget->refresh(tasks, m_type_colors);
 	}
 	else if(m_board_widget)
 	{
-		m_board_widget->refresh(tasks, m_is_lead);
+		m_board_widget->refresh(tasks, m_is_lead, m_type_colors);
 	}
 }
