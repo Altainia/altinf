@@ -303,7 +303,7 @@ test('gantt: dragging task to Done on board removes it from live Gantt', async (
   await card.dragTo(pageA.locator('.kb-column[data-status="done"]'));
 
   // B's Gantt must no longer show GanttStatusTask (done tasks are filtered).
-  await expect(pageB.locator('.gv-scroll svg text', { hasText: 'GanttStatusTask' })).not.toBeVisible({ timeout: 15_000 });
+  await expect(pageB.locator('.gv-scroll svg text', { hasText: 'GanttStatusTask' })).not.toBeAttached({ timeout: 15_000 });
 
   await ctxA.close();
   await ctxB.close();

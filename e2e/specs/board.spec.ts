@@ -473,6 +473,7 @@ test('Gantt view renders an SVG for tasks that have dates', async ({ page }) => 
 
   // Create a task with start and end dates.
   await page.locator('.kb-new-btn').click();
+  await expect(page.locator('.kb-editor-page')).toBeVisible();
   await page.locator('input[placeholder="Task title"]').fill('Board Test Task Nu');
   await page.locator('.kb-editor-field-wrap').filter({ hasText: 'Status' })
     .locator('select').selectOption({ label: 'In Progress' });
@@ -506,7 +507,7 @@ test('Gantt view shows no today line when today is outside all task date ranges'
 
 test('Gantt view renders today line and label when a task spans today', async ({ page }) => {
   await loginAndGoToBoard(page);
-  // Create a task whose date range brackets today (2026-04-28), with In Progress
+  // Create a task whose date range brackets today, with In Progress
   // status so it is not filtered out of the Gantt.
   await page.locator('.kb-new-btn').click();
   await expect(page.locator('.kb-editor-page')).toBeVisible();
