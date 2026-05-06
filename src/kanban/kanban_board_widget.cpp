@@ -43,10 +43,10 @@ static std::string date_str(const Wt::WDate& d)
 kanban_board_widget::kanban_board_widget(
   std::vector<kanban_task_entry>                          tasks,
   bool                                                    can_edit,
-  std::map<long long, std::string>                        type_colors,
+  const std::map<long long, std::string>&                 type_colors,
   std::function<void(long long, const std::string&, int)> on_move,
   std::function<void(long long)>                          on_edit):
-  m_type_colors{std::move(type_colors)}
+  m_type_colors{type_colors}
 {
 	Wt::WApplication::instance()->require("js/kanban.js?v=" BUILD_VERSION);
 
@@ -88,11 +88,11 @@ kanban_board_widget::kanban_board_widget(
 	init_js(serialize_tasks(tasks), can_edit);
 }
 
-void kanban_board_widget::refresh(std::vector<kanban_task_entry>   tasks,
-                                  bool                             can_edit,
-                                  std::map<long long, std::string> type_colors)
+void kanban_board_widget::refresh(std::vector<kanban_task_entry>          tasks,
+                                  bool                                    can_edit,
+                                  const std::map<long long, std::string>& type_colors)
 {
-	m_type_colors = std::move(type_colors);
+	m_type_colors = type_colors;
 	init_js(serialize_tasks(tasks), can_edit);
 }
 

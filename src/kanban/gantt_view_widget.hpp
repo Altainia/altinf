@@ -12,11 +12,11 @@
 class gantt_view_widget: public Wt::WContainerWidget
 {
 public:
-	explicit gantt_view_widget(std::vector<kanban_task_entry>   tasks,
-	                           std::map<long long, std::string> type_colors);
+	explicit gantt_view_widget(std::vector<kanban_task_entry>          tasks,
+	                            const std::map<long long, std::string>& type_colors);
 
-	void refresh(std::vector<kanban_task_entry>   tasks,
-	             std::map<long long, std::string> type_colors);
+	void refresh(std::vector<kanban_task_entry>          tasks,
+	             const std::map<long long, std::string>& type_colors);
 
 private:
 	std::map<long long, std::string> m_type_colors;

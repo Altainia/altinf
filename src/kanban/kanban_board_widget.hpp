@@ -17,12 +17,13 @@ class kanban_board_widget: public Wt::WContainerWidget
 public:
 	kanban_board_widget(std::vector<kanban_task_entry>                          tasks,
 	                    bool                                                    can_edit,
-	                    std::map<long long, std::string>                        type_colors,
+	                    const std::map<long long, std::string>&                 type_colors,
 	                    std::function<void(long long, const std::string&, int)> on_move,
 	                    std::function<void(long long)>                          on_edit);
 
-	void refresh(std::vector<kanban_task_entry> tasks, bool can_edit,
-	             std::map<long long, std::string> type_colors);
+	void refresh(std::vector<kanban_task_entry>         tasks,
+	             bool                                   can_edit,
+	             const std::map<long long, std::string>& type_colors);
 
 private:
 	std::string                      m_mount_id;

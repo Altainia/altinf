@@ -39,9 +39,9 @@ static std::string date_str_gv(const Wt::WDate& d)
 	return d.isValid() ? d.toString("yyyy-MM-dd").toUTF8() : "";
 }
 
-gantt_view_widget::gantt_view_widget(std::vector<kanban_task_entry>   tasks,
-                                     std::map<long long, std::string> type_colors):
-  m_type_colors{std::move(type_colors)}
+gantt_view_widget::gantt_view_widget(std::vector<kanban_task_entry>          tasks,
+                                     const std::map<long long, std::string>& type_colors):
+  m_type_colors{type_colors}
 {
 	Wt::WApplication::instance()->require("js/gantt.js?v=" BUILD_VERSION);
 
@@ -52,10 +52,10 @@ gantt_view_widget::gantt_view_widget(std::vector<kanban_task_entry>   tasks,
 	doJavaScript("initGantt('" + mount_id + "'," + json + ");");
 }
 
-void gantt_view_widget::refresh(std::vector<kanban_task_entry>   tasks,
-                                std::map<long long, std::string> type_colors)
+void gantt_view_widget::refresh(std::vector<kanban_task_entry>          tasks,
+                                const std::map<long long, std::string>& type_colors)
 {
-	m_type_colors = std::move(type_colors);
+	m_type_colors = type_colors;
 	doJavaScript("initGantt('" + id() + "'," + serialize_tasks(tasks) + ");");
 }
 
