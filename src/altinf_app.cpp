@@ -334,8 +334,9 @@ void altinf_app::handle_path(const std::string& path)
 				return;
 			}
 			const auto members = m_kanban_db->members_for_team(team_id);
+			const auto types   = m_kanban_db->types_for_org(team->org_id);
 			m_content->addNew<kanban_task_editor_page>(
-			  *m_kanban_db, *m_org_db, team_id, m_session, is_lead, nullptr, members, [this, team_id] {
+			  *m_kanban_db, *m_org_db, team_id, m_session, is_lead, nullptr, members, types, [this, team_id] {
 				  setInternalPath("/board/" + std::to_string(team_id), true);
 			  });
 		}
@@ -361,8 +362,9 @@ void altinf_app::handle_path(const std::string& path)
 			}
 			m_edit_task        = opt;
 			const auto members = m_kanban_db->members_for_team(team_id);
+			const auto types   = m_kanban_db->types_for_org(team->org_id);
 			m_content->addNew<kanban_task_editor_page>(
-			  *m_kanban_db, *m_org_db, team_id, m_session, is_lead, &(*m_edit_task), members, [this, team_id] {
+			  *m_kanban_db, *m_org_db, team_id, m_session, is_lead, &(*m_edit_task), members, types, [this, team_id] {
 				  setInternalPath("/board/" + std::to_string(team_id), true);
 			  });
 		}

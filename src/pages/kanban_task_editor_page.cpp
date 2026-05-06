@@ -3,7 +3,6 @@
 #include <Wt/Dbo/Exception.h>
 #include <Wt/WAnchor.h>
 #include <Wt/WApplication.h>
-#include <Wt/WColor.h>
 #include <Wt/WDate.h>
 #include <Wt/WLink.h>
 #include <Wt/WPushButton.h>
@@ -27,14 +26,15 @@ const std::vector<std::string> kanban_task_editor_page::k_status_labels = {
   "Done"};
 
 kanban_task_editor_page::kanban_task_editor_page(
-  kanban_db&                      db,
-  org_db&                         odb,
-  long long                       team_id,
-  const session_data&             session,
-  bool                            is_lead,
-  const kanban_task_entry*        existing,
-  const std::vector<std::string>& members,
-  std::function<void()>           on_save):
+  kanban_db&                          db,
+  org_db&                             odb,
+  long long                           team_id,
+  const session_data&                 session,
+  bool                                is_lead,
+  const kanban_task_entry*            existing,
+  const std::vector<std::string>&     members,
+  const std::vector<task_type_entry>& types,
+  std::function<void()>               on_save):
   m_db{db},
   m_odb{odb},
   m_team_id{team_id},
@@ -197,16 +197,55 @@ kanban_task_editor_page::kanban_task_editor_page(
 	clear_end->setStyleClass("kb-date-clear");
 	clear_end->clicked().connect([this] { m_end_date->setText(Wt::WString{}); });
 
-	auto* color_wrap = sched_row->addNew<Wt::WContainerWidget>();
-	color_wrap->setStyleClass("kb-editor-field-wrap");
-	color_wrap->addNew<Wt::WText>("Color", Wt::TextFormat::Plain)
-	  ->setStyleClass("kb-field-label");
-	// TODO(task4): replace with chip selector
-	m_color = color_wrap->addNew<Wt::WColorPicker>();
-	m_color->setStyleClass("kb-color-picker");
+	// ── Type ─────────────────────────────────────────────────────────────────
+	form->addNew<Wt::WText>("<h2>Type</h2>", Wt::TextFormat::UnsafeXHTML);
+
+	auto* type_row = form->addNew<Wt::WContainerWidget>();
+	type_row->setStyleClass("kb-type-chips");
+
+	m_type_id = 0;
+	if(existing)
 	{
-		int cr{0x7a}, cg{0xa2}, cb{0xd4};
-		m_color->setColor(Wt::WColor(cr, cg, cb));
+		const bool valid_type = std::any_of(
+		  types.begin(), types.end(), [&](const task_type_entry& ty) { return ty.id == existing->type_id; });
+		if(valid_type)
+		{
+			m_type_id = existing->type_id;
+		}
+	}
+
+	auto add_chip = [&](long long          chip_type_id,
+	                    const std::string& label,
+	                    const std::string& hex) {
+		auto* chip = type_row->addNew<Wt::WContainerWidget>();
+		chip->setStyleClass(chip_type_id == m_type_id ? "kb-type-chip selected" : "kb-type-chip");
+
+		auto* dot = chip->addNew<Wt::WContainerWidget>();
+		dot->setStyleClass("kb-type-chip__dot");
+		if(hex.size() == 7 && hex[0] == '#')
+		{
+			int r = std::stoi(hex.substr(1, 2), nullptr, 16);
+			int g = std::stoi(hex.substr(3, 2), nullptr, 16);
+			int b = std::stoi(hex.substr(5, 2), nullptr, 16);
+			dot->decorationStyle().setBackgroundColor(Wt::WColor{r, g, b});
+		}
+		chip->addNew<Wt::WText>(label, Wt::TextFormat::Plain);
+		m_type_chips.push_back(chip);
+
+		chip->clicked().connect([this, chip, chip_type_id] {
+			m_type_id = chip_type_id;
+			for(auto* c: m_type_chips)
+			{
+				c->removeStyleClass("selected");
+			}
+			chip->addStyleClass("selected");
+		});
+	};
+
+	add_chip(0, "(None)", "#cccccc");
+	for(const auto& ty: types)
+	{
+		add_chip(ty.id, ty.name, ty.color);
 	}
 
 	// ── Actions ───────────────────────────────────────────────────────────────
@@ -327,7 +366,7 @@ void kanban_task_editor_page::save()
 	t.title       = title;
 	t.description = m_description->text().toUTF8();
 	t.assigned_to = new_assignee;
-	t.type_id     = 0;
+	t.type_id     = m_type_id;
 	if(const auto d = m_start_date->date(); d.isValid())
 	{
 		t.start_date = d;

@@ -5,7 +5,6 @@
 #include "kanban/kanban_db.hpp"
 #include "org/org_db.hpp"
 
-#include <Wt/WColorPicker.h>
 #include <Wt/WComboBox.h>
 #include <Wt/WContainerWidget.h>
 #include <Wt/WDateEdit.h>
@@ -22,14 +21,15 @@
 class kanban_task_editor_page: public Wt::WContainerWidget
 {
 public:
-    kanban_task_editor_page(kanban_db&                      db,
-                            org_db&                         odb,
-                            long long                       team_id,
-                            const session_data&             session,
-                            bool                            is_lead,
-                            const kanban_task_entry*        existing,
-                            const std::vector<std::string>& members,
-                            std::function<void()>           on_save);
+    kanban_task_editor_page(kanban_db&                          db,
+                            org_db&                             odb,
+                            long long                           team_id,
+                            const session_data&                 session,
+                            bool                                is_lead,
+                            const kanban_task_entry*            existing,
+                            const std::vector<std::string>&     members,
+                            const std::vector<task_type_entry>& types,
+                            std::function<void()>               on_save);
 
     ~kanban_task_editor_page() override;
 
@@ -52,8 +52,9 @@ private:
     Wt::WComboBox*    m_assigned_to{nullptr};
     Wt::WDateEdit*    m_start_date{nullptr};
     Wt::WDateEdit*    m_end_date{nullptr};
-    Wt::WColorPicker* m_color{nullptr};
-    Wt::WText*        m_status_msg{nullptr};
+    long long                          m_type_id{0};
+    std::vector<Wt::WContainerWidget*> m_type_chips;
+    Wt::WText*                         m_status_msg{nullptr};
     Wt::WPushButton*  m_save_btn{nullptr};
     Wt::WPushButton*  m_del_btn{nullptr};
 
