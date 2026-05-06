@@ -71,6 +71,12 @@ void org_landing_page::render()
 		                   "/org/" + std::to_string(m_org_id) + "/board"},
 		         "View all teams\xe2\x80\x99 board")
 		  ->setStyleClass("editor-btn editor-btn-cancel");
+
+		actions->addNew<Wt::WAnchor>(
+		         Wt::WLink{Wt::LinkType::InternalPath,
+		                   "/org/" + std::to_string(m_org_id) + "/types"},
+		         "Manage types")
+		  ->setStyleClass("editor-btn editor-btn-cancel");
 	}
 
 	const auto  all_teams = m_kdb.teams_for_org(m_org_id);

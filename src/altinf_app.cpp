@@ -27,6 +27,7 @@
 #include "pages/org_admin_page.hpp"
 #include "pages/org_board_page.hpp"
 #include "pages/org_landing_page.hpp"
+#include "pages/org_type_manager_page.hpp"
 #include "pages/post_editor_page.hpp"
 #include "widgets/footer.hpp"
 #include "widgets/live_hub.hpp"
@@ -436,6 +437,16 @@ void altinf_app::handle_path(const std::string& path)
 			}
 			m_content->addNew<kanban_team_page>(
 			  *m_org_db, *m_kanban_db, *m_user_db, org_id, m_session);
+		}
+		else if(suffix == "/types")
+		{
+			if(!is_org_lead)
+			{
+				show_forbidden();
+				return;
+			}
+			m_content->addNew<org_type_manager_page>(
+			  *m_kanban_db, *m_org_db, org_id, m_session);
 		}
 		else
 		{
