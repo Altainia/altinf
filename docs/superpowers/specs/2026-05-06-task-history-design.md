@@ -116,7 +116,9 @@ struct task_event_entry {
 void archive_task(long long id, const std::string& actor);
 void unarchive_task(long long id, const std::string& actor);
 void archive_team(long long id, const std::string& actor);
-std::vector<task_event_entry> history_for_task(long long task_id);
+void unarchive_team(long long id);
+std::vector<kanban_task_entry> archived_tasks_for_team(long long team_id);
+std::vector<task_event_entry>  history_for_task(long long task_id);
 ```
 
 ### Query filter changes
@@ -201,10 +203,30 @@ May 5, 2026 at 09:15  —  alice
 | `add_task` | `kanban_task_editor_page.cpp` (save) | → `add_task(entry, m_username)` |
 | `update_task_status` | `kanban_board_widget.cpp` | → `update_task_status(id, status, sort_order, actor)` — actor threaded from session |
 | `delete_team` | `kanban_team_page.cpp:326` | → `archive_team(id, actor)` — actor from session |
+| *(new)* | `kanban_archive_page` | New page at `/archive/team/:id`; calls `tasks_for_team` with an archived-only variant |
+| *(new)* | `kanban_team_page` | Unarchive team button calls new `unarchive_team(id)` on `kanban_db` |
+
+---
+
+## Accessing Archived Tasks and Teams
+
+### Archived tasks — dedicated archive page (`/archive/team/:id`)
+
+A new page, `kanban_archive_page`, is added at the route `/archive/team/:id`. It is accessible only to leads (org leads, team leads, admins) via a link on the kanban board (e.g., an "Archived" link in the board header or footer).
+
+The page lists all archived tasks for the team in a simple table/list (title, last-known status, archived date). Each row links to the task editor for that task.
+
+Archived tasks open in `kanban_task_editor_page` in **read-only mode**: all form fields are disabled, the Save button is hidden, and the only actions available are "Unarchive" (leads only) and "Back". The History tab is available as normal.
+
+To edit an archived task, the lead must first click "Unarchive", which returns the task to the active board, then navigate to it normally.
+
+### Archived teams — collapsible section on the team management page
+
+`kanban_team_page` gains a collapsible "Archived Teams" section below the active teams list, visible only to org leads. Each archived team is shown with its name and an "Unarchive" button. Clicking "Unarchive" sets the team's `is_archived=0` (tasks in the team are **not** automatically unarchived — they stay archived individually).
 
 ---
 
 ## Testing
 
 - Catch2: unit tests for `record_event`, `history_for_task`, `archive_task`, `archive_team`, and the diff logic in `update_task`.
-- Playwright E2E: create a task, edit several fields, verify history tab shows correct before/after values and actor; archive a task and verify it disappears from the board; verify history tab is accessible on archived tasks opened by URL.
+- Playwright E2E: create a task, edit several fields, verify history tab shows correct before/after values and actor; archive a task and verify it disappears from the board; navigate to the archive page and verify the task appears there; verify the task editor is read-only for the archived task; unarchive and verify it returns to the board as editable; archive a team and verify its archived tasks appear in the archive page; verify the "Archived Teams" section appears on the team management page for org leads.
