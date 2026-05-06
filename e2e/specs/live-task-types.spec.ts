@@ -133,15 +133,14 @@ test('task editor: assigning a type makes the board card non-gray', async ({ bro
   await page.locator('input[placeholder="Task title"]').fill('TypedTask');
 
   // Select the first available type chip (not the "None" chip).
-  const chips = page.locator('.kb-type-chip');
-  // Click the second chip (index 1) which should be the FeatureType we created.
-  await chips.nth(1).click();
-  await expect(chips.nth(1)).toHaveClass(/selected/);
+  await page.locator('.kb-type-chip', { hasText: 'FeatureType' }).click();
+  await expect(page.locator('.kb-type-chip.selected', { hasText: 'FeatureType' })).toBeVisible();
 
   await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
   await expect(page.locator('.kb-board')).toBeVisible();
 
   // The card's border-left-color should not be the gray fallback (#cccccc).
+  await expect(page.locator('.kb-card', { hasText: 'TypedTask' })).toBeVisible();
   const borderColor = await page.locator('.kb-card', { hasText: 'TypedTask' })
     .evaluate((el) => (el as HTMLElement).style.borderLeftColor);
   expect(borderColor).not.toBe('rgb(204, 204, 204)');
@@ -164,6 +163,7 @@ test('type manager: delete type → card border-left-color becomes gray', async 
   // Navigate to the board — the card should fall back to gray.
   await goToBoard(page);
 
+  await expect(page.locator('.kb-card', { hasText: 'TypedTask' })).toBeVisible();
   const borderColor = await page.locator('.kb-card', { hasText: 'TypedTask' })
     .evaluate((el) => (el as HTMLElement).style.borderLeftColor);
   expect(borderColor).toBe('rgb(204, 204, 204)');
