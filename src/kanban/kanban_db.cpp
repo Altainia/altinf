@@ -3,6 +3,10 @@
 #include <Wt/Dbo/Transaction.h>
 #include <Wt/Dbo/backend/Sqlite3.h>
 
+#include <chrono>
+#include <iomanip>
+#include <sstream>
+
 #include "auth/permission.hpp"
 
 kanban_db::kanban_db(const std::string& db_path)
@@ -12,47 +16,39 @@ kanban_db::kanban_db(const std::string& db_path)
 	m_dbo.mapClass<team_member_record>("team_member");
 	m_dbo.mapClass<kanban_task_record>("kanban_task");
 	m_dbo.mapClass<task_type_record>("task_type");
+	m_dbo.mapClass<task_event_record>("task_event");
+	m_dbo.mapClass<task_field_change_record>("task_field_change");
 
 	try
 	{
 		m_dbo.createTables();
 	}
 	catch(const Wt::Dbo::Exception&)
-	{
-		// Tables already exist. Add new columns if they are missing (idempotent).
-	}
+	{}
 
-	// Ensure new columns exist on pre-existing databases.
-	// Each ALTER TABLE needs its own transaction; SQLite will error (caught) if
-	// the column already exists, which is the idempotent-migration behavior we want.
-	try
-	{
-		Wt::Dbo::Transaction t{m_dbo};
-		m_dbo.execute("ALTER TABLE team ADD COLUMN org_id INTEGER NOT NULL DEFAULT 0");
-	}
-	catch(...)
-	{}
-	try
-	{
-		Wt::Dbo::Transaction t{m_dbo};
-		m_dbo.execute("ALTER TABLE team_member ADD COLUMN is_lead INTEGER NOT NULL DEFAULT 0");
-	}
-	catch(...)
-	{}
-	try
-	{
-		Wt::Dbo::Transaction t{m_dbo};
-		m_dbo.execute("ALTER TABLE kanban_task ADD COLUMN type_id INTEGER NOT NULL DEFAULT 0");
-	}
-	catch(...)
-	{}
+	// Idempotent column migrations.
+	auto migrate = [this](const std::string& sql) {
+		try
+		{
+			Wt::Dbo::Transaction t{m_dbo};
+			m_dbo.execute(sql);
+		}
+		catch(...)
+		{}
+	};
+
+	migrate("ALTER TABLE team ADD COLUMN org_id INTEGER NOT NULL DEFAULT 0");
+	migrate("ALTER TABLE team_member ADD COLUMN is_lead INTEGER NOT NULL DEFAULT 0");
+	migrate("ALTER TABLE kanban_task ADD COLUMN type_id INTEGER NOT NULL DEFAULT 0");
+	migrate("ALTER TABLE kanban_task ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0");
+	migrate("ALTER TABLE team ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0");
 }
 
 // ---- static helpers ----
 
 team_entry kanban_db::to_entry(const Wt::Dbo::ptr<team_record>& p)
 {
-	return {.id = p.id(), .name = p->name, .org_id = p->org_id};
+	return {.id = p.id(), .name = p->name, .org_id = p->org_id, .is_archived = p->is_archived != 0};
 }
 
 kanban_task_entry kanban_db::to_entry(const Wt::Dbo::ptr<kanban_task_record>& p)
@@ -68,6 +64,7 @@ kanban_task_entry kanban_db::to_entry(const Wt::Dbo::ptr<kanban_task_record>& p)
 	e.end_date    = p->end_date;
 	e.type_id     = p->type_id;
 	e.sort_order  = p->sort_order;
+	e.is_archived = p->is_archived != 0;
 	return e;
 }
 
@@ -181,6 +178,44 @@ void kanban_db::delete_team(long long id)
 			(*rows.begin()).remove();
 		}
 	}
+}
+
+void kanban_db::archive_team(long long id, const std::string& /*actor*/)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results =
+	  m_dbo.find<team_record>().where("id = ?").bind(id).resultList();
+	if(!results.empty())
+	{
+		(*results.begin()).modify()->is_archived = 1;
+	}
+}
+
+void kanban_db::unarchive_team(long long id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results =
+	  m_dbo.find<team_record>().where("id = ?").bind(id).resultList();
+	if(!results.empty())
+	{
+		(*results.begin()).modify()->is_archived = 0;
+	}
+}
+
+std::vector<team_entry> kanban_db::archived_teams_for_org(long long org_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results = m_dbo.find<team_record>()
+	                       .where("org_id = ? AND is_archived = 1")
+	                       .bind(org_id)
+	                       .orderBy("id")
+	                       .resultList();
+	std::vector<team_entry> out;
+	for(const auto& p: results)
+	{
+		out.push_back(to_entry(p));
+	}
+	return out;
 }
 
 // ---- Members ----
@@ -330,7 +365,7 @@ std::vector<long long> kanban_db::team_ids_for_user(const std::string& username)
 
 // ---- Tasks ----
 
-long long kanban_db::add_task(const kanban_task_entry& e)
+long long kanban_db::add_task(const kanban_task_entry& e, const std::string& actor)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	auto                 p  = m_dbo.add(std::make_unique<kanban_task_record>());
@@ -344,10 +379,12 @@ long long kanban_db::add_task(const kanban_task_entry& e)
 	p.modify()->type_id     = e.type_id;
 	p.modify()->sort_order  = e.sort_order;
 	m_dbo.flush();
-	return p.id();
+	const long long new_id = p.id();
+	record_event(new_id, actor, "created", {});
+	return new_id;
 }
 
-void kanban_db::update_task(const kanban_task_entry& e)
+void kanban_db::update_task(const kanban_task_entry& e, const std::string& actor)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results =
@@ -365,9 +402,13 @@ void kanban_db::update_task(const kanban_task_entry& e)
 	p.modify()->end_date               = e.end_date;
 	p.modify()->type_id                = e.type_id;
 	p.modify()->sort_order             = e.sort_order;
+	record_event(e.id, actor, "updated", {});
 }
 
-void kanban_db::update_task_status(long long id, const std::string& status, int sort_order)
+void kanban_db::update_task_status(long long          id,
+                                   const std::string& status,
+                                   int                sort_order,
+                                   const std::string& actor)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results =
@@ -379,6 +420,7 @@ void kanban_db::update_task_status(long long id, const std::string& status, int 
 	Wt::Dbo::ptr<kanban_task_record> p = *results.begin();
 	p.modify()->status                 = status;
 	p.modify()->sort_order             = sort_order;
+	record_event(id, actor, "status_changed", {});
 }
 
 bool kanban_db::self_assign(long long task_id, const std::string& username)
@@ -438,6 +480,78 @@ std::vector<kanban_task_entry> kanban_db::tasks_for_team(long long team_id)
 	for(const auto& p: results)
 	{
 		out.push_back(to_entry(p));
+	}
+	return out;
+}
+
+std::vector<kanban_task_entry> kanban_db::archived_tasks_for_team(long long team_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results = m_dbo.find<kanban_task_record>()
+	                       .where("team_id = ? AND is_archived = 1")
+	                       .bind(team_id)
+	                       .orderBy("sort_order, id")
+	                       .resultList();
+	std::vector<kanban_task_entry> out;
+	for(const auto& p: results)
+	{
+		out.push_back(to_entry(p));
+	}
+	return out;
+}
+
+void kanban_db::archive_task(long long id, const std::string& actor)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results =
+	  m_dbo.find<kanban_task_record>().where("id = ?").bind(id).resultList();
+	if(!results.empty())
+	{
+		(*results.begin()).modify()->is_archived = 1;
+		record_event(id, actor, "archived", {});
+	}
+}
+
+void kanban_db::unarchive_task(long long id, const std::string& actor)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results =
+	  m_dbo.find<kanban_task_record>().where("id = ?").bind(id).resultList();
+	if(!results.empty())
+	{
+		(*results.begin()).modify()->is_archived = 0;
+		record_event(id, actor, "unarchived", {});
+	}
+}
+
+std::vector<task_event_entry> kanban_db::history_for_task(long long task_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           events = m_dbo.find<task_event_record>()
+	                      .where("task_id = ?")
+	                      .bind(task_id)
+	                      .orderBy("id")
+	                      .resultList();
+	std::vector<task_event_entry> out;
+	for(const auto& ev: events)
+	{
+		task_event_entry entry;
+		entry.id          = ev.id();
+		entry.task_id     = ev->task_id;
+		entry.actor       = ev->actor;
+		entry.occurred_at = ev->occurred_at;
+		entry.event_type  = ev->event_type;
+
+		const auto changes = m_dbo.find<task_field_change_record>()
+		                       .where("event_id = ?")
+		                       .bind(ev.id())
+		                       .resultList();
+		for(const auto& ch: changes)
+		{
+			entry.changes.push_back(
+			  {.field_name = ch->field_name, .old_value = ch->old_value, .new_value = ch->new_value});
+		}
+		out.push_back(std::move(entry));
 	}
 	return out;
 }
@@ -529,5 +643,53 @@ std::optional<task_type_entry> kanban_db::find_task_type(long long id)
 	catch(const Wt::Dbo::ObjectNotFoundException&)
 	{
 		return std::nullopt;
+	}
+}
+
+// ---- Private helpers ----
+
+void kanban_db::record_event(long long                                   task_id,
+                             const std::string&                          actor,
+                             const std::string&                          event_type,
+                             const std::vector<task_field_change_entry>& changes)
+{
+	// Generate an ISO-8601 UTC timestamp.
+	const auto         now = std::chrono::system_clock::now();
+	const auto         tt  = std::chrono::system_clock::to_time_t(now);
+	std::ostringstream ts;
+	ts << std::put_time(std::gmtime(&tt), "%Y-%m-%dT%H:%M:%SZ");
+
+	auto ev                  = m_dbo.add(std::make_unique<task_event_record>());
+	ev.modify()->task_id     = task_id;
+	ev.modify()->actor       = actor;
+	ev.modify()->occurred_at = ts.str();
+	ev.modify()->event_type  = event_type;
+	m_dbo.flush();
+
+	for(const auto& ch: changes)
+	{
+		auto fc                 = m_dbo.add(std::make_unique<task_field_change_record>());
+		fc.modify()->event_id   = ev.id();
+		fc.modify()->field_name = ch.field_name;
+		fc.modify()->old_value  = ch.old_value;
+		fc.modify()->new_value  = ch.new_value;
+	}
+}
+
+std::string kanban_db::type_name_for_id(long long type_id)
+{
+	if(type_id == 0)
+	{
+		return {};
+	}
+	try
+	{
+		Wt::Dbo::Transaction t{m_dbo};
+		auto                 p = m_dbo.load<task_type_record>(type_id);
+		return p->name;
+	}
+	catch(const Wt::Dbo::ObjectNotFoundException&)
+	{
+		return {};
 	}
 }

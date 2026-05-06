@@ -18,7 +18,8 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
   m_db{db},
   m_team_id{team_id},
   m_is_lead{is_lead},
-  m_show_gantt{show_gantt}
+  m_show_gantt{show_gantt},
+  m_username{session.username}
 {
 	setStyleClass("page kb-page");
 
@@ -82,7 +83,7 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 		  m_is_lead,
 		  m_type_colors,
 		  [this](long long tid, const std::string& status, int sort) {
-			  m_db.update_task_status(tid, status, sort);
+			  m_db.update_task_status(tid, status, sort, m_username);
 			  live_hub::instance().broadcast("team:" + std::to_string(m_team_id));
 			  m_board_widget->refresh(m_db.tasks_for_team(m_team_id), m_is_lead, m_type_colors);
 		  },

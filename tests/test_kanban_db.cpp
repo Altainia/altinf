@@ -72,7 +72,7 @@ TEST_CASE("kanban_db - delete_team removes members and tasks")
 	kanban_db       db{":memory:"};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
-	db.add_task(make_task(tid, "Chore"));
+	db.add_task(make_task(tid, "Chore"), "test");
 	db.delete_team(tid);
 	CHECK(!db.find_team(tid).has_value());
 	CHECK(db.members_for_team(tid).empty());
@@ -157,8 +157,8 @@ TEST_CASE("kanban_db - add task and retrieve for team")
 {
 	kanban_db       db{":memory:"};
 	const long long tid = db.create_team("T", 1);
-	db.add_task(make_task(tid, "Alpha", "todo", 1));
-	db.add_task(make_task(tid, "Beta", "todo", 0));
+	db.add_task(make_task(tid, "Alpha", "todo", 1), "test");
+	db.add_task(make_task(tid, "Beta", "todo", 0), "test");
 	const auto tasks = db.tasks_for_team(tid);
 	REQUIRE(tasks.size() == 2);
 	CHECK(tasks[0].title == "Beta");
@@ -169,7 +169,7 @@ TEST_CASE("kanban_db - find_task")
 {
 	kanban_db       db{":memory:"};
 	const long long tid = db.create_team("T", 1);
-	const long long id  = db.add_task(make_task(tid, "My Task"));
+	const long long id  = db.add_task(make_task(tid, "My Task"), "test");
 	const auto      opt = db.find_task(id);
 	REQUIRE(opt.has_value());
 	CHECK(opt->title == "My Task");
@@ -186,10 +186,10 @@ TEST_CASE("kanban_db - update task")
 {
 	kanban_db       db{":memory:"};
 	const long long tid  = db.create_team("T", 1);
-	const long long id   = db.add_task(make_task(tid, "Original"));
+	const long long id   = db.add_task(make_task(tid, "Original"), "test");
 	auto            task = *db.find_task(id);
 	task.title           = "Updated";
-	db.update_task(task);
+	db.update_task(task, "test");
 	const auto updated = db.find_task(id);
 	CHECK(updated->title == "Updated");
 }
@@ -198,8 +198,8 @@ TEST_CASE("kanban_db - update_task_status")
 {
 	kanban_db       db{":memory:"};
 	const long long tid = db.create_team("T", 1);
-	const long long id  = db.add_task(make_task(tid, "T", "todo"));
-	db.update_task_status(id, "done", 5);
+	const long long id  = db.add_task(make_task(tid, "T", "todo"), "test");
+	db.update_task_status(id, "done", 5, "test");
 	const auto opt = db.find_task(id);
 	REQUIRE(opt.has_value());
 	CHECK(opt->status == "done");
@@ -210,8 +210,8 @@ TEST_CASE("kanban_db - delete task")
 {
 	kanban_db       db{":memory:"};
 	const long long tid = db.create_team("T", 1);
-	const long long id  = db.add_task(make_task(tid, "To Delete"));
-	db.add_task(make_task(tid, "To Keep"));
+	const long long id  = db.add_task(make_task(tid, "To Delete"), "test");
+	db.add_task(make_task(tid, "To Keep"), "test");
 	db.delete_task(id);
 	const auto tasks = db.tasks_for_team(tid);
 	REQUIRE(tasks.size() == 1);
@@ -230,7 +230,7 @@ TEST_CASE("kanban_db - self_assign succeeds on unassigned task")
 	kanban_db       db{":memory:"};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
-	const long long id = db.add_task(make_task(tid, "Work"));
+	const long long id = db.add_task(make_task(tid, "Work"), "test");
 	CHECK(db.self_assign(id, "alice"));
 	CHECK(db.find_task(id)->assigned_to == "alice");
 }
@@ -243,7 +243,7 @@ TEST_CASE("kanban_db - self_assign fails when already assigned")
 	db.add_member(tid, "bob");
 	auto t             = make_task(tid, "Work");
 	t.assigned_to      = "alice";
-	const long long id = db.add_task(t);
+	const long long id = db.add_task(t, "test");
 	CHECK(!db.self_assign(id, "bob"));
 }
 
@@ -251,7 +251,7 @@ TEST_CASE("kanban_db - self_assign fails for non-member")
 {
 	kanban_db       db{":memory:"};
 	const long long tid = db.create_team("T", 1);
-	const long long id  = db.add_task(make_task(tid, "Work"));
+	const long long id  = db.add_task(make_task(tid, "Work"), "test");
 	CHECK(!db.self_assign(id, "stranger"));
 }
 
@@ -429,7 +429,7 @@ TEST_CASE("kanban_db - delete_task_type zeroes out affected tasks")
 	e.team_id           = team_id;
 	e.title             = "A task";
 	e.type_id           = type_id;
-	const long long tid = db.add_task(e);
+	const long long tid = db.add_task(e, "test");
 
 	db.delete_task_type(type_id);
 
@@ -453,7 +453,7 @@ TEST_CASE("kanban_db - task type_id persists through add and find")
 	e.team_id          = team_id;
 	e.title            = "My task";
 	e.type_id          = type_id;
-	const long long id = db.add_task(e);
+	const long long id = db.add_task(e, "test");
 
 	const auto found = db.find_task(id);
 	REQUIRE(found.has_value());
@@ -470,11 +470,11 @@ TEST_CASE("kanban_db - update_task preserves type_id change")
 	e.team_id          = team_id;
 	e.title            = "My task";
 	e.type_id          = 0;
-	const long long id = db.add_task(e);
+	const long long id = db.add_task(e, "test");
 
 	auto task    = *db.find_task(id);
 	task.type_id = type_id;
-	db.update_task(task);
+	db.update_task(task, "test");
 
 	CHECK(db.find_task(id)->type_id == type_id);
 }

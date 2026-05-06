@@ -388,7 +388,7 @@ void kanban_task_editor_page::save()
 		t.sort_order = m_existing->sort_order;
 		try
 		{
-			m_db.update_task(t);
+			m_db.update_task(t, m_username);
 		}
 		catch(const Wt::Dbo::StaleObjectException&)
 		{
@@ -398,7 +398,7 @@ void kanban_task_editor_page::save()
 	}
 	else
 	{
-		t.id = m_db.add_task(t);
+		t.id = m_db.add_task(t, m_username);
 	}
 
 	// Fire a task_assigned notification if the assignee changed to a new person.

@@ -15,7 +15,8 @@ org_board_page::org_board_page(org_db&             odb,
                                long long           org_id,
                                const session_data& session):
   m_db{kdb},
-  m_org_id{org_id}
+  m_org_id{org_id},
+  m_username{session.username}
 {
 	setStyleClass("page org-board-page");
 
@@ -73,8 +74,8 @@ org_board_page::org_board_page(org_db&             odb,
 		  tasks,
 		  true, // is_lead — org leads always have edit rights
 		  m_type_colors,
-		  [&kdb, tid](long long task_id, const std::string& status, int sort) {
-			  kdb.update_task_status(task_id, status, sort);
+		  [&kdb, tid, actor = session.username](long long task_id, const std::string& status, int sort) {
+			  kdb.update_task_status(task_id, status, sort, actor);
 		  },
 		  [tid](long long task_id) {
 			  Wt::WApplication::instance()->setInternalPath(

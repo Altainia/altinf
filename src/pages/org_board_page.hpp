@@ -23,6 +23,7 @@ public:
 private:
 	kanban_db&                       m_db;
 	long long                        m_org_id{0};
+	std::string                      m_username;
 	std::string                      m_session_id;
 	std::shared_ptr<bool>            m_alive{std::make_shared<bool>(true)};
 	std::map<long long, std::string> m_type_colors;

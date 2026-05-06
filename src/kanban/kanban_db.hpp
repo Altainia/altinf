@@ -22,6 +22,9 @@ public:
 	std::vector<team_entry>   teams_for_org(long long org_id);
 	std::optional<team_entry> find_team(long long id);
 	void                      delete_team(long long id);
+	void                      archive_team(long long id, const std::string& actor);
+	void                      unarchive_team(long long id);
+	std::vector<team_entry>   archived_teams_for_org(long long org_id);
 
 	// Members
 	void                           add_member(long long team_id, const std::string& username);
@@ -39,16 +42,23 @@ public:
 	std::vector<long long>         team_ids_for_user(const std::string& username);
 
 	// Tasks
-	long long                        add_task(const kanban_task_entry& e);
-	void                             update_task(const kanban_task_entry& e);
+	long long                        add_task(const kanban_task_entry& e,
+	                                          const std::string& actor);
+	void                             update_task(const kanban_task_entry& e,
+	                                             const std::string& actor);
 	void                             update_task_status(long long          id,
 	                                                    const std::string& status,
-	                                                    int                sort_order);
+	                                                    int                sort_order,
+	                                                    const std::string& actor);
 	// Assigns an unassigned task to username; no-op if already assigned.
 	bool                             self_assign(long long task_id, const std::string& username);
 	void                             delete_task(long long id);
+	void                             archive_task(long long id, const std::string& actor);
+	void                             unarchive_task(long long id, const std::string& actor);
 	std::optional<kanban_task_entry> find_task(long long id);
 	std::vector<kanban_task_entry>   tasks_for_team(long long team_id);
+	std::vector<kanban_task_entry>   archived_tasks_for_team(long long team_id);
+	std::vector<task_event_entry>    history_for_task(long long task_id);
 
 	// Permission helpers (is_org_lead pre-computed by the caller)
 	bool can_view_board(long long team_id, const std::string& username,
@@ -74,4 +84,10 @@ private:
 	static team_entry        to_entry(const Wt::Dbo::ptr<team_record>& p);
 	static kanban_task_entry to_entry(const Wt::Dbo::ptr<kanban_task_record>& p);
 	static task_type_entry   to_entry(const Wt::Dbo::ptr<task_type_record>& p);
+
+	void        record_event(long long task_id,
+	                         const std::string& actor,
+	                         const std::string& event_type,
+	                         const std::vector<task_field_change_entry>& changes);
+	std::string type_name_for_id(long long type_id);
 };

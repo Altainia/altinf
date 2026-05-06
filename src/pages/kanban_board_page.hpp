@@ -28,6 +28,7 @@ private:
     long long                        m_org_id{0};
     bool                             m_is_lead{false};
     bool                             m_show_gantt{false};
+    std::string                      m_username;
     std::string                      m_session_id;
     std::shared_ptr<bool>            m_alive{std::make_shared<bool>(true)};
     std::map<long long, std::string> m_type_colors;
