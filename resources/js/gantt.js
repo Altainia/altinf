@@ -253,7 +253,7 @@
         var ce  = (e && e < viewEnd)   ? e : viewEnd;
         var bx  = LABEL_W + daysBetween(viewStart, cs) * pxDay;
         var bw  = Math.max(4, daysBetween(cs, ce) * pxDay);
-        var clr = task.color || '#7aa2d4';
+        var clr = task.color || '#cccccc';
 
         // Fade at any edge where the bar is unbounded: either because the task
         // has no date on that side, or because the real date is clipped off-screen.

@@ -8,11 +8,14 @@
 #include <map>
 
 #include "kanban/kanban_board_widget.hpp"
+#include "widgets/live_hub.hpp"
 
 org_board_page::org_board_page(org_db&             odb,
                                kanban_db&          kdb,
                                long long           org_id,
-                               const session_data& session)
+                               const session_data& session):
+  m_db{kdb},
+  m_org_id{org_id}
 {
 	setStyleClass("page org-board-page");
 
@@ -42,10 +45,9 @@ org_board_page::org_board_page(org_db&             odb,
 	}
 
 	// ── One board per team ────────────────────────────────────────────────────
-	std::map<long long, std::string> type_colors;
 	for(const auto& ty: kdb.types_for_org(org_id))
 	{
-		type_colors[ty.id] = ty.color;
+		m_type_colors[ty.id] = ty.color;
 	}
 
 	for(const auto& team: teams)
@@ -70,7 +72,7 @@ org_board_page::org_board_page(org_db&             odb,
 		auto* board = section->addNew<kanban_board_widget>(
 		  tasks,
 		  true, // is_lead — org leads always have edit rights
-		  type_colors,
+		  m_type_colors,
 		  [&kdb, tid](long long task_id, const std::string& status, int sort) {
 			  kdb.update_task_status(task_id, status, sort);
 		  },
@@ -81,5 +83,27 @@ org_board_page::org_board_page(org_db&             odb,
 			    true);
 		  });
 		(void)board;
+	}
+
+	// Subscribe to live updates when task types change for this org.
+	m_session_id = Wt::WApplication::instance()->sessionId();
+	live_hub::instance().subscribe(
+	  "org:" + std::to_string(m_org_id) + ":types",
+	  m_session_id,
+	  [this, alive = m_alive] {
+		  if(*alive)
+		  {
+			  Wt::WApplication::instance()->triggerUpdate();
+		  }
+	  });
+}
+
+org_board_page::~org_board_page()
+{
+	*m_alive = false;
+	if(!m_session_id.empty())
+	{
+		live_hub::instance().unsubscribe(
+		  "org:" + std::to_string(m_org_id) + ":types", m_session_id);
 	}
 }
