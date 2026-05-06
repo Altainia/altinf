@@ -3,6 +3,7 @@
 #include <Wt/Dbo/Exception.h>
 #include <Wt/WAnchor.h>
 #include <Wt/WApplication.h>
+#include <Wt/WColor.h>
 #include <Wt/WDate.h>
 #include <Wt/WLink.h>
 #include <Wt/WPushButton.h>
@@ -224,10 +225,15 @@ kanban_task_editor_page::kanban_task_editor_page(
 		dot->setStyleClass("kb-type-chip__dot");
 		if(hex.size() == 7 && hex[0] == '#')
 		{
-			int r = std::stoi(hex.substr(1, 2), nullptr, 16);
-			int g = std::stoi(hex.substr(3, 2), nullptr, 16);
-			int b = std::stoi(hex.substr(5, 2), nullptr, 16);
-			dot->decorationStyle().setBackgroundColor(Wt::WColor{r, g, b});
+			try
+			{
+				int r = std::stoi(hex.substr(1, 2), nullptr, 16);
+				int g = std::stoi(hex.substr(3, 2), nullptr, 16);
+				int b = std::stoi(hex.substr(5, 2), nullptr, 16);
+				dot->decorationStyle().setBackgroundColor(Wt::WColor{r, g, b});
+			}
+			catch(...)
+			{}
 		}
 		chip->addNew<Wt::WText>(label, Wt::TextFormat::Plain);
 		m_type_chips.push_back(chip);
