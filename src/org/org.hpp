@@ -9,11 +9,13 @@
 struct org_record
 {
 	std::string name;
+	int         is_archived{0};
 
 	template<class Action>
 	void persist(Action& a)
 	{
-		Wt::Dbo::field(a, name, "name");
+		Wt::Dbo::field(a, name,        "name");
+		Wt::Dbo::field(a, is_archived, "is_archived");
 	}
 };
 
@@ -72,6 +74,7 @@ struct org_entry
 {
 	long long   id{0};
 	std::string name;
+	bool        is_archived{false};
 };
 
 struct org_member_entry
