@@ -469,3 +469,32 @@
   background:    #cccccc;
   flex-shrink:   0;
 }
+
+// ── Type manager page ─────────────────────────────────────────────────────
+.org-type-list {
+  display:        flex;
+  flex-direction: column;
+  gap:            8px;
+  margin-bottom:  24px;
+}
+
+.org-type-row {
+  display:       flex;
+  align-items:   center;
+  gap:           10px;
+  padding:       8px 12px;
+  background:    var(--color-surface);
+  border:        1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.org-type-dot {
+  width:         16px;
+  height:        16px;
+  border-radius: 50%;
+  flex-shrink:   0;
+}
+
+.org-type-name {
+  flex: 1;
+}
