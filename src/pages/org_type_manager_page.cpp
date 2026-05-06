@@ -197,10 +197,10 @@ void org_type_manager_page::save_edit(long long type_id)
 		return;
 	}
 	m_db.update_task_type(type_id, name, wcolor_to_hex(m_edit_color->color()));
-	live_hub::instance().broadcast(
-	  "org:" + std::to_string(m_org_id) + ":types");
 	m_status_msg->setText("");
 	refresh_list();
+	live_hub::instance().broadcast(
+	  "org:" + std::to_string(m_org_id) + ":types");
 }
 
 void org_type_manager_page::add_type()
@@ -213,23 +213,24 @@ void org_type_manager_page::add_type()
 	}
 	m_db.create_task_type(
 	  m_org_id, name, wcolor_to_hex(m_color_picker->color()));
-	live_hub::instance().broadcast(
-	  "org:" + std::to_string(m_org_id) + ":types");
 
 	m_name_input->setText({});
 	m_status_msg->setText("");
+
+	refresh_list();
 
 	const auto types = m_db.types_for_org(m_org_id);
 	m_color_picker->setColor(
 	  hex_to_wcolor(k_palette[types.size() % k_palette.size()]));
 
-	refresh_list();
+	live_hub::instance().broadcast(
+	  "org:" + std::to_string(m_org_id) + ":types");
 }
 
 void org_type_manager_page::delete_type(long long type_id)
 {
 	m_db.delete_task_type(type_id);
+	refresh_list();
 	live_hub::instance().broadcast(
 	  "org:" + std::to_string(m_org_id) + ":types");
-	refresh_list();
 }
