@@ -58,6 +58,17 @@ public:
 	std::vector<kanban_task_entry>   archived_tasks_for_team(long long team_id);
 	std::vector<task_event_entry>    history_for_task(long long task_id);
 
+	// Comments
+	long long                            add_comment(long long task_id,
+	                                                 const std::string& author,
+	                                                 const std::string& body);
+	void                                 edit_comment(long long comment_id,
+	                                                  const std::string& editor,
+	                                                  const std::string& new_body);
+	void                                 delete_comment(long long comment_id,
+	                                                    const std::string& actor);
+	std::vector<task_comment_entry>      comments_for_task(long long task_id);
+
 	// Permission helpers (is_org_lead pre-computed by the caller)
 	bool can_view_board(long long team_id, const std::string& username,
 	                    permission::flags perms, bool is_org_lead = false);
@@ -87,4 +98,8 @@ private:
 	                  const std::string& actor,
 	                  const std::string& event_type,
 	                  const std::vector<task_field_change_entry>& changes);
+	void record_comment_event(long long          comment_id,
+	                           const std::string& actor,
+	                           const std::string& event_type,
+	                           const std::string& body_snapshot);
 };
