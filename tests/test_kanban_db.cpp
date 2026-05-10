@@ -636,3 +636,124 @@ TEST_CASE("kanban_db - archive_team cascades archived event to each task")
 		CHECK(history[0].actor == "lead");
 	}
 }
+
+// ---- comments ----
+
+TEST_CASE("kanban_db - add_comment returns id and is retrievable")
+{
+	kanban_db       db{":memory:"};
+	const long long tid  = db.create_team("T", 1);
+	const long long task = db.add_task(make_task(tid, "Work"), "creator");
+	const long long cid  = db.add_comment(task, "alice", "Hello **world**");
+	CHECK(cid > 0);
+	const auto comments = db.comments_for_task(task);
+	REQUIRE(comments.size() == 1);
+	CHECK(comments[0].id == cid);
+	CHECK(comments[0].author == "alice");
+	CHECK(comments[0].body == "Hello **world**");
+	CHECK(!comments[0].is_deleted);
+	CHECK(comments[0].last_edited_by.empty());
+	CHECK(comments[0].deleted_by.empty());
+	CHECK(!comments[0].created_at.empty());
+}
+
+TEST_CASE("kanban_db - comments_for_task returns in chronological order")
+{
+	kanban_db       db{":memory:"};
+	const long long tid  = db.create_team("T", 1);
+	const long long task = db.add_task(make_task(tid, "Work"), "creator");
+	db.add_comment(task, "alice", "First");
+	db.add_comment(task, "bob", "Second");
+	db.add_comment(task, "carol", "Third");
+	const auto comments = db.comments_for_task(task);
+	REQUIRE(comments.size() == 3);
+	CHECK(comments[0].body == "First");
+	CHECK(comments[1].body == "Second");
+	CHECK(comments[2].body == "Third");
+}
+
+TEST_CASE("kanban_db - edit_comment updates body and records edited event")
+{
+	kanban_db       db{":memory:"};
+	const long long tid  = db.create_team("T", 1);
+	const long long task = db.add_task(make_task(tid, "Work"), "creator");
+	const long long cid  = db.add_comment(task, "alice", "Original");
+	db.edit_comment(cid, "alice", "Revised");
+	const auto comments = db.comments_for_task(task);
+	REQUIRE(comments.size() == 1);
+	CHECK(comments[0].body == "Revised");
+	CHECK(comments[0].last_edited_by == "alice");
+	CHECK(!comments[0].last_edited_at.empty());
+}
+
+TEST_CASE("kanban_db - edit_comment reflects most recent editor when edited twice")
+{
+	kanban_db       db{":memory:"};
+	const long long tid  = db.create_team("T", 1);
+	const long long task = db.add_task(make_task(tid, "Work"), "creator");
+	const long long cid  = db.add_comment(task, "alice", "v1");
+	db.edit_comment(cid, "alice", "v2");
+	db.edit_comment(cid, "bob", "v3");
+	const auto comments = db.comments_for_task(task);
+	REQUIRE(comments.size() == 1);
+	CHECK(comments[0].body == "v3");
+	CHECK(comments[0].last_edited_by == "bob");
+}
+
+TEST_CASE("kanban_db - edit_comment is a no-op on deleted comment")
+{
+	kanban_db       db{":memory:"};
+	const long long tid  = db.create_team("T", 1);
+	const long long task = db.add_task(make_task(tid, "Work"), "creator");
+	const long long cid  = db.add_comment(task, "alice", "Original");
+	db.delete_comment(cid, "alice");
+	db.edit_comment(cid, "alice", "Should not apply");
+	const auto comments = db.comments_for_task(task);
+	REQUIRE(comments.size() == 1);
+	CHECK(comments[0].body.empty());           // still deleted, body cleared
+	CHECK(comments[0].last_edited_by.empty()); // no edit event recorded
+}
+
+TEST_CASE("kanban_db - delete_comment sets is_deleted and clears body in entry")
+{
+	kanban_db       db{":memory:"};
+	const long long tid  = db.create_team("T", 1);
+	const long long task = db.add_task(make_task(tid, "Work"), "creator");
+	const long long cid  = db.add_comment(task, "alice", "Goodbye");
+	db.delete_comment(cid, "bob");
+	const auto comments = db.comments_for_task(task);
+	REQUIRE(comments.size() == 1);
+	CHECK(comments[0].is_deleted);
+	CHECK(comments[0].body.empty());
+	CHECK(comments[0].deleted_by == "bob");
+	CHECK(!comments[0].deleted_at.empty());
+}
+
+TEST_CASE("kanban_db - delete_comment is a no-op if already deleted")
+{
+	kanban_db       db{":memory:"};
+	const long long tid  = db.create_team("T", 1);
+	const long long task = db.add_task(make_task(tid, "Work"), "creator");
+	const long long cid  = db.add_comment(task, "alice", "Hello");
+	db.delete_comment(cid, "alice");
+	db.delete_comment(cid, "bob"); // second delete is a no-op
+	const auto comments = db.comments_for_task(task);
+	REQUIRE(comments.size() == 1);
+	CHECK(comments[0].deleted_by == "alice"); // original deletor preserved
+}
+
+TEST_CASE("kanban_db - comments_for_task includes deleted comments as placeholders")
+{
+	kanban_db       db{":memory:"};
+	const long long tid  = db.create_team("T", 1);
+	const long long task = db.add_task(make_task(tid, "Work"), "creator");
+	db.add_comment(task, "alice", "Keep me");
+	const long long cid2 = db.add_comment(task, "bob", "Delete me");
+	db.delete_comment(cid2, "bob");
+	const auto comments = db.comments_for_task(task);
+	REQUIRE(comments.size() == 2);
+	CHECK(!comments[0].is_deleted);
+	CHECK(comments[0].body == "Keep me");
+	CHECK(comments[1].is_deleted);
+	CHECK(comments[1].body.empty());
+}
