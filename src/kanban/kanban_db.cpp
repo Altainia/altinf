@@ -170,6 +170,9 @@ void kanban_db::archive_team(long long id, const std::string& actor)
 
 void kanban_db::unarchive_team(long long id)
 {
+	// Tasks within the team are NOT automatically unarchived — each task must be
+	// unarchived individually. This is intentional: tasks may have been archived
+	// independently before the team was archived.
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results =
 	  m_dbo.find<team_record>().where("id = ?").bind(id).resultList();
@@ -384,7 +387,7 @@ void kanban_db::update_task(const kanban_task_entry& e, const std::string& actor
 		{
 			return m_dbo.load<task_type_record>(tid)->name;
 		}
-		catch(...)
+		catch(const Wt::Dbo::ObjectNotFoundException&)
 		{
 			return {};
 		}
@@ -461,6 +464,10 @@ bool kanban_db::self_assign(long long task_id, const std::string& username)
 		return false; // Already assigned — self-assign not permitted.
 	}
 	if(!is_member(p->team_id, username))
+	{
+		return false;
+	}
+	if(p->is_archived)
 	{
 		return false;
 	}
