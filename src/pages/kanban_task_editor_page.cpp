@@ -7,10 +7,12 @@
 #include <Wt/WDate.h>
 #include <Wt/WLink.h>
 #include <Wt/WPushButton.h>
+#include <Wt/WTabWidget.h>
 #include <Wt/WText.h>
 
 #include <algorithm>
 #include <cstdio>
+#include <map>
 
 #include "org/org.hpp"
 #include "widgets/live_hub.hpp"
@@ -56,8 +58,24 @@ kanban_task_editor_page::kanban_task_editor_page(
 	  is_new ? "<h1>New Task</h1>" : "<h1>Edit Task</h1>",
 	  Wt::TextFormat::UnsafeXHTML);
 
-	auto* form = addNew<Wt::WContainerWidget>();
+	auto* tabs = addNew<Wt::WTabWidget>();
+	tabs->setStyleClass("kb-editor-tabs");
+
+	auto* details_panel = new Wt::WContainerWidget();
+	tabs->addTab(std::unique_ptr<Wt::WContainerWidget>(details_panel), "Details");
+
+	auto* form = details_panel;
 	form->setStyleClass("kb-editor-form");
+
+	m_history_panel = new Wt::WContainerWidget();
+	tabs->addTab(std::unique_ptr<Wt::WContainerWidget>(m_history_panel), "History");
+
+	tabs->currentChanged().connect([this](int index) {
+		if(index == 1)
+		{
+			rebuild_history();
+		}
+	});
 
 	// ── Title ─────────────────────────────────────────────────────────────────
 	form->addNew<Wt::WText>("<h2>Task</h2>", Wt::TextFormat::UnsafeXHTML);
@@ -266,25 +284,56 @@ kanban_task_editor_page::kanban_task_editor_page(
 	m_save_btn->setStyleClass("editor-btn");
 	m_save_btn->clicked().connect([this] { save(); });
 
-	// Delete only for leads editing existing tasks.
+	if(existing && existing->is_archived)
+	{
+		m_title->setReadOnly(true);
+		m_description->setReadOnly(true);
+		m_status->setDisabled(true);
+		m_assigned_to->setDisabled(true);
+		m_start_date->setReadOnly(true);
+		m_end_date->setReadOnly(true);
+		for(auto* chip: m_type_chips)
+		{
+			chip->setDisabled(true);
+		}
+		m_save_btn->hide();
+	}
+
+	// Archive/Unarchive only for leads editing existing tasks.
 	if(!is_new && is_lead)
 	{
-		m_del_btn = btn_row->addNew<Wt::WPushButton>("Delete");
-		m_del_btn->setStyleClass("editor-btn editor-btn-danger");
-		m_del_btn->clicked().connect(
-		  [this] {
-			  const long long tid = m_existing->id;
-			  if(m_task_id != 0)
-			  {
-				  live_hub::instance().unsubscribe(
-				    "task:" + std::to_string(m_task_id), m_session_id);
-				  m_task_id = 0;
-			  }
-			  m_db.archive_task(tid, m_username);
-			  live_hub::instance().broadcast("team:" + std::to_string(m_team_id));
-			  live_hub::instance().broadcast("task:" + std::to_string(tid));
-			  m_on_save();
-		  });
+		if(existing->is_archived)
+		{
+			m_del_btn = btn_row->addNew<Wt::WPushButton>("Unarchive");
+			m_del_btn->setStyleClass("editor-btn");
+			m_del_btn->clicked().connect([this] {
+				m_db.unarchive_task(m_existing->id, m_username);
+				live_hub::instance().broadcast(
+				  "team:" + std::to_string(m_team_id));
+				live_hub::instance().broadcast(
+				  "task:" + std::to_string(m_existing->id));
+				m_on_save();
+			});
+		}
+		else
+		{
+			m_del_btn = btn_row->addNew<Wt::WPushButton>("Archive");
+			m_del_btn->setStyleClass("editor-btn editor-btn-danger");
+			m_del_btn->clicked().connect([this] {
+				const long long tid = m_existing->id;
+				if(m_task_id != 0)
+				{
+					live_hub::instance().unsubscribe(
+					  "task:" + std::to_string(m_task_id), m_session_id);
+					m_task_id = 0;
+				}
+				m_db.archive_task(tid, m_username);
+				live_hub::instance().broadcast(
+				  "team:" + std::to_string(m_team_id));
+				live_hub::instance().broadcast("task:" + std::to_string(tid));
+				m_on_save();
+			});
+		}
 	}
 
 	const std::string back_url = "/board/" + std::to_string(team_id);
@@ -330,6 +379,122 @@ void kanban_task_editor_page::mark_stale()
 	if(m_del_btn)
 	{
 		m_del_btn->setDisabled(true);
+	}
+}
+
+void kanban_task_editor_page::rebuild_history()
+{
+	m_history_panel->clear();
+
+	if(m_task_id == 0)
+	{
+		m_history_panel->addNew<Wt::WText>(
+		  "No history yet.", Wt::TextFormat::Plain);
+		return;
+	}
+
+	const auto events = m_db.history_for_task(m_task_id);
+	if(events.empty())
+	{
+		m_history_panel->addNew<Wt::WText>(
+		  "No history yet.", Wt::TextFormat::Plain);
+		return;
+	}
+
+	static const std::map<std::string, std::string> k_field_labels = {
+	  {"status", "Status"},
+	  {"title", "Title"},
+	  {"description", "Description"},
+	  {"assigned_to", "Assigned to"},
+	  {"start_date", "Start date"},
+	  {"end_date", "End date"},
+	  {"type", "Type"},
+	};
+
+	static const std::map<std::string, std::string> k_status_labels = {
+	  {"todo", "To Do"},
+	  {"in_progress", "In Progress"},
+	  {"review", "Review"},
+	  {"done", "Done"},
+	};
+
+	auto display_val = [&](const std::string& field,
+	                       const std::string& val) -> std::string {
+		if(val.empty())
+		{
+			return "(unset)";
+		}
+		if(field == "status")
+		{
+			const auto it = k_status_labels.find(val);
+			return it != k_status_labels.end() ? it->second : val;
+		}
+		return val;
+	};
+
+	auto format_ts = [](const std::string& iso) -> std::string {
+		// Parse "2026-05-06T14:30:00Z" -> "May 6, 2026 at 14:30"
+		if(iso.size() < 16)
+		{
+			return iso;
+		}
+		try
+		{
+			const int          yr       = std::stoi(iso.substr(0, 4));
+			const int          mo       = std::stoi(iso.substr(5, 2));
+			const int          dy       = std::stoi(iso.substr(8, 2));
+			const auto         hr       = iso.substr(11, 2);
+			const auto         mn       = iso.substr(14, 2);
+			static const char* months[] = {
+			  "", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+			return std::string(months[mo]) + " " + std::to_string(dy) +
+			       ", " + std::to_string(yr) + " at " + hr + ":" + mn;
+		}
+		catch(...)
+		{
+			return iso;
+		}
+	};
+
+	for(const auto& ev: events)
+	{
+		auto* entry = m_history_panel->addNew<Wt::WContainerWidget>();
+		entry->setStyleClass("kb-history-entry");
+
+		const std::string header =
+		  format_ts(ev.occurred_at) + "  \xe2\x80\x94  " + ev.actor;
+		auto* hdr = entry->addNew<Wt::WText>(header, Wt::TextFormat::Plain);
+		hdr->setStyleClass("kb-history-header");
+
+		if(ev.event_type == "created")
+		{
+			entry->addNew<Wt::WText>("[Task created]", Wt::TextFormat::Plain)
+			  ->setStyleClass("kb-history-line");
+		}
+		else if(ev.event_type == "archived")
+		{
+			entry->addNew<Wt::WText>("[Task archived]", Wt::TextFormat::Plain)
+			  ->setStyleClass("kb-history-line");
+		}
+		else if(ev.event_type == "unarchived")
+		{
+			entry->addNew<Wt::WText>("[Task unarchived]", Wt::TextFormat::Plain)
+			  ->setStyleClass("kb-history-line");
+		}
+		else
+		{
+			for(const auto& ch: ev.changes)
+			{
+				const auto        label = k_field_labels.count(ch.field_name) ? k_field_labels.at(ch.field_name) : ch.field_name;
+				const std::string line =
+				  label + ": " +
+				  display_val(ch.field_name, ch.old_value) +
+				  " \xe2\x86\x92 " +
+				  display_val(ch.field_name, ch.new_value);
+				entry->addNew<Wt::WText>(line, Wt::TextFormat::Plain)
+				  ->setStyleClass("kb-history-line");
+			}
+		}
 	}
 }
 

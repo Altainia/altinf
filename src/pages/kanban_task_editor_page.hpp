@@ -10,6 +10,7 @@
 #include <Wt/WDateEdit.h>
 #include <Wt/WLineEdit.h>
 #include <Wt/WPushButton.h>
+#include <Wt/WTabWidget.h>
 #include <Wt/WText.h>
 #include <Wt/WTextArea.h>
 
@@ -55,8 +56,9 @@ private:
     long long                          m_type_id{0};
     std::vector<Wt::WContainerWidget*> m_type_chips;
     Wt::WText*                         m_status_msg{nullptr};
-    Wt::WPushButton*  m_save_btn{nullptr};
-    Wt::WPushButton*  m_del_btn{nullptr};
+    Wt::WPushButton*                   m_save_btn{nullptr};
+    Wt::WPushButton*                   m_del_btn{nullptr};
+    Wt::WContainerWidget*              m_history_panel{nullptr};
 
     std::vector<std::string> m_assignee_values;
 
@@ -65,4 +67,5 @@ private:
 
     void save();
     void mark_stale();
+    void rebuild_history();
 };
