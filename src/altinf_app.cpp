@@ -16,6 +16,7 @@
 #include "pages/account_manager_page.hpp"
 #include "pages/blog_page.hpp"
 #include "pages/blog_post_page.hpp"
+#include "pages/kanban_archive_page.hpp"
 #include "pages/kanban_board_page.hpp"
 #include "pages/kanban_task_editor_page.hpp"
 #include "pages/kanban_team_page.hpp"
@@ -368,6 +369,16 @@ void altinf_app::handle_path(const std::string& path)
 			  *m_kanban_db, *m_org_db, team_id, m_session, is_lead, &(*m_edit_task), members, types, [this, team_id] {
 				  setInternalPath("/board/" + std::to_string(team_id), true);
 			  });
+		}
+		else if(suffix == "/archive")
+		{
+			if(!is_lead)
+			{
+				show_forbidden();
+				return;
+			}
+			m_content->addNew<kanban_archive_page>(
+			  *m_kanban_db, m_session, team_id);
 		}
 		else if(suffix == "/manage")
 		{
