@@ -172,3 +172,55 @@ struct task_event_entry
 	std::string event_type;
 	std::vector<task_field_change_entry> changes;
 };
+
+struct task_comment_record
+{
+	long long   task_id{0};
+	std::string author;
+	std::string body;
+	std::string created_at;
+	int         is_deleted{0};
+
+	template<class Action>
+	void persist(Action& a)
+	{
+		Wt::Dbo::field(a, task_id,    "task_id");
+		Wt::Dbo::field(a, author,     "author");
+		Wt::Dbo::field(a, body,       "body");
+		Wt::Dbo::field(a, created_at, "created_at");
+		Wt::Dbo::field(a, is_deleted, "is_deleted");
+	}
+};
+
+struct task_comment_event_record
+{
+	long long   comment_id{0};
+	std::string actor;
+	std::string occurred_at;
+	std::string event_type;
+	std::string body_snapshot;
+
+	template<class Action>
+	void persist(Action& a)
+	{
+		Wt::Dbo::field(a, comment_id,    "comment_id");
+		Wt::Dbo::field(a, actor,         "actor");
+		Wt::Dbo::field(a, occurred_at,   "occurred_at");
+		Wt::Dbo::field(a, event_type,    "event_type");
+		Wt::Dbo::field(a, body_snapshot, "body_snapshot");
+	}
+};
+
+struct task_comment_entry
+{
+	long long   id{0};
+	long long   task_id{0};
+	std::string author;
+	std::string body;        // empty string when is_deleted
+	std::string created_at;
+	bool        is_deleted{false};
+	std::string last_edited_by;
+	std::string last_edited_at;
+	std::string deleted_by;
+	std::string deleted_at;
+};
