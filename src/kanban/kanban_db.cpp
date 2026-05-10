@@ -111,7 +111,7 @@ std::vector<team_entry> kanban_db::all_teams()
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results =
-	  m_dbo.find<team_record>().orderBy("id").resultList();
+	  m_dbo.find<team_record>().where("is_archived = 0").orderBy("id").resultList();
 	std::vector<team_entry> out;
 	for(const auto& p: results)
 	{
@@ -124,7 +124,7 @@ std::vector<team_entry> kanban_db::teams_for_org(long long org_id)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results =
-	  m_dbo.find<team_record>().where("org_id = ?").bind(org_id).orderBy("id").resultList();
+	  m_dbo.find<team_record>().where("org_id = ? AND is_archived = 0").bind(org_id).orderBy("id").resultList();
 	std::vector<team_entry> out;
 	for(const auto& p: results)
 	{
@@ -180,14 +180,26 @@ void kanban_db::delete_team(long long id)
 	}
 }
 
-void kanban_db::archive_team(long long id, const std::string& /*actor*/)
+void kanban_db::archive_team(long long id, const std::string& actor)
 {
 	Wt::Dbo::Transaction t{m_dbo};
-	const auto           results =
+	const auto           teams =
 	  m_dbo.find<team_record>().where("id = ?").bind(id).resultList();
-	if(!results.empty())
+	if(teams.empty())
 	{
-		(*results.begin()).modify()->is_archived = 1;
+		return;
+	}
+	(*teams.begin()).modify()->is_archived = 1;
+
+	const auto tasks =
+	  m_dbo.find<kanban_task_record>()
+	    .where("team_id = ? AND is_archived = 0")
+	    .bind(id)
+	    .resultList();
+	for(const auto& p: tasks)
+	{
+		p.modify()->is_archived = 1;
+		record_event(p.id(), actor, "archived", {});
 	}
 }
 
@@ -420,7 +432,7 @@ void kanban_db::update_task_status(long long          id,
 	Wt::Dbo::ptr<kanban_task_record> p = *results.begin();
 	p.modify()->status                 = status;
 	p.modify()->sort_order             = sort_order;
-	record_event(id, actor, "status_changed", {});
+	record_event(id, actor, "updated", {});
 }
 
 bool kanban_db::self_assign(long long task_id, const std::string& username)
@@ -472,7 +484,7 @@ std::vector<kanban_task_entry> kanban_db::tasks_for_team(long long team_id)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results = m_dbo.find<kanban_task_record>()
-	                       .where("team_id = ?")
+	                       .where("team_id = ? AND is_archived = 0")
 	                       .bind(team_id)
 	                       .orderBy("sort_order, id")
 	                       .resultList();
@@ -530,7 +542,7 @@ std::vector<task_event_entry> kanban_db::history_for_task(long long task_id)
 	const auto           events = m_dbo.find<task_event_record>()
 	                      .where("task_id = ?")
 	                      .bind(task_id)
-	                      .orderBy("id")
+	                      .orderBy("id DESC")
 	                      .resultList();
 	std::vector<task_event_entry> out;
 	for(const auto& ev: events)
