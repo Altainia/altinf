@@ -125,7 +125,7 @@ kanban_team_page::kanban_team_page(org_db&             odb,
 					  live_hub::instance().broadcast(
 					    "org:" + std::to_string(m_org_id));
 					  Wt::WApplication::instance()->setInternalPath(
-					    m_back_url, true);
+					    Wt::WApplication::instance()->internalPath(), true);
 				  });
 			}
 		}
