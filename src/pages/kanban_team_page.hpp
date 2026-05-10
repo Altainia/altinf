@@ -37,6 +37,8 @@ private:
 	std::string           m_session_id;
 	std::shared_ptr<bool> m_alive{std::make_shared<bool>(true)};
 
+	std::string           m_back_url;
+
 	Wt::WContainerWidget* m_members_section{nullptr};
 	Wt::WContainerWidget* m_pending_section{nullptr};
 	Wt::WLineEdit*        m_invite_input{nullptr};

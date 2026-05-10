@@ -37,9 +37,9 @@ kanban_team_page::kanban_team_page(org_db&             odb,
 	addNew<Wt::WText>("<h1>Manage: " + org->name + "</h1>",
 	                  Wt::TextFormat::UnsafeXHTML);
 
-	const std::string effective_back = back_url.empty() ? "/org/" + std::to_string(org_id) : back_url;
+	m_back_url = back_url.empty() ? "/org/" + std::to_string(org_id) : back_url;
 	addNew<Wt::WAnchor>(
-	  Wt::WLink{Wt::LinkType::InternalPath, effective_back},
+	  Wt::WLink{Wt::LinkType::InternalPath, m_back_url},
 	  "\xe2\x86\x90 Back")
 	  ->setStyleClass("kb-back-link");
 
@@ -101,6 +101,35 @@ kanban_team_page::kanban_team_page(org_db&             odb,
 	m_teams_section = addNew<Wt::WContainerWidget>();
 	m_teams_section->setStyleClass("kb-teams-container");
 	refresh_teams();
+
+	// ── Archived teams ────────────────────────────────────────────────────────
+	{
+		const auto archived = m_kdb.archived_teams_for_org(m_org_id);
+		if(!archived.empty())
+		{
+			auto* details = addNew<Wt::WContainerWidget>();
+			details->setStyleClass("kb-archived-teams");
+			details->addNew<Wt::WText>("<h2>Archived Teams</h2>",
+			                           Wt::TextFormat::UnsafeXHTML);
+			for(const auto& team: archived)
+			{
+				auto* row = details->addNew<Wt::WContainerWidget>();
+				row->setStyleClass("kb-team-row");
+				row->addNew<Wt::WText>(team.name, Wt::TextFormat::Plain)
+				  ->setStyleClass("kb-member-name");
+				auto* btn = row->addNew<Wt::WPushButton>("Unarchive");
+				btn->setStyleClass("editor-btn editor-btn-cancel");
+				btn->clicked().connect(
+				  [this, tid = team.id] {
+					  m_kdb.unarchive_team(tid);
+					  live_hub::instance().broadcast(
+					    "org:" + std::to_string(m_org_id));
+					  Wt::WApplication::instance()->setInternalPath(
+					    m_back_url, true);
+				  });
+			}
+		}
+	}
 
 	// ── New team form ─────────────────────────────────────────────────────────
 	addNew<Wt::WText>("<h2>Create team</h2>", Wt::TextFormat::UnsafeXHTML);
@@ -319,7 +348,7 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 		  }
 	  });
 
-	auto* del_team = hdr->addNew<Wt::WPushButton>("Delete team");
+	auto* del_team = hdr->addNew<Wt::WPushButton>("Archive");
 	del_team->setStyleClass("link-action-btn link-delete-btn");
 	del_team->clicked().connect(
 	  [this, tid = team.id] {
