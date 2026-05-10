@@ -261,6 +261,22 @@ TEST_CASE("kanban_db - self_assign fails for non-member")
 	CHECK(!db.self_assign(id, "stranger"));
 }
 
+TEST_CASE("kanban_db - self_assign records assigned_to history event")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	const long long id = db.add_task(make_task(tid, "Work"), "creator");
+	db.self_assign(id, "alice");
+	const auto history = db.history_for_task(id);
+	REQUIRE(history.size() == 2); // created + updated
+	CHECK(history[0].event_type == "updated");
+	REQUIRE(history[0].changes.size() == 1);
+	CHECK(history[0].changes[0].field_name == "assigned_to");
+	CHECK(history[0].changes[0].old_value == "");
+	CHECK(history[0].changes[0].new_value == "alice");
+}
+
 // ---- permissions ----
 
 TEST_CASE("kanban_db - can_view_board: admin bypasses membership")
