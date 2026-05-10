@@ -145,41 +145,6 @@ std::optional<team_entry> kanban_db::find_team(long long id)
 	return to_entry(*results.begin());
 }
 
-void kanban_db::delete_team(long long id)
-{
-	Wt::Dbo::Transaction t{m_dbo};
-
-	// Remove all members and tasks first.
-	{
-		const auto rows = m_dbo.find<team_member_record>()
-		                    .where("team_id = ?")
-		                    .bind(id)
-		                    .resultList();
-		for(auto p: rows)
-		{
-			p.remove();
-		}
-	}
-	{
-		const auto rows = m_dbo.find<kanban_task_record>()
-		                    .where("team_id = ?")
-		                    .bind(id)
-		                    .resultList();
-		for(auto p: rows)
-		{
-			p.remove();
-		}
-	}
-	{
-		const auto rows =
-		  m_dbo.find<team_record>().where("id = ?").bind(id).resultList();
-		if(!rows.empty())
-		{
-			(*rows.begin()).remove();
-		}
-	}
-}
-
 void kanban_db::archive_team(long long id, const std::string& actor)
 {
 	Wt::Dbo::Transaction t{m_dbo};
@@ -406,15 +371,56 @@ void kanban_db::update_task(const kanban_task_entry& e, const std::string& actor
 		return;
 	}
 	Wt::Dbo::ptr<kanban_task_record> p = *results.begin();
-	p.modify()->status                 = e.status;
-	p.modify()->title                  = e.title;
-	p.modify()->description            = e.description;
-	p.modify()->assigned_to            = e.assigned_to;
-	p.modify()->start_date             = e.start_date;
-	p.modify()->end_date               = e.end_date;
-	p.modify()->type_id                = e.type_id;
-	p.modify()->sort_order             = e.sort_order;
-	record_event(e.id, actor, "updated", {});
+
+	auto date_str = [](const Wt::WDate& d) -> std::string {
+		return d.isValid() ? d.toString("yyyy-MM-dd").toUTF8() : "";
+	};
+	auto type_name = [&](long long tid) -> std::string {
+		if(tid == 0)
+		{
+			return {};
+		}
+		try
+		{
+			return m_dbo.load<task_type_record>(tid)->name;
+		}
+		catch(...)
+		{
+			return {};
+		}
+	};
+
+	std::vector<task_field_change_entry> changes;
+	auto                                 diff = [&](const std::string& field,
+                  const std::string& old_val,
+                  const std::string& new_val) {
+    if(old_val != new_val)
+    {
+      changes.push_back({field, old_val, new_val});
+    }
+	};
+
+	diff("status", p->status, e.status);
+	diff("title", p->title, e.title);
+	diff("description", p->description, e.description);
+	diff("assigned_to", p->assigned_to, e.assigned_to);
+	diff("start_date", date_str(p->start_date), date_str(e.start_date));
+	diff("end_date", date_str(p->end_date), date_str(e.end_date));
+	diff("type", type_name(p->type_id), type_name(e.type_id));
+
+	p.modify()->status      = e.status;
+	p.modify()->title       = e.title;
+	p.modify()->description = e.description;
+	p.modify()->assigned_to = e.assigned_to;
+	p.modify()->start_date  = e.start_date;
+	p.modify()->end_date    = e.end_date;
+	p.modify()->type_id     = e.type_id;
+	p.modify()->sort_order  = e.sort_order;
+
+	if(!changes.empty())
+	{
+		record_event(e.id, actor, "updated", changes);
+	}
 }
 
 void kanban_db::update_task_status(long long          id,
@@ -429,10 +435,15 @@ void kanban_db::update_task_status(long long          id,
 	{
 		return;
 	}
-	Wt::Dbo::ptr<kanban_task_record> p = *results.begin();
-	p.modify()->status                 = status;
-	p.modify()->sort_order             = sort_order;
-	record_event(id, actor, "updated", {});
+	Wt::Dbo::ptr<kanban_task_record> p          = *results.begin();
+	const std::string                old_status = p->status;
+	p.modify()->status                          = status;
+	p.modify()->sort_order                      = sort_order;
+
+	if(old_status != status)
+	{
+		record_event(id, actor, "updated", {{"status", old_status, status}});
+	}
 }
 
 bool kanban_db::self_assign(long long task_id, const std::string& username)
@@ -454,18 +465,8 @@ bool kanban_db::self_assign(long long task_id, const std::string& username)
 		return false;
 	}
 	p.modify()->assigned_to = username;
+	record_event(task_id, username, "updated", {{"assigned_to", {}, username}});
 	return true;
-}
-
-void kanban_db::delete_task(long long id)
-{
-	Wt::Dbo::Transaction t{m_dbo};
-	const auto           results =
-	  m_dbo.find<kanban_task_record>().where("id = ?").bind(id).resultList();
-	if(!results.empty())
-	{
-		(*results.begin()).remove();
-	}
 }
 
 std::optional<kanban_task_entry> kanban_db::find_task(long long id)
@@ -685,23 +686,5 @@ void kanban_db::record_event(long long                                   task_id
 		fc.modify()->field_name = ch.field_name;
 		fc.modify()->old_value  = ch.old_value;
 		fc.modify()->new_value  = ch.new_value;
-	}
-}
-
-std::string kanban_db::type_name_for_id(long long type_id)
-{
-	if(type_id == 0)
-	{
-		return {};
-	}
-	try
-	{
-		Wt::Dbo::Transaction t{m_dbo};
-		auto                 p = m_dbo.load<task_type_record>(type_id);
-		return p->name;
-	}
-	catch(const Wt::Dbo::ObjectNotFoundException&)
-	{
-		return {};
 	}
 }

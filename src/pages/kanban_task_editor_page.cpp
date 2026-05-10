@@ -280,7 +280,7 @@ kanban_task_editor_page::kanban_task_editor_page(
 				    "task:" + std::to_string(m_task_id), m_session_id);
 				  m_task_id = 0;
 			  }
-			  m_db.delete_task(tid);
+			  m_db.archive_task(tid, m_username);
 			  live_hub::instance().broadcast("team:" + std::to_string(m_team_id));
 			  live_hub::instance().broadcast("task:" + std::to_string(tid));
 			  m_on_save();

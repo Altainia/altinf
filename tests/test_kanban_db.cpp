@@ -67,16 +67,19 @@ TEST_CASE("kanban_db - find_team missing returns nullopt")
 	CHECK(!db.find_team(9999).has_value());
 }
 
-TEST_CASE("kanban_db - delete_team removes members and tasks")
+TEST_CASE("kanban_db - archive_team hides team and archives its tasks")
 {
 	kanban_db       db{":memory:"};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
-	db.add_task(make_task(tid, "Chore"), "test");
-	db.delete_team(tid);
-	CHECK(!db.find_team(tid).has_value());
-	CHECK(db.members_for_team(tid).empty());
-	CHECK(db.tasks_for_team(tid).empty());
+	db.add_task(make_task(tid, "Chore"), "alice");
+	db.archive_team(tid, "alice");
+	CHECK(db.find_team(tid).has_value());            // row still exists
+	CHECK(db.find_team(tid)->is_archived);           // but archived
+	CHECK(db.teams_for_org(1).empty());              // not visible in active list
+	CHECK(db.tasks_for_team(tid).empty());           // tasks hidden
+	CHECK(!db.archived_tasks_for_team(tid).empty()); // but visible in archive
+	CHECK(!db.members_for_team(tid).empty());        // members preserved
 }
 
 // ---- members ----
@@ -206,16 +209,19 @@ TEST_CASE("kanban_db - update_task_status")
 	CHECK(opt->sort_order == 5);
 }
 
-TEST_CASE("kanban_db - delete task")
+TEST_CASE("kanban_db - archive_task hides task from tasks_for_team")
 {
 	kanban_db       db{":memory:"};
 	const long long tid = db.create_team("T", 1);
-	const long long id  = db.add_task(make_task(tid, "To Delete"), "test");
-	db.add_task(make_task(tid, "To Keep"), "test");
-	db.delete_task(id);
+	const long long id  = db.add_task(make_task(tid, "To Archive"), "alice");
+	db.add_task(make_task(tid, "To Keep"), "alice");
+	db.archive_task(id, "alice");
 	const auto tasks = db.tasks_for_team(tid);
 	REQUIRE(tasks.size() == 1);
 	CHECK(tasks[0].title == "To Keep");
+	const auto archived = db.archived_tasks_for_team(tid);
+	REQUIRE(archived.size() == 1);
+	CHECK(archived[0].title == "To Archive");
 }
 
 TEST_CASE("kanban_db - tasks_for_team empty when no tasks")
@@ -477,4 +483,105 @@ TEST_CASE("kanban_db - update_task preserves type_id change")
 	db.update_task(task, "test");
 
 	CHECK(db.find_task(id)->type_id == type_id);
+}
+
+TEST_CASE("kanban_db - add_task records created event")
+{
+	kanban_db       db{":memory:"};
+	const long long tid     = db.create_team("T", 1);
+	const long long id      = db.add_task(make_task(tid, "My Task"), "alice");
+	const auto      history = db.history_for_task(id);
+	REQUIRE(history.size() == 1);
+	CHECK(history[0].event_type == "created");
+	CHECK(history[0].actor == "alice");
+	CHECK(history[0].changes.empty());
+}
+
+TEST_CASE("kanban_db - update_task records field changes")
+{
+	kanban_db       db{":memory:"};
+	const long long tid  = db.create_team("T", 1);
+	const long long id   = db.add_task(make_task(tid, "Original"), "alice");
+	auto            task = *db.find_task(id);
+	task.title           = "Updated";
+	db.update_task(task, "bob");
+	const auto history = db.history_for_task(id);
+	REQUIRE(history.size() == 2); // created + updated
+	CHECK(history[0].event_type == "updated");
+	REQUIRE(history[0].changes.size() == 1);
+	CHECK(history[0].changes[0].field_name == "title");
+	CHECK(history[0].changes[0].old_value == "Original");
+	CHECK(history[0].changes[0].new_value == "Updated");
+}
+
+TEST_CASE("kanban_db - update_task with no changes writes no event")
+{
+	kanban_db       db{":memory:"};
+	const long long tid  = db.create_team("T", 1);
+	const long long id   = db.add_task(make_task(tid, "Same"), "alice");
+	auto            task = *db.find_task(id);
+	db.update_task(task, "alice"); // nothing changed
+	const auto history = db.history_for_task(id);
+	REQUIRE(history.size() == 1); // only the created event
+	CHECK(history[0].event_type == "created");
+}
+
+TEST_CASE("kanban_db - update_task_status records status change")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	const long long id  = db.add_task(make_task(tid, "T", "todo"), "alice");
+	db.update_task_status(id, "done", 5, "alice");
+	const auto history = db.history_for_task(id);
+	REQUIRE(history.size() == 2);
+	CHECK(history[0].event_type == "updated");
+	REQUIRE(history[0].changes.size() == 1);
+	CHECK(history[0].changes[0].field_name == "status");
+	CHECK(history[0].changes[0].old_value == "todo");
+	CHECK(history[0].changes[0].new_value == "done");
+}
+
+TEST_CASE("kanban_db - archive_task records archived event")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	const long long id  = db.add_task(make_task(tid, "Work"), "alice");
+	db.archive_task(id, "bob");
+	const auto history = db.history_for_task(id);
+	REQUIRE(history.size() == 2);
+	CHECK(history[0].event_type == "archived");
+	CHECK(history[0].actor == "bob");
+}
+
+TEST_CASE("kanban_db - unarchive_task records unarchived event")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	const long long id  = db.add_task(make_task(tid, "Work"), "alice");
+	db.archive_task(id, "alice");
+	db.unarchive_task(id, "carol");
+	const auto active = db.tasks_for_team(tid);
+	REQUIRE(active.size() == 1);
+	const auto history = db.history_for_task(id);
+	REQUIRE(history.size() == 3);
+	CHECK(history[0].event_type == "unarchived");
+	CHECK(history[0].actor == "carol");
+}
+
+TEST_CASE("kanban_db - archive_team cascades archived event to each task")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_task(make_task(tid, "A"), "alice");
+	db.add_task(make_task(tid, "B"), "alice");
+	db.archive_team(tid, "lead");
+	const auto archived = db.archived_tasks_for_team(tid);
+	REQUIRE(archived.size() == 2);
+	for(const auto& t: archived)
+	{
+		const auto history = db.history_for_task(t.id);
+		REQUIRE(!history.empty());
+		CHECK(history[0].event_type == "archived");
+		CHECK(history[0].actor == "lead");
+	}
 }

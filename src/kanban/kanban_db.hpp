@@ -21,7 +21,6 @@ public:
 	std::vector<team_entry>   all_teams();
 	std::vector<team_entry>   teams_for_org(long long org_id);
 	std::optional<team_entry> find_team(long long id);
-	void                      delete_team(long long id);
 	void                      archive_team(long long id, const std::string& actor);
 	void                      unarchive_team(long long id);
 	std::vector<team_entry>   archived_teams_for_org(long long org_id);
@@ -52,7 +51,6 @@ public:
 	                                                    const std::string& actor);
 	// Assigns an unassigned task to username; no-op if already assigned.
 	bool                             self_assign(long long task_id, const std::string& username);
-	void                             delete_task(long long id);
 	void                             archive_task(long long id, const std::string& actor);
 	void                             unarchive_task(long long id, const std::string& actor);
 	std::optional<kanban_task_entry> find_task(long long id);
@@ -85,9 +83,8 @@ private:
 	static kanban_task_entry to_entry(const Wt::Dbo::ptr<kanban_task_record>& p);
 	static task_type_entry   to_entry(const Wt::Dbo::ptr<task_type_record>& p);
 
-	void        record_event(long long task_id,
-	                         const std::string& actor,
-	                         const std::string& event_type,
-	                         const std::vector<task_field_change_entry>& changes);
-	std::string type_name_for_id(long long type_id);
+	void record_event(long long task_id,
+	                  const std::string& actor,
+	                  const std::string& event_type,
+	                  const std::vector<task_field_change_entry>& changes);
 };

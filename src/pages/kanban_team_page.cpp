@@ -323,7 +323,7 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 	del_team->setStyleClass("link-action-btn link-delete-btn");
 	del_team->clicked().connect(
 	  [this, tid = team.id] {
-		  m_kdb.delete_team(tid);
+		  m_kdb.archive_team(tid, m_session.username);
 		  live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
 		  live_hub::instance().broadcast("team:" + std::to_string(tid));
 		  refresh_teams();
