@@ -20,13 +20,22 @@ org_db::org_db(const std::string& db_path)
 	{
 		// Tables already exist — ignore.
 	}
+
+	try
+	{
+		m_dbo.execute("ALTER TABLE organization ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0");
+	}
+	catch(const Wt::Dbo::Exception&)
+	{
+		// Column already exists — ignore.
+	}
 }
 
 // ---- static helpers ----
 
 org_entry org_db::to_entry(const Wt::Dbo::ptr<org_record>& p)
 {
-	return {.id = p.id(), .name = p->name};
+	return {.id = p.id(), .name = p->name, .is_archived = p->is_archived != 0};
 }
 
 org_member_entry org_db::to_entry(const Wt::Dbo::ptr<org_member_record>& p)
@@ -87,8 +96,9 @@ std::optional<org_entry> org_db::find_org(long long org_id)
 
 std::vector<org_entry> org_db::all_orgs()
 {
-	Wt::Dbo::Transaction   t{m_dbo};
-	const auto             results = m_dbo.find<org_record>().orderBy("id").resultList();
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results =
+	  m_dbo.find<org_record>().where("is_archived = 0").orderBy("id").resultList();
 	std::vector<org_entry> out;
 	for(const auto& p: results)
 	{
@@ -356,8 +366,10 @@ std::vector<org_entry> org_db::orgs_for_user(const std::string& username)
 	std::vector<org_entry> out;
 	for(const auto& m: memberships)
 	{
-		const auto orgs =
-		  m_dbo.find<org_record>().where("id = ?").bind(m->org_id).resultList();
+		const auto orgs = m_dbo.find<org_record>()
+		                    .where("id = ? AND is_archived = 0")
+		                    .bind(m->org_id)
+		                    .resultList();
 		if(!orgs.empty())
 		{
 			out.push_back(to_entry(*orgs.begin()));
@@ -451,4 +463,30 @@ std::optional<long long> org_db::get_last_org(const std::string& username)
 	}
 	const long long v = (*results.begin())->last_org_id;
 	return v == 0 ? std::nullopt : std::optional<long long>{v};
+}
+
+// ---- Archive ----
+
+void org_db::archive_org(long long id, const std::string& /*actor*/)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results =
+	  m_dbo.find<org_record>().where("id = ?").bind(id).resultList();
+	if(!results.empty())
+	{
+		(*results.begin()).modify()->is_archived = 1;
+	}
+}
+
+std::vector<org_entry> org_db::archived_orgs()
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results =
+	  m_dbo.find<org_record>().where("is_archived = 1").orderBy("id").resultList();
+	std::vector<org_entry> out;
+	for(const auto& p: results)
+	{
+		out.push_back(to_entry(p));
+	}
+	return out;
 }

@@ -348,3 +348,26 @@ TEST_CASE("org_db - rescind_invite_notification on nonexistent notification is a
 	// No invite sent to bob — should not throw.
 	CHECK_NOTHROW(db.rescind_invite_notification(oid, "bob"));
 }
+
+// ---- archive ----
+
+TEST_CASE("org_db - archive_org hides org from all_orgs")
+{
+	org_db     db{":memory:"};
+	const auto id = db.create_org("Acme", "alice");
+	db.archive_org(id, "alice");
+	CHECK(db.all_orgs().empty());
+	const auto archived = db.archived_orgs();
+	REQUIRE(archived.size() == 1);
+	CHECK(archived[0].name == "Acme");
+	CHECK(archived[0].is_archived);
+}
+
+TEST_CASE("org_db - archive_org hides org from orgs_for_user")
+{
+	org_db     db{":memory:"};
+	const auto id = db.create_org("Acme", "alice");
+	db.accept_invite(id, "alice");
+	db.archive_org(id, "alice");
+	CHECK(db.orgs_for_user("alice").empty());
+}

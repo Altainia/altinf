@@ -18,6 +18,8 @@ public:
 	                                      const std::string& creator_username);
 	std::optional<org_entry>   find_org(long long org_id);
 	std::vector<org_entry>     all_orgs();
+	void                       archive_org(long long id, const std::string& actor);
+	std::vector<org_entry>     archived_orgs();
 
 	// Membership
 	void invite_to_org(long long org_id, const std::string& username, bool as_lead);
