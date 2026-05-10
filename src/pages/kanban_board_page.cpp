@@ -67,6 +67,11 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 		     Wt::WLink{Wt::LinkType::InternalPath, team_url + "/manage"},
 		     "Manage Team")
 		  ->setStyleClass("editor-btn editor-btn-cancel kb-manage-link");
+
+		hdr->addNew<Wt::WAnchor>(
+		     Wt::WLink{Wt::LinkType::InternalPath, team_url + "/archive"},
+		     "Archived")
+		  ->setStyleClass("editor-btn editor-btn-cancel kb-manage-link");
 	}
 
 	// ── Content ───────────────────────────────────────────────────────────────
