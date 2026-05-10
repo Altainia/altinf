@@ -306,7 +306,7 @@ test('org manage: rename team updates second lead\'s page', async ({ browser }) 
   await bobCtx.close();
 });
 
-test('org manage: delete team disappears from second lead\'s page', async ({ browser }) => {
+test('org manage: archive team disappears from second lead\'s page', async ({ browser }) => {
   const adminCtx = await browser.newContext();
   const bobCtx   = await browser.newContext();
   const adminPage = await adminCtx.newPage();
@@ -318,7 +318,7 @@ test('org manage: delete team disappears from second lead\'s page', async ({ bro
   await goToManage(bobPage);
 
   await adminPage.locator('.kb-team-block:has(input[value="RenamedLiveTeam"])')
-    .getByRole('button', { name: 'Delete team' }).click();
+    .getByRole('button', { name: 'Archive team' }).click();
 
   await expect(bobPage.locator('.kb-team-block:has(input[value="RenamedLiveTeam"])')).not.toBeVisible();
 

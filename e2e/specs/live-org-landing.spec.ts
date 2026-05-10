@@ -121,7 +121,7 @@ test('org landing: team renamed by lead updates member\'s landing page', async (
   await frankCtx.close();
 });
 
-test('org landing: team deleted by lead disappears from member\'s landing page', async ({ browser }) => {
+test('org landing: team archived by lead disappears from member\'s landing page', async ({ browser }) => {
   const adminCtx = await browser.newContext();
   const frankCtx = await browser.newContext();
   const adminPage = await adminCtx.newPage();
@@ -133,7 +133,7 @@ test('org landing: team deleted by lead disappears from member\'s landing page',
   await goToLanding(frankPage);
 
   await adminPage.locator('.kb-team-block:has(input[value="NewLandingTeam"])')
-    .getByRole('button', { name: 'Delete team' }).click();
+    .getByRole('button', { name: 'Archive team' }).click();
 
   await expect(frankPage.locator('.org-team-row', { hasText: 'NewLandingTeam' })).not.toBeVisible();
 
