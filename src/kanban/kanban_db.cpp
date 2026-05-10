@@ -15,6 +15,8 @@ kanban_db::kanban_db(const std::string& db_path)
 	m_dbo.mapClass<task_type_record>("task_type");
 	m_dbo.mapClass<task_event_record>("task_event");
 	m_dbo.mapClass<task_field_change_record>("task_field_change");
+	m_dbo.mapClass<task_comment_record>("task_comment");
+	m_dbo.mapClass<task_comment_event_record>("task_comment_event");
 
 	try
 	{
@@ -39,6 +41,24 @@ kanban_db::kanban_db(const std::string& db_path)
 	migrate("ALTER TABLE kanban_task ADD COLUMN type_id INTEGER NOT NULL DEFAULT 0");
 	migrate("ALTER TABLE kanban_task ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0");
 	migrate("ALTER TABLE team ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0");
+
+	migrate(
+	  "CREATE TABLE IF NOT EXISTS task_comment ("
+	  "id integer primary key autoincrement,"
+	  " task_id integer not null default 0,"
+	  " author text not null default '',"
+	  " body text not null default '',"
+	  " created_at text not null default '',"
+	  " is_deleted integer not null default 0)");
+
+	migrate(
+	  "CREATE TABLE IF NOT EXISTS task_comment_event ("
+	  "id integer primary key autoincrement,"
+	  " comment_id integer not null default 0,"
+	  " actor text not null default '',"
+	  " occurred_at text not null default '',"
+	  " event_type text not null default '',"
+	  " body_snapshot text not null default '')");
 }
 
 // ---- static helpers ----
@@ -701,4 +721,129 @@ void kanban_db::record_event(long long                                   task_id
 		fc.modify()->old_value  = ch.old_value;
 		fc.modify()->new_value  = ch.new_value;
 	}
+}
+
+void kanban_db::record_comment_event(long long          comment_id,
+                                     const std::string& actor,
+                                     const std::string& event_type,
+                                     const std::string& body_snapshot)
+{
+	const std::string ts =
+	  Wt::WDateTime::currentDateTime().toString("yyyy-MM-ddThh:mm:ssZ").toUTF8();
+
+	auto ev                    = m_dbo.add(std::make_unique<task_comment_event_record>());
+	ev.modify()->comment_id    = comment_id;
+	ev.modify()->actor         = actor;
+	ev.modify()->occurred_at   = ts;
+	ev.modify()->event_type    = event_type;
+	ev.modify()->body_snapshot = body_snapshot;
+}
+
+// ---- Comments ----
+
+long long kanban_db::add_comment(long long          task_id,
+                                 const std::string& author,
+                                 const std::string& body)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const std::string    ts =
+	  Wt::WDateTime::currentDateTime().toString("yyyy-MM-ddThh:mm:ssZ").toUTF8();
+
+	auto p                 = m_dbo.add(std::make_unique<task_comment_record>());
+	p.modify()->task_id    = task_id;
+	p.modify()->author     = author;
+	p.modify()->body       = body;
+	p.modify()->created_at = ts;
+	p.modify()->is_deleted = 0;
+	m_dbo.flush();
+	const long long new_id = p.id();
+
+	record_comment_event(new_id, author, "created", body);
+	return new_id;
+}
+
+void kanban_db::edit_comment(long long          comment_id,
+                             const std::string& editor,
+                             const std::string& new_body)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results = m_dbo.find<task_comment_record>()
+	                       .where("id = ?")
+	                       .bind(comment_id)
+	                       .resultList();
+	if(results.empty())
+	{
+		return;
+	}
+	Wt::Dbo::ptr<task_comment_record> p = *results.begin();
+	if(p->is_deleted)
+	{
+		return; // No-op on deleted comment.
+	}
+	p.modify()->body = new_body;
+	record_comment_event(comment_id, editor, "edited", new_body);
+}
+
+void kanban_db::delete_comment(long long comment_id, const std::string& actor)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results = m_dbo.find<task_comment_record>()
+	                       .where("id = ?")
+	                       .bind(comment_id)
+	                       .resultList();
+	if(results.empty())
+	{
+		return;
+	}
+	Wt::Dbo::ptr<task_comment_record> p = *results.begin();
+	if(p->is_deleted)
+	{
+		return; // Already deleted — no-op.
+	}
+	const std::string body_snapshot = p->body;
+	p.modify()->is_deleted          = 1;
+	record_comment_event(comment_id, actor, "deleted", body_snapshot);
+}
+
+std::vector<task_comment_entry> kanban_db::comments_for_task(long long task_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           rows = m_dbo.find<task_comment_record>()
+	                    .where("task_id = ?")
+	                    .bind(task_id)
+	                    .orderBy("id")
+	                    .resultList();
+
+	std::vector<task_comment_entry> out;
+	for(const auto& c: rows)
+	{
+		task_comment_entry e;
+		e.id         = c.id();
+		e.task_id    = c->task_id;
+		e.author     = c->author;
+		e.created_at = c->created_at;
+		e.is_deleted = c->is_deleted != 0;
+		e.body       = e.is_deleted ? "" : c->body;
+
+		const auto events = m_dbo.find<task_comment_event_record>()
+		                      .where("comment_id = ?")
+		                      .bind(c.id())
+		                      .orderBy("id")
+		                      .resultList();
+		for(const auto& ev: events)
+		{
+			if(ev->event_type == "edited")
+			{
+				e.last_edited_by = ev->actor;
+				e.last_edited_at = ev->occurred_at;
+			}
+			else if(ev->event_type == "deleted")
+			{
+				e.deleted_by = ev->actor;
+				e.deleted_at = ev->occurred_at;
+			}
+		}
+		out.push_back(std::move(e));
+	}
+	return out;
 }
