@@ -302,7 +302,7 @@ kanban_task_editor_page::kanban_task_editor_page(
 	// Archive/Unarchive only for leads editing existing tasks.
 	if(!is_new && is_lead)
 	{
-		if(existing->is_archived)
+		if(existing && existing->is_archived)
 		{
 			m_del_btn = btn_row->addNew<Wt::WPushButton>("Unarchive");
 			m_del_btn->setStyleClass("editor-btn");
