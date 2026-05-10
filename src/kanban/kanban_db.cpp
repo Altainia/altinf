@@ -2,10 +2,7 @@
 
 #include <Wt/Dbo/Transaction.h>
 #include <Wt/Dbo/backend/Sqlite3.h>
-
-#include <chrono>
-#include <iomanip>
-#include <sstream>
+#include <Wt/WDateTime.h>
 
 #include "auth/permission.hpp"
 
@@ -525,11 +522,17 @@ void kanban_db::archive_task(long long id, const std::string& actor)
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results =
 	  m_dbo.find<kanban_task_record>().where("id = ?").bind(id).resultList();
-	if(!results.empty())
+	if(results.empty())
 	{
-		(*results.begin()).modify()->is_archived = 1;
-		record_event(id, actor, "archived", {});
+		return;
 	}
+	Wt::Dbo::ptr<kanban_task_record> p = *results.begin();
+	if(p->is_archived)
+	{
+		return; // Already archived — no-op.
+	}
+	p.modify()->is_archived = 1;
+	record_event(id, actor, "archived", {});
 }
 
 void kanban_db::unarchive_task(long long id, const std::string& actor)
@@ -537,11 +540,17 @@ void kanban_db::unarchive_task(long long id, const std::string& actor)
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results =
 	  m_dbo.find<kanban_task_record>().where("id = ?").bind(id).resultList();
-	if(!results.empty())
+	if(results.empty())
 	{
-		(*results.begin()).modify()->is_archived = 0;
-		record_event(id, actor, "unarchived", {});
+		return;
 	}
+	Wt::Dbo::ptr<kanban_task_record> p = *results.begin();
+	if(!p->is_archived)
+	{
+		return; // Already active — no-op.
+	}
+	p.modify()->is_archived = 0;
+	record_event(id, actor, "unarchived", {});
 }
 
 std::vector<task_event_entry> kanban_db::history_for_task(long long task_id)
@@ -673,16 +682,14 @@ void kanban_db::record_event(long long                                   task_id
                              const std::string&                          event_type,
                              const std::vector<task_field_change_entry>& changes)
 {
-	// Generate an ISO-8601 UTC timestamp.
-	const auto         now = std::chrono::system_clock::now();
-	const auto         tt  = std::chrono::system_clock::to_time_t(now);
-	std::ostringstream ts;
-	ts << std::put_time(std::gmtime(&tt), "%Y-%m-%dT%H:%M:%SZ");
+	// Generate an ISO-8601 UTC timestamp (thread-safe via Wt).
+	const std::string ts =
+	  Wt::WDateTime::currentDateTime().toString("yyyy-MM-ddThh:mm:ssZ").toUTF8();
 
 	auto ev                  = m_dbo.add(std::make_unique<task_event_record>());
 	ev.modify()->task_id     = task_id;
 	ev.modify()->actor       = actor;
-	ev.modify()->occurred_at = ts.str();
+	ev.modify()->occurred_at = ts;
 	ev.modify()->event_type  = event_type;
 	m_dbo.flush();
 
