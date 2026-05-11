@@ -97,29 +97,10 @@ kanban_task_editor_page::kanban_task_editor_page(
 	m_history_panel = new Wt::WContainerWidget();
 	tabs->addTab(std::unique_ptr<Wt::WContainerWidget>(m_history_panel), "History");
 
-	// ── Comments tab ─────────────────────────────────────────────────────────
-	auto* comments_panel = new Wt::WContainerWidget();
-	tabs->addTab(
-	  std::unique_ptr<Wt::WContainerWidget>(comments_panel),
-	  "Comments");
-	comments_panel->setStyleClass("kb-comment-section");
-
-	comments_panel->addNew<Wt::WText>("<h2>Comments</h2>", Wt::TextFormat::UnsafeXHTML);
-
-	m_comment_list = comments_panel->addNew<Wt::WContainerWidget>();
-	m_comment_list->setStyleClass("kb-comment-list");
-
-	m_comment_compose = comments_panel->addNew<Wt::WContainerWidget>();
-	m_comment_compose->setStyleClass("kb-comment-compose");
-
 	tabs->currentChanged().connect([this](int index) {
 		if(index == 1)
 		{
 			rebuild_history();
-		}
-		else if(index == 2)
-		{
-			rebuild_comments();
 		}
 	});
 
@@ -318,6 +299,18 @@ kanban_task_editor_page::kanban_task_editor_page(
 		add_chip(ty.id, ty.name, ty.color);
 	}
 
+	// ── Comments (inline, below type chips) ──────────────────────────────────
+	if(existing)
+	{
+		auto* comment_section = form->addNew<Wt::WContainerWidget>();
+		comment_section->setStyleClass("kb-comment-section");
+		comment_section->addNew<Wt::WText>("<h2>Comments</h2>", Wt::TextFormat::UnsafeXHTML);
+		m_comment_list = comment_section->addNew<Wt::WContainerWidget>();
+		m_comment_list->setStyleClass("kb-comment-list");
+		m_comment_compose = comment_section->addNew<Wt::WContainerWidget>();
+		m_comment_compose->setStyleClass("kb-comment-compose");
+	}
+
 	// ── Actions ───────────────────────────────────────────────────────────────
 	m_status_msg = form->addNew<Wt::WText>("", Wt::TextFormat::Plain);
 	m_status_msg->setStyleClass("editor-status");
@@ -401,6 +394,17 @@ kanban_task_editor_page::kanban_task_editor_page(
 				  Wt::WApplication::instance()->triggerUpdate();
 			  }
 		  });
+		live_hub::instance().subscribe(
+		  "task:" + std::to_string(m_task_id) + ":comments",
+		  m_session_id,
+		  [this, alive = m_alive] {
+			  if(*alive)
+			  {
+				  rebuild_comments();
+				  Wt::WApplication::instance()->triggerUpdate();
+			  }
+		  });
+		rebuild_comments();
 	}
 }
 
@@ -411,6 +415,8 @@ kanban_task_editor_page::~kanban_task_editor_page()
 	{
 		live_hub::instance().unsubscribe(
 		  "task:" + std::to_string(m_task_id), m_session_id);
+		live_hub::instance().unsubscribe(
+		  "task:" + std::to_string(m_task_id) + ":comments", m_session_id);
 	}
 }
 
@@ -549,9 +555,12 @@ void kanban_task_editor_page::rebuild_comments()
 
 			if(c.is_deleted)
 			{
-				auto* del_text = item->addNew<Wt::WText>(
-				  "[deleted]", Wt::TextFormat::Plain);
-				del_text->setStyleClass("kb-comment-deleted");
+				// Fix 2: show who deleted and when
+				const std::string msg =
+				  "Comment deleted by " + c.deleted_by +
+				  " \xe2\x80\x94 " + format_ts(c.deleted_at);
+				item->setStyleClass("kb-comment-item kb-comment-deleted");
+				item->addNew<Wt::WText>(msg, Wt::TextFormat::Plain);
 				continue;
 			}
 
@@ -576,12 +585,12 @@ void kanban_task_editor_page::rebuild_comments()
 			}
 			body_wrap->addNew<Wt::WText>(body_html, Wt::TextFormat::UnsafeXHTML);
 
-			// Edited/deleted meta
+			// Fix 3: "Edited by" meta line
 			if(!c.last_edited_at.empty())
 			{
 				auto* meta = item->addNew<Wt::WText>(
-				  "edited " + format_ts(c.last_edited_at) +
-				    " by " + c.last_edited_by,
+				  "Edited by " + c.last_edited_by +
+				    " at " + format_ts(c.last_edited_at),
 				  Wt::TextFormat::Plain);
 				meta->setStyleClass("kb-comment-meta");
 			}
@@ -597,7 +606,9 @@ void kanban_task_editor_page::rebuild_comments()
 				auto* del_btn  = actions->addNew<Wt::WPushButton>("Delete");
 				del_btn->setStyleClass("kb-comment-del-btn");
 
-				const long long cid = c.id;
+				const long long   cid      = c.id;
+				const std::string c_author = c.author;
+				const bool        is_own   = (c.author == m_username);
 
 				// Inline edit area (hidden by default)
 				auto* edit_area = item->addNew<Wt::WContainerWidget>();
@@ -613,11 +624,37 @@ void kanban_task_editor_page::rebuild_comments()
 				auto* cancel_edit_btn = edit_btns->addNew<Wt::WPushButton>("Cancel");
 				cancel_edit_btn->setStyleClass("editor-btn editor-btn-cancel");
 
-				edit_btn->clicked().connect([body_wrap, edit_area, actions] {
-					body_wrap->hide();
-					actions->hide();
-					edit_area->show();
-				});
+				// Fix 7: edit confirmation for leads acting on another user's comment
+				edit_btn->clicked().connect(
+				  [this, c_author, is_own, body_wrap, edit_area, actions, alive = m_alive] {
+					  if(is_own)
+					  {
+						  body_wrap->hide();
+						  actions->hide();
+						  edit_area->show();
+					  }
+					  else
+					  {
+						  auto* d = new Wt::WDialog("Edit Another User's Comment");
+						  d->contents()->addNew<Wt::WText>(
+						    "This comment was written by " + c_author +
+						      ". Are you sure you want to edit it?",
+						    Wt::TextFormat::Plain);
+						  auto* yes = d->footer()->addNew<Wt::WPushButton>("Edit Anyway");
+						  yes->setStyleClass("editor-btn");
+						  auto* no = d->footer()->addNew<Wt::WPushButton>("Cancel");
+						  no->setStyleClass("editor-btn editor-btn-cancel");
+						  yes->clicked().connect([d, body_wrap, edit_area, actions] {
+							  d->accept();
+							  body_wrap->hide();
+							  actions->hide();
+							  edit_area->show();
+						  });
+						  no->clicked().connect([d] { d->reject(); });
+						  d->finished().connect([d](Wt::DialogCode) { delete d; });
+						  d->show();
+					  }
+				  });
 
 				cancel_edit_btn->clicked().connect([body_wrap, edit_area, actions] {
 					edit_area->hide();
@@ -625,6 +662,7 @@ void kanban_task_editor_page::rebuild_comments()
 					actions->show();
 				});
 
+				// Fix 7: broadcast after saving edit
 				save_edit_btn->clicked().connect(
 				  [this, cid, edit_ta, alive = m_alive] {
 					  if(!*alive)
@@ -637,29 +675,62 @@ void kanban_task_editor_page::rebuild_comments()
 						  return;
 					  }
 					  m_db.edit_comment(cid, m_username, new_body);
+					  live_hub::instance().broadcast(
+					    "task:" + std::to_string(m_task_id) + ":comments");
 					  rebuild_comments();
 				  });
 
+				// Fix 6: delete confirmation dialog
 				del_btn->clicked().connect(
-				  [this, cid, alive = m_alive] {
-					  if(!*alive)
-					  {
-						  return;
-					  }
-					  m_db.delete_comment(cid, m_username);
-					  rebuild_comments();
+				  [this, cid, c_author, is_own, alive = m_alive] {
+					  auto*             d = new Wt::WDialog("Delete Comment");
+					  const std::string msg =
+					    is_own ? "Are you sure you want to delete this comment?" : "This comment was written by " + c_author + ". Are you sure you want to delete it?";
+					  d->contents()->addNew<Wt::WText>(msg, Wt::TextFormat::Plain);
+					  auto* yes = d->footer()->addNew<Wt::WPushButton>("Delete");
+					  yes->setStyleClass("editor-btn editor-btn-danger");
+					  auto* no = d->footer()->addNew<Wt::WPushButton>("Cancel");
+					  no->setStyleClass("editor-btn editor-btn-cancel");
+					  yes->clicked().connect([this, d, cid, alive = m_alive] {
+						  d->accept();
+						  if(!*alive)
+						  {
+							  return;
+						  }
+						  m_db.delete_comment(cid, m_username);
+						  live_hub::instance().broadcast(
+						    "task:" + std::to_string(m_task_id) + ":comments");
+						  rebuild_comments();
+					  });
+					  no->clicked().connect([d] { d->reject(); });
+					  d->finished().connect([d](Wt::DialogCode) { delete d; });
+					  d->show();
 				  });
 			}
 		}
 	}
 
-	// Compose box (always shown for existing tasks)
+	// Fix 4: hide compose area for archived tasks
+	if(m_existing && m_existing->is_archived)
+	{
+		return;
+	}
+
+	// Compose box
 	auto* ta = m_comment_compose->addNew<Wt::WTextArea>();
 	ta->setPlaceholderText("Write a comment (Markdown supported)");
 	ta->setStyleClass("editor-field");
 
 	auto* post_btn = m_comment_compose->addNew<Wt::WPushButton>("Post Comment");
 	post_btn->setStyleClass("editor-btn kb-comment-post-btn");
+
+	// Fix 5: disable Post button when textarea is empty
+	post_btn->setDisabled(true);
+	ta->keyWentUp().connect([ta, post_btn] {
+		post_btn->setDisabled(ta->text().empty());
+	});
+
+	// Fix 7: broadcast after posting
 	post_btn->clicked().connect(
 	  [this, ta, alive = m_alive] {
 		  if(!*alive)
@@ -672,6 +743,8 @@ void kanban_task_editor_page::rebuild_comments()
 			  return;
 		  }
 		  m_db.add_comment(m_task_id, m_username, body);
+		  live_hub::instance().broadcast(
+		    "task:" + std::to_string(m_task_id) + ":comments");
 		  ta->setText(Wt::WString{});
 		  rebuild_comments();
 	  });
