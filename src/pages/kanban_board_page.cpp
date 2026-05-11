@@ -19,11 +19,11 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
                                      bool                show_gantt):
   m_db{db},
   m_odb{odb},
+  m_session{session},
   m_team_id{team_id},
   m_caps{caps},
   m_show_gantt{show_gantt},
-  m_username{session.username},
-  m_session{session}
+  m_username{session.username}
 {
 	setStyleClass("page kb-page");
 
