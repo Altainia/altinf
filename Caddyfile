@@ -1,0 +1,3 @@
+altinf.com {
+    reverse_proxy altinf:8080
+}
