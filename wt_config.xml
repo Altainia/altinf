@@ -6,9 +6,8 @@
         <num-processes>1</num-processes>
       </shared-process>
       <reload-is-new-session>true</reload-is-new-session>
-      <tracking>Cookie</tracking>
+      <tracking>Auto</tracking>
     </session-management>
-    <trusted-proxy-networks>172.16.0.0/12</trusted-proxy-networks>
     <max-request-size>1048576</max-request-size>
     <debug>false</debug>
   </application-settings>
