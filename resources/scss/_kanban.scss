@@ -538,7 +538,10 @@
   color:          var(--color-muted);
   margin-bottom:  0.4rem;
 
-  .kb-comment-author { font-weight: 600; color: var(--color-text); }
+  .kb-comment-author {
+    font-weight: 600;
+    color:       var(--color-text);
+  }
 }
 
 .kb-comment-body {
@@ -575,8 +578,8 @@
   }
 
   .kb-comment-del-btn:hover {
-    color:        #e06c6c;
-    border-color: #e06c6c;
+    color:        var(--color-error);
+    border-color: var(--color-error);
   }
 }
 
