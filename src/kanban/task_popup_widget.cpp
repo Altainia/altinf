@@ -132,6 +132,10 @@ task_popup_widget::task_popup_widget(kanban_db&                              db,
 		m_title_display->clicked().connect([this] { enter_edit_mode(m_title_display, m_title_edit); });
 		m_title_edit->blurred().connect([this] {
 			const std::string v = m_title_edit->text().toUTF8();
+			if(v.empty())
+			{
+				m_title_edit->setText(m_original.title);
+			}
 			exit_edit_mode(m_title_display, m_title_edit, v.empty() ? m_original.title : v);
 			if(!v.empty() && v != m_original.title)
 			{
@@ -189,7 +193,7 @@ task_popup_widget::task_popup_widget(kanban_db&                              db,
 	if(can_edit)
 	{
 		m_status_display->clicked().connect([this] { enter_edit_mode(m_status_display, m_status_edit); });
-		m_status_edit->blurred().connect([this] {
+		m_status_edit->changed().connect([this] {
 			const int         si = m_status_edit->currentIndex();
 			const std::string v  = (si >= 0 && si < static_cast<int>(k_status_vals.size())) ? k_status_vals[si] : "todo";
 			exit_edit_mode(m_status_display, m_status_edit, status_lbl(v));
@@ -237,7 +241,7 @@ task_popup_widget::task_popup_widget(kanban_db&                              db,
 	if(can_use_assignee)
 	{
 		m_assignee_display->clicked().connect([this] { enter_edit_mode(m_assignee_display, m_assignee_edit); });
-		m_assignee_edit->blurred().connect([this] {
+		m_assignee_edit->changed().connect([this] {
 			const int         ai = m_assignee_edit->currentIndex();
 			const std::string v  = (ai >= 0 && ai < static_cast<int>(m_assignee_values.size())) ? m_assignee_values[ai] : "";
 			exit_edit_mode(m_assignee_display, m_assignee_edit, v.empty() ? "(unassigned)" : v);
@@ -267,7 +271,6 @@ task_popup_widget::task_popup_widget(kanban_db&                              db,
 		edit_out = wrap_out->addNew<Wt::WDateEdit>();
 		edit_out->setFormat("yyyy-MM-dd");
 		edit_out->setStyleClass("editor-field");
-		edit_out->changed().connect([] {});
 		if(orig.isValid())
 		{
 			edit_out->setDate(orig);
@@ -407,6 +410,7 @@ task_popup_widget::~task_popup_widget()
 
 void task_popup_widget::mark_stale()
 {
+	m_stale = true;
 	if(m_stale_banner)
 	{
 		m_stale_banner->show();
@@ -424,7 +428,7 @@ void task_popup_widget::mark_field_dirty(const std::string& field, Wt::WContaine
 	{
 		container->addStyleClass("kb-popup-field--dirty");
 	}
-	if(m_save_btn)
+	if(m_save_btn && !m_stale)
 	{
 		m_save_btn->setEnabled(true);
 	}

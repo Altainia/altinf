@@ -77,6 +77,7 @@ private:
     std::vector<std::string>           m_assignee_values;
 
     Wt::WContainerWidget* m_stale_banner{nullptr};
+    bool                  m_stale{false};
     Wt::WPushButton*      m_save_btn{nullptr};
     Wt::WContainerWidget* m_comment_list{nullptr};
     Wt::WContainerWidget* m_comment_compose{nullptr};
