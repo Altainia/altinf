@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('login page renders form', async ({ page }) => {
-  await page.goto('/?_=/login');
+  await page.goto('/login');
   await expect(page.locator('.login-form')).toBeVisible();
   await expect(page.locator('input[placeholder="Username"]')).toBeVisible();
   await expect(page.locator('input[placeholder="Password"]')).toBeVisible();
@@ -9,7 +9,7 @@ test('login page renders form', async ({ page }) => {
 });
 
 test('wrong credentials shows error message', async ({ page }) => {
-  await page.goto('/?_=/login');
+  await page.goto('/login');
   await page.locator('input[placeholder="Username"]').fill('admin');
   await page.locator('input[placeholder="Password"]').fill('wrongpassword');
   await page.locator('.login-btn').click();
@@ -17,7 +17,7 @@ test('wrong credentials shows error message', async ({ page }) => {
 });
 
 test('unknown user shows error message', async ({ page }) => {
-  await page.goto('/?_=/login');
+  await page.goto('/login');
   await page.locator('input[placeholder="Username"]').fill('nobody');
   await page.locator('input[placeholder="Password"]').fill('whatever');
   await page.locator('.login-btn').click();
@@ -25,7 +25,7 @@ test('unknown user shows error message', async ({ page }) => {
 });
 
 test('correct credentials logs in and shows logout link', async ({ page }) => {
-  await page.goto('/?_=/login');
+  await page.goto('/login');
   await page.locator('input[placeholder="Username"]').fill('admin');
   await page.locator('input[placeholder="Password"]').fill('testpass');
   await page.locator('.login-btn').click();
@@ -33,7 +33,7 @@ test('correct credentials logs in and shows logout link', async ({ page }) => {
 });
 
 test('logged-in admin sees admin nav links', async ({ page }) => {
-  await page.goto('/?_=/login');
+  await page.goto('/login');
   await page.locator('input[placeholder="Username"]').fill('admin');
   await page.locator('input[placeholder="Password"]').fill('testpass');
   await page.locator('.login-btn').click();
@@ -42,7 +42,7 @@ test('logged-in admin sees admin nav links', async ({ page }) => {
 });
 
 test('logout clears session', async ({ page }) => {
-  await page.goto('/?_=/login');
+  await page.goto('/login');
   await page.locator('input[placeholder="Username"]').fill('admin');
   await page.locator('input[placeholder="Password"]').fill('testpass');
   await page.locator('.login-btn').click();
@@ -64,6 +64,6 @@ test('navbar login link navigates to login page', async ({ page }) => {
 });
 
 test('login page auto-focuses username field', async ({ page }) => {
-  await page.goto('/?_=/login');
+  await page.goto('/login');
   await expect(page.locator('input[placeholder="Username"]')).toBeFocused();
 });

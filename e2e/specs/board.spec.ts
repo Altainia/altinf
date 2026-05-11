@@ -7,7 +7,7 @@ test.describe.configure({ mode: 'serial' });
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 async function login(page: Page) {
-  await page.goto('/?_=/login');
+  await page.goto('/login');
   await page.locator('input[placeholder="Username"]').fill('admin');
   await page.locator('input[placeholder="Password"]').fill('testpass');
   await page.locator('.login-btn').click();
@@ -85,7 +85,7 @@ async function createTaskWithDates(page: Page, title: string, startDate: string,
 // ── access control ────────────────────────────────────────────────────────────
 
 test('unauthenticated visit to /board redirects to login', async ({ page }) => {
-  await page.goto('/?_=/board/1');
+  await page.goto('/board/1');
   await expect(page.locator('.login-form')).toBeVisible();
 });
 

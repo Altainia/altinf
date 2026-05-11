@@ -20,7 +20,7 @@ test('home page shows welcome text', async ({ page }) => {
 });
 
 test('nav brand links back to home', async ({ page }) => {
-  await page.goto('/?_=/blog');
+  await page.goto('/blog');
   await page.locator('.nav-brand').click();
   await expect(page.locator('h1')).toContainText("Hi, I'm Ben.");
 });

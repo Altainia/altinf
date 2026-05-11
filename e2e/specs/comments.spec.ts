@@ -6,7 +6,7 @@ const ORG  = 'CommentOrg';
 const TEAM = 'CommentTeam';
 
 async function loginAs(page: Page, username: string, password: string) {
-  await page.goto('/?_=/login');
+  await page.goto('/login');
   await page.locator('input[placeholder="Username"]').fill(username);
   await page.locator('input[placeholder="Password"]').fill(password);
   await page.locator('.login-btn').click();
