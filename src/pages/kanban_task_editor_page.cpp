@@ -5,17 +5,44 @@
 #include <Wt/WApplication.h>
 #include <Wt/WColor.h>
 #include <Wt/WDate.h>
+#include <Wt/WDialog.h>
 #include <Wt/WLink.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WTabWidget.h>
 #include <Wt/WText.h>
+#include <cmark.h>
 
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <map>
 
 #include "org/org.hpp"
 #include "widgets/live_hub.hpp"
+
+static std::string format_ts(const std::string& iso)
+{
+	if(iso.size() < 16)
+	{
+		return iso;
+	}
+	try
+	{
+		const int          yr       = std::stoi(iso.substr(0, 4));
+		const int          mo       = std::stoi(iso.substr(5, 2));
+		const int          dy       = std::stoi(iso.substr(8, 2));
+		const auto         hr       = iso.substr(11, 2);
+		const auto         mn       = iso.substr(14, 2);
+		static const char* months[] = {
+		  "", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+		return std::string(months[mo]) + " " + std::to_string(dy) +
+		       ", " + std::to_string(yr) + " at " + hr + ":" + mn;
+	}
+	catch(...)
+	{
+		return iso;
+	}
+}
 
 const std::vector<std::string> kanban_task_editor_page::k_status_vals = {
   "todo",
@@ -70,10 +97,29 @@ kanban_task_editor_page::kanban_task_editor_page(
 	m_history_panel = new Wt::WContainerWidget();
 	tabs->addTab(std::unique_ptr<Wt::WContainerWidget>(m_history_panel), "History");
 
+	// ── Comments tab ─────────────────────────────────────────────────────────
+	auto* comments_panel = new Wt::WContainerWidget();
+	tabs->addTab(
+	  std::unique_ptr<Wt::WContainerWidget>(comments_panel),
+	  "Comments");
+	comments_panel->setStyleClass("kb-comment-section");
+
+	comments_panel->addNew<Wt::WText>("<h2>Comments</h2>", Wt::TextFormat::UnsafeXHTML);
+
+	m_comment_list = comments_panel->addNew<Wt::WContainerWidget>();
+	m_comment_list->setStyleClass("kb-comment-list");
+
+	m_comment_compose = comments_panel->addNew<Wt::WContainerWidget>();
+	m_comment_compose->setStyleClass("kb-comment-compose");
+
 	tabs->currentChanged().connect([this](int index) {
 		if(index == 1)
 		{
 			rebuild_history();
+		}
+		else if(index == 2)
+		{
+			rebuild_comments();
 		}
 	});
 
@@ -432,30 +478,6 @@ void kanban_task_editor_page::rebuild_history()
 		return val;
 	};
 
-	auto format_ts = [](const std::string& iso) -> std::string {
-		// Parse "2026-05-06T14:30:00Z" -> "May 6, 2026 at 14:30"
-		if(iso.size() < 16)
-		{
-			return iso;
-		}
-		try
-		{
-			const int          yr       = std::stoi(iso.substr(0, 4));
-			const int          mo       = std::stoi(iso.substr(5, 2));
-			const int          dy       = std::stoi(iso.substr(8, 2));
-			const auto         hr       = iso.substr(11, 2);
-			const auto         mn       = iso.substr(14, 2);
-			static const char* months[] = {
-			  "", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-			return std::string(months[mo]) + " " + std::to_string(dy) +
-			       ", " + std::to_string(yr) + " at " + hr + ":" + mn;
-		}
-		catch(...)
-		{
-			return iso;
-		}
-	};
-
 	for(const auto& ev: events)
 	{
 		auto* entry = m_history_panel->addNew<Wt::WContainerWidget>();
@@ -496,6 +518,163 @@ void kanban_task_editor_page::rebuild_history()
 			}
 		}
 	}
+}
+
+void kanban_task_editor_page::rebuild_comments()
+{
+	m_comment_list->clear();
+	m_comment_compose->clear();
+
+	if(m_task_id == 0)
+	{
+		m_comment_list->addNew<Wt::WText>(
+		  "Save the task first to add comments.", Wt::TextFormat::Plain);
+		return;
+	}
+
+	const auto comments = m_db.comments_for_task(m_task_id);
+
+	if(comments.empty())
+	{
+		auto* empty = m_comment_list->addNew<Wt::WText>(
+		  "No comments yet.", Wt::TextFormat::Plain);
+		empty->setStyleClass("kb-comment-deleted");
+	}
+	else
+	{
+		for(const auto& c: comments)
+		{
+			auto* item = m_comment_list->addNew<Wt::WContainerWidget>();
+			item->setStyleClass("kb-comment-item");
+
+			if(c.is_deleted)
+			{
+				auto* del_text = item->addNew<Wt::WText>(
+				  "[deleted]", Wt::TextFormat::Plain);
+				del_text->setStyleClass("kb-comment-deleted");
+				continue;
+			}
+
+			// Header: author + timestamp
+			auto* hdr = item->addNew<Wt::WContainerWidget>();
+			hdr->setStyleClass("kb-comment-header");
+			auto* author_span = hdr->addNew<Wt::WText>(
+			  c.author, Wt::TextFormat::Plain);
+			author_span->setStyleClass("kb-comment-author");
+			hdr->addNew<Wt::WText>(
+			  " \xe2\x80\x94 " + format_ts(c.created_at), Wt::TextFormat::Plain);
+
+			// Body (Markdown rendered)
+			auto* body_wrap = item->addNew<Wt::WContainerWidget>();
+			body_wrap->setStyleClass("kb-comment-body");
+			char* html_raw = cmark_markdown_to_html(
+			  c.body.c_str(), c.body.size(), CMARK_OPT_DEFAULT);
+			const std::string body_html = html_raw ? std::string(html_raw) : "";
+			if(html_raw)
+			{
+				free(html_raw);
+			}
+			body_wrap->addNew<Wt::WText>(body_html, Wt::TextFormat::UnsafeXHTML);
+
+			// Edited/deleted meta
+			if(!c.last_edited_at.empty())
+			{
+				auto* meta = item->addNew<Wt::WText>(
+				  "edited " + format_ts(c.last_edited_at) +
+				    " by " + c.last_edited_by,
+				  Wt::TextFormat::Plain);
+				meta->setStyleClass("kb-comment-meta");
+			}
+
+			const bool can_act = (c.author == m_username) || m_is_lead;
+			if(can_act)
+			{
+				auto* actions = item->addNew<Wt::WContainerWidget>();
+				actions->setStyleClass("kb-comment-actions");
+
+				// Edit button + inline edit area (hidden until clicked)
+				auto* edit_btn = actions->addNew<Wt::WPushButton>("Edit");
+				auto* del_btn  = actions->addNew<Wt::WPushButton>("Delete");
+				del_btn->setStyleClass("kb-comment-del-btn");
+
+				const long long cid = c.id;
+
+				// Inline edit area (hidden by default)
+				auto* edit_area = item->addNew<Wt::WContainerWidget>();
+				edit_area->setStyleClass("kb-comment-edit-area");
+				edit_area->hide();
+				auto* edit_ta = edit_area->addNew<Wt::WTextArea>();
+				edit_ta->setText(c.body);
+				edit_ta->setStyleClass("editor-field");
+				auto* edit_btns = edit_area->addNew<Wt::WContainerWidget>();
+				edit_btns->setStyleClass("kb-comment-edit-btns");
+				auto* save_edit_btn = edit_btns->addNew<Wt::WPushButton>("Save");
+				save_edit_btn->setStyleClass("editor-btn");
+				auto* cancel_edit_btn = edit_btns->addNew<Wt::WPushButton>("Cancel");
+				cancel_edit_btn->setStyleClass("editor-btn editor-btn-cancel");
+
+				edit_btn->clicked().connect([body_wrap, edit_area, actions] {
+					body_wrap->hide();
+					actions->hide();
+					edit_area->show();
+				});
+
+				cancel_edit_btn->clicked().connect([body_wrap, edit_area, actions] {
+					edit_area->hide();
+					body_wrap->show();
+					actions->show();
+				});
+
+				save_edit_btn->clicked().connect(
+				  [this, cid, edit_ta, alive = m_alive] {
+					  if(!*alive)
+					  {
+						  return;
+					  }
+					  const std::string new_body = edit_ta->text().toUTF8();
+					  if(new_body.empty())
+					  {
+						  return;
+					  }
+					  m_db.edit_comment(cid, m_username, new_body);
+					  rebuild_comments();
+				  });
+
+				del_btn->clicked().connect(
+				  [this, cid, alive = m_alive] {
+					  if(!*alive)
+					  {
+						  return;
+					  }
+					  m_db.delete_comment(cid, m_username);
+					  rebuild_comments();
+				  });
+			}
+		}
+	}
+
+	// Compose box (always shown for existing tasks)
+	auto* ta = m_comment_compose->addNew<Wt::WTextArea>();
+	ta->setPlaceholderText("Write a comment (Markdown supported)");
+	ta->setStyleClass("editor-field");
+
+	auto* post_btn = m_comment_compose->addNew<Wt::WPushButton>("Post Comment");
+	post_btn->setStyleClass("editor-btn kb-comment-post-btn");
+	post_btn->clicked().connect(
+	  [this, ta, alive = m_alive] {
+		  if(!*alive)
+		  {
+			  return;
+		  }
+		  const std::string body = ta->text().toUTF8();
+		  if(body.empty())
+		  {
+			  return;
+		  }
+		  m_db.add_comment(m_task_id, m_username, body);
+		  ta->setText(Wt::WString{});
+		  rebuild_comments();
+	  });
 }
 
 void kanban_task_editor_page::save()

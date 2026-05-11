@@ -59,6 +59,8 @@ private:
     Wt::WPushButton*                   m_save_btn{nullptr};
     Wt::WPushButton*                   m_del_btn{nullptr};
     Wt::WContainerWidget*              m_history_panel{nullptr};
+    Wt::WContainerWidget*              m_comment_list{nullptr};
+    Wt::WContainerWidget*              m_comment_compose{nullptr};
 
     std::vector<std::string> m_assignee_values;
 
@@ -68,4 +70,5 @@ private:
     void save();
     void mark_stale();
     void rebuild_history();
+    void rebuild_comments();
 };
