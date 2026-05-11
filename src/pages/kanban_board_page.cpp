@@ -13,11 +13,11 @@
 kanban_board_page::kanban_board_page(kanban_db&          db,
                                      const session_data& session,
                                      long long           team_id,
-                                     bool                is_lead,
+                                     team_cap::flags     caps,
                                      bool                show_gantt):
   m_db{db},
   m_team_id{team_id},
-  m_is_lead{is_lead},
+  m_caps{caps},
   m_show_gantt{show_gantt},
   m_username{session.username}
 {
@@ -56,18 +56,24 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 	      Wt::WLink{Wt::LinkType::InternalPath, team_url + "/gantt"}, "Gantt")
 	  ->setStyleClass(show_gantt ? "kb-tab kb-tab--active" : "kb-tab");
 
-	if(m_is_lead)
+	if(caps.has_any(team_cap::create_task))
 	{
 		hdr->addNew<Wt::WAnchor>(
 		     Wt::WLink{Wt::LinkType::InternalPath, team_url + "/task/new"},
 		     "+ New Task")
 		  ->setStyleClass("editor-btn kb-new-btn");
+	}
 
+	if(caps.has_any(team_cap::manage_team))
+	{
 		hdr->addNew<Wt::WAnchor>(
 		     Wt::WLink{Wt::LinkType::InternalPath, team_url + "/manage"},
 		     "Manage Team")
 		  ->setStyleClass("editor-btn editor-btn-cancel kb-manage-link");
+	}
 
+	if(caps.has_any(team_cap::view_archived))
+	{
 		hdr->addNew<Wt::WAnchor>(
 		     Wt::WLink{Wt::LinkType::InternalPath, team_url + "/archive"},
 		     "Archived")
@@ -85,12 +91,19 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 	{
 		m_board_widget = addNew<kanban_board_widget>(
 		  tasks,
-		  m_is_lead,
+		  m_caps.has_any(team_cap::edit_task_fields),
 		  m_type_colors,
 		  [this](long long tid, const std::string& status, int sort) {
+			  if(!m_caps.has_any(team_cap::edit_task_fields))
+			  {
+				  return;
+			  }
 			  m_db.update_task_status(tid, status, sort, m_username);
 			  live_hub::instance().broadcast("team:" + std::to_string(m_team_id));
-			  m_board_widget->refresh(m_db.tasks_for_team(m_team_id), m_is_lead, m_type_colors);
+			  m_board_widget->refresh(
+			    m_db.tasks_for_team(m_team_id),
+			    m_caps.has_any(team_cap::edit_task_fields),
+			    m_type_colors);
 		  },
 		  [this](long long tid) {
 			  Wt::WApplication::instance()->setInternalPath(
@@ -154,6 +167,9 @@ void kanban_board_page::refresh()
 	}
 	else if(m_board_widget)
 	{
-		m_board_widget->refresh(tasks, m_is_lead, m_type_colors);
+		m_board_widget->refresh(
+		  tasks,
+		  m_caps.has_any(team_cap::edit_task_fields),
+		  m_type_colors);
 	}
 }

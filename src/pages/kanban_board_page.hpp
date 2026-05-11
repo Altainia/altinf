@@ -4,6 +4,7 @@
 #include "kanban/kanban_db.hpp"
 #include "kanban/kanban_board_widget.hpp"
 #include "kanban/gantt_view_widget.hpp"
+#include "kanban/team_cap.hpp"
 
 #include <Wt/WContainerWidget.h>
 
@@ -17,7 +18,7 @@ public:
     kanban_board_page(kanban_db&          db,
                       const session_data& session,
                       long long           team_id,
-                      bool                is_lead,
+                      team_cap::flags     caps,
                       bool                show_gantt);
 
     ~kanban_board_page() override;
@@ -26,7 +27,7 @@ private:
     kanban_db&                       m_db;
     long long                        m_team_id{0};
     long long                        m_org_id{0};
-    bool                             m_is_lead{false};
+    team_cap::flags                  m_caps;
     bool                             m_show_gantt{false};
     std::string                      m_username;
     std::string                      m_session_id;

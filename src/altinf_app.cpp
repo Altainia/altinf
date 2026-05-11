@@ -333,29 +333,29 @@ void altinf_app::handle_path(const std::string& path)
 		const bool is_team_lead = m_kanban_db->is_team_lead(team_id, m_session.username);
 		const bool is_lead      = is_org_lead || is_team_lead;
 
+		const auto caps = resolve_team_caps(team_id, team->org_id);
+
 		const std::string suffix = suffix_after_id(path, 7);
 
 		if(suffix.empty() || suffix == "/")
 		{
-			if(!m_kanban_db->can_view_board(
-			     team_id, m_session.username, m_session.permissions, is_org_lead))
+			if(!caps.has_any(team_cap::view_board))
 			{
 				show_forbidden();
 				return;
 			}
 			m_content->addNew<kanban_board_page>(
-			  *m_kanban_db, m_session, team_id, is_lead, false);
+			  *m_kanban_db, m_session, team_id, caps, false);
 		}
 		else if(suffix == "/gantt")
 		{
-			if(!m_kanban_db->can_view_board(
-			     team_id, m_session.username, m_session.permissions, is_org_lead))
+			if(!caps.has_any(team_cap::view_board))
 			{
 				show_forbidden();
 				return;
 			}
 			m_content->addNew<kanban_board_page>(
-			  *m_kanban_db, m_session, team_id, is_lead, true);
+			  *m_kanban_db, m_session, team_id, caps, true);
 		}
 		else if(suffix == "/task/new")
 		{
