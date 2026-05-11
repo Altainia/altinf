@@ -335,7 +335,7 @@ task_popup_widget::task_popup_widget(kanban_db&                              db,
 				}
 				chip->addStyleClass("selected");
 				m_dirty_fields.insert("type");
-				if(m_save_btn)
+				if(m_save_btn && !m_stale)
 				{
 					m_save_btn->setEnabled(true);
 				}
