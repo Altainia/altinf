@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { loginAs } from './helpers';
 
 test('links page shows heading', async ({ page }) => {
   await page.goto('/links');
@@ -16,11 +17,7 @@ test('logged-out user sees no Add Link button', async ({ page }) => {
 });
 
 test('logged-in admin sees Add Link button', async ({ page }) => {
-  await page.goto('/login');
-  await page.locator('input[placeholder="Username"]').fill('admin');
-  await page.locator('input[placeholder="Password"]').fill('testpass');
-  await page.locator('.login-btn').click();
-  await expect(page.locator('.nav-logout')).toBeVisible();
+  await loginAs(page, 'admin', 'testpass');
 
   // Navigate within the same Wt session via the nav link (page.goto resets the session)
   await page.locator('.nav-link', { hasText: 'Links' }).click();
@@ -28,11 +25,7 @@ test('logged-in admin sees Add Link button', async ({ page }) => {
 });
 
 test('Add Link button navigates to link editor', async ({ page }) => {
-  await page.goto('/login');
-  await page.locator('input[placeholder="Username"]').fill('admin');
-  await page.locator('input[placeholder="Password"]').fill('testpass');
-  await page.locator('.login-btn').click();
-  await expect(page.locator('.nav-logout')).toBeVisible();
+  await loginAs(page, 'admin', 'testpass');
 
   await page.locator('.nav-link', { hasText: 'Links' }).click();
   await page.locator('.link-add-btn').click();

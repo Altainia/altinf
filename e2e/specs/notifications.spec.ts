@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { loginAs } from './helpers';
 
 // These tests exercise real-time server push: one browser session triggers an
 // action that should update a second logged-in session without a page reload.
@@ -12,15 +13,6 @@ import { test, expect, type Page } from '@playwright/test';
 test.describe.configure({ mode: 'serial' });
 
 // ── helpers ───────────────────────────────────────────────────────────────────
-
-async function loginAs(page: Page, username: string, password: string) {
-  // page.goto() is fine here — it creates a fresh session that we log into.
-  await page.goto('/login');
-  await page.locator('input[placeholder="Username"]').fill(username);
-  await page.locator('input[placeholder="Password"]').fill(password);
-  await page.locator('.login-btn').click();
-  await expect(page.locator('.nav-logout')).toBeVisible();
-}
 
 // Navigate to the accounts list then create a new user.
 // Must be called on a logged-in admin page (uses click-based navigation).

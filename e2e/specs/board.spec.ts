@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { loginAs } from './helpers';
 
 // All tests share the same SQLite database, so state accumulates across tests
 // within a run.  Serial mode keeps them ordered and avoids parallel-write races.
@@ -7,11 +8,7 @@ test.describe.configure({ mode: 'serial' });
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 async function login(page: Page) {
-  await page.goto('/login');
-  await page.locator('input[placeholder="Username"]').fill('admin');
-  await page.locator('input[placeholder="Password"]').fill('testpass');
-  await page.locator('.login-btn').click();
-  await expect(page.locator('.nav-logout')).toBeVisible();
+  await loginAs(page, 'admin', 'testpass');
 }
 
 async function loginAndGoToBoard(page: Page) {
