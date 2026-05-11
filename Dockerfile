@@ -82,7 +82,6 @@ COPY --from=app-builder /src/build/resources /app/resources
 COPY wt_config.xml /app/wt_config.xml
 
 # /data  → volume for SQLite DB + posts/
-# /certs → volume for cert.pem, key.pem, dh.pem
 VOLUME ["/data"]
 
 EXPOSE 8080
