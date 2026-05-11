@@ -8,18 +8,22 @@
 #include <map>
 
 #include "kanban/gantt_view_widget.hpp"
+#include "kanban/task_popup_widget.hpp"
 #include "widgets/live_hub.hpp"
 
 kanban_board_page::kanban_board_page(kanban_db&          db,
+                                     org_db&             odb,
                                      const session_data& session,
                                      long long           team_id,
                                      team_cap::flags     caps,
                                      bool                show_gantt):
   m_db{db},
+  m_odb{odb},
   m_team_id{team_id},
   m_caps{caps},
   m_show_gantt{show_gantt},
-  m_username{session.username}
+  m_username{session.username},
+  m_session{session}
 {
 	setStyleClass("page kb-page");
 
@@ -106,10 +110,8 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 			    m_type_colors);
 		  },
 		  [this](long long tid) {
-			  Wt::WApplication::instance()->setInternalPath(
-			    "/board/" + std::to_string(m_team_id) + "/task/" +
-			      std::to_string(tid) + "/edit",
-			    true);
+			  new task_popup_widget(
+			    m_db, m_odb, tid, m_session, m_caps, m_type_colors, m_team_id);
 		  });
 	}
 

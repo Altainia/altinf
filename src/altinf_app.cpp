@@ -341,7 +341,7 @@ void altinf_app::handle_path(const std::string& path)
 				return;
 			}
 			m_content->addNew<kanban_board_page>(
-			  *m_kanban_db, m_session, team_id, caps, false);
+			  *m_kanban_db, *m_org_db, m_session, team_id, caps, false);
 		}
 		else if(suffix == "/gantt")
 		{
@@ -351,7 +351,7 @@ void altinf_app::handle_path(const std::string& path)
 				return;
 			}
 			m_content->addNew<kanban_board_page>(
-			  *m_kanban_db, m_session, team_id, caps, true);
+			  *m_kanban_db, *m_org_db, m_session, team_id, caps, true);
 		}
 		else if(suffix == "/task/new")
 		{

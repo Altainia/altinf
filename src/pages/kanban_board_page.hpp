@@ -5,6 +5,7 @@
 #include "kanban/kanban_board_widget.hpp"
 #include "kanban/gantt_view_widget.hpp"
 #include "kanban/team_cap.hpp"
+#include "org/org_db.hpp"
 
 #include <Wt/WContainerWidget.h>
 
@@ -16,6 +17,7 @@ class kanban_board_page: public Wt::WContainerWidget
 {
 public:
     kanban_board_page(kanban_db&          db,
+                      org_db&             odb,
                       const session_data& session,
                       long long           team_id,
                       team_cap::flags     caps,
@@ -25,6 +27,8 @@ public:
 
 private:
     kanban_db&                       m_db;
+    org_db&                          m_odb;
+    session_data                     m_session;
     long long                        m_team_id{0};
     long long                        m_org_id{0};
     team_cap::flags                  m_caps;
