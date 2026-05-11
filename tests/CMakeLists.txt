@@ -19,6 +19,12 @@ target_include_directories(test_permissions PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_permissions PRIVATE Catch2::Catch2WithMain)
 catch_discover_tests(test_permissions)
 
+# test_team_cap — header-only, no extra libs
+add_executable(test_team_cap test_team_cap.cpp)
+target_include_directories(test_team_cap PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_team_cap PRIVATE Catch2::Catch2WithMain)
+catch_discover_tests(test_team_cap)
+
 # test_blog_loader
 add_executable(test_blog_loader test_blog_loader.cpp
   ${CMAKE_SOURCE_DIR}/src/blog/blog_loader.cpp)
