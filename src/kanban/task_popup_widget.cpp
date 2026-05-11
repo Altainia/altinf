@@ -691,6 +691,7 @@ void task_popup_widget::save()
 	}
 
 	live_hub::instance().unsubscribe("task:" + std::to_string(m_task_id), m_session_id);
+	live_hub::instance().unsubscribe("task:" + std::to_string(m_task_id) + ":comments", m_session_id);
 	m_task_id = 0;
 	live_hub::instance().broadcast("team:" + std::to_string(m_team_id));
 	live_hub::instance().broadcast("task:" + std::to_string(m_original.id));
