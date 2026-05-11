@@ -8,7 +8,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake ninja-build git ca-certificates \
     libboost-all-dev libssl-dev libsqlite3-dev zlib1g-dev \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/lib/x86_64-linux-gnu/libssl.so    /usr/lib/libssl.so \
+    && ln -sf /usr/lib/x86_64-linux-gnu/libcrypto.so /usr/lib/libcrypto.so
 
 RUN git clone --depth 1 --branch ${WT_VERSION} \
         https://github.com/emweb/wt.git /wt-src
@@ -19,6 +21,7 @@ RUN cmake -S /wt-src -B /wt-build \
         -DBUILD_EXAMPLES=OFF \
         -DENABLE_LIBWTTEST=OFF \
         -DCONNECTOR_FCGI=OFF \
+        -DENABLE_SSL=ON \
     && cmake --build /wt-build --parallel "$(nproc)" \
     && cmake --install /wt-build
 
