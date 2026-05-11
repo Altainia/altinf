@@ -1,16 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
+import { loginAs } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
 const ORG = 'LiveLandingOrg';
-
-async function loginAs(page: Page, username: string, password: string) {
-  await page.goto('/login');
-  await page.locator('input[placeholder="Username"]').fill(username);
-  await page.locator('input[placeholder="Password"]').fill(password);
-  await page.locator('.login-btn').click();
-  await expect(page.locator('.nav-logout')).toBeVisible();
-}
 
 async function goToLanding(page: Page) {
   // Admin can use the Orgs admin link; non-admin members use the nav org link.

@@ -1,4 +1,5 @@
 import { test, expect, type Page, type Browser } from '@playwright/test';
+import { loginAs } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -8,14 +9,6 @@ const TEAM = 'PermTeam';
 let boardUrl        = '';
 let taskUrl         = '';
 let archivedTaskUrl = '';
-
-async function loginAs(page: Page, username: string, password: string) {
-  await page.goto('/login');
-  await page.locator('input[placeholder="Username"]').fill(username);
-  await page.locator('input[placeholder="Password"]').fill(password);
-  await page.locator('.login-btn').click();
-  await expect(page.locator('.nav-logout')).toBeVisible();
-}
 
 async function createUser(page: Page, username: string, password: string) {
   await page.locator('.nav-link', { hasText: 'Accounts' }).click();

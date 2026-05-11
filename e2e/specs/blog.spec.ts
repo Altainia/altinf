@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { loginAs } from './helpers';
 
 test('blog page shows heading', async ({ page }) => {
   await page.goto('/blog');
@@ -47,11 +48,7 @@ test('clicking a tag chip filters the list', async ({ page }) => {
 });
 
 test('logged-in admin sees edit post link on post page', async ({ page }) => {
-  await page.goto('/login');
-  await page.locator('input[placeholder="Username"]').fill('admin');
-  await page.locator('input[placeholder="Password"]').fill('testpass');
-  await page.locator('.login-btn').click();
-  await expect(page.locator('.nav-logout')).toBeVisible();
+  await loginAs(page, 'admin', 'testpass');
 
   // Navigate within the same Wt session via the nav link, then open a post
   await page.locator('.nav-link', { hasText: 'Blog' }).click();
