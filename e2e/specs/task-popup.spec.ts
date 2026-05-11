@@ -9,23 +9,48 @@ test.beforeAll(async ({ browser }) => {
   const page = await browser.newPage();
   await loginAs(page, 'admin', 'testpass');
 
+  // Navigate to orgs page.
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
-  await page.locator('input[placeholder="Organization name"]').fill('PopupOrg');
-  await page.locator('.org-create-form .editor-btn').click();
-  await page.locator('.org-list-link', { hasText: /^PopupOrg$/ }).click();
-  await page.getByRole('link', { name: 'Manage organization' }).click();
-  await page.locator('input[placeholder="Team name"]').fill('PopupTeam');
-  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(page.locator('.org-admin-page')).toBeVisible();
 
-  await page.locator('.nav-link', { hasText: 'Orgs' }).click();
-  await page.locator('.org-list-link', { hasText: /^PopupOrg$/ }).click();
+  // Create org only if it does not already exist.
+  const orgExists = (await page.locator('.org-list-link', { hasText: /^PopupOrg$/ }).count()) > 0;
+  if (!orgExists) {
+    await page.locator('input[placeholder="Organization name"]').fill('PopupOrg');
+    await page.locator('.org-create-form .editor-btn').click();
+    await expect(page.locator('.org-list-link', { hasText: /^PopupOrg$/ })).toBeVisible();
+  }
+  await page.locator('.org-list-link', { hasText: /^PopupOrg$/ }).first().click();
+  await expect(page.locator('.org-landing-page')).toBeVisible();
+
+  // Create team only if it does not already exist.
+  const teamExists = (await page.locator('.org-team-link').count()) > 0;
+  if (!teamExists) {
+    await page.getByRole('link', { name: 'Manage organization' }).click();
+    await expect(page.locator('.kb-team-page')).toBeVisible();
+    await page.locator('input[placeholder="Team name"]').fill('PopupTeam');
+    await page.getByRole('button', { name: 'Create' }).click();
+    await expect(page.locator('.kb-team-block')).toBeVisible();
+    // Return to org landing to navigate to board.
+    await page.locator('.nav-link', { hasText: 'Orgs' }).click();
+    await page.locator('.org-list-link', { hasText: /^PopupOrg$/ }).first().click();
+    await expect(page.locator('.org-landing-page')).toBeVisible();
+  }
+
   await page.locator('.org-team-link').first().click();
+  await expect(page.locator('.kb-board')).toBeVisible();
   teamUrl = page.url();
 
-  await page.locator('.kb-new-btn').click();
-  await page.locator('input[placeholder="Task title"]').fill('PopupTask');
-  await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
-  await expect(page.locator('.kb-board')).toBeVisible();
+  // Create task only if a task named exactly 'PopupTask' does not exist.
+  const taskExists = (await page.locator('.kb-card', { hasText: /^PopupTask$/ }).count()) > 0;
+  if (!taskExists) {
+    await page.locator('.kb-new-btn').click();
+    await expect(page.locator('.kb-editor-page')).toBeVisible();
+    await page.locator('input[placeholder="Task title"]').fill('PopupTask');
+    await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
+    await expect(page.locator('.kb-board')).toBeVisible();
+  }
+
   await page.close();
 });
 
