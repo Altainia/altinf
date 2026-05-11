@@ -45,6 +45,7 @@ kanban_db::kanban_db(const std::string& db_path)
 	migrate(
 	  "CREATE TABLE IF NOT EXISTS task_comment ("
 	  "id integer primary key autoincrement,"
+	  " version integer not null default 0,"
 	  " task_id integer not null default 0,"
 	  " author text not null default '',"
 	  " body text not null default '',"
@@ -54,6 +55,7 @@ kanban_db::kanban_db(const std::string& db_path)
 	migrate(
 	  "CREATE TABLE IF NOT EXISTS task_comment_event ("
 	  "id integer primary key autoincrement,"
+	  " version integer not null default 0,"
 	  " comment_id integer not null default 0,"
 	  " actor text not null default '',"
 	  " occurred_at text not null default '',"
@@ -737,6 +739,7 @@ void kanban_db::record_comment_event(long long          comment_id,
 	ev.modify()->occurred_at   = ts;
 	ev.modify()->event_type    = event_type;
 	ev.modify()->body_snapshot = body_snapshot;
+	m_dbo.flush();
 }
 
 // ---- Comments ----
