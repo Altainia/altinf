@@ -88,6 +88,6 @@ EXPOSE 8080
 
 ENTRYPOINT ["/app/altinf", \
     "--config",       "/app/wt_config.xml", \
-    "--docroot",      "/app/resources", \
+    "--docroot",      "/app/resources;/css,/js", \
     "--approot",      "/data", \
     "--http-address", "0.0.0.0", "--http-port", "8080"]

@@ -27,7 +27,7 @@ export default defineConfig({
       `ALTINF_ADMIN_PASSWORD=testpass`,
       BINARY,
       `--approot ${TEST_DIR}`,
-      `--docroot ${DOCROOT}`,
+      `--docroot "${DOCROOT};/css,/js"`,
       `--http-address 0.0.0.0`,
       `--http-port ${PORT}`,
       `--config ${WT_CONFIG}`,
