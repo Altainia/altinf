@@ -372,6 +372,44 @@ test('no-start no-end task is rendered with fades on both sides', function () {
     'last stop should be opacity 0 (right fade)');
 });
 
+// ── EDIT callback ─────────────────────────────────────────────────────────────
+
+console.log('\nEDIT callback');
+
+test('clicking a task bar fires EDIT:<id> on the callback input', function () {
+  const dom = new JSDOM(
+    '<!DOCTYPE html><body>' +
+    '<input id="cb-test" style="position:absolute;left:-9999px">' +
+    '<div id="gv-mount-test"></div>' +
+    '</body>',
+    { runScripts: 'dangerously' }
+  );
+  const { window } = dom;
+  window.eval(GANTT_SRC);
+
+  let fired = '';
+  dom.window.document.getElementById('cb-test')
+    .addEventListener('change', function () { fired = this.value; });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tasks = [{
+    id: 77,
+    title: 'Bar Task',
+    assigned_to: '',
+    color: '#aabbcc',
+    start_date: isoDate(addDays(today, -1)),
+    end_date:   isoDate(addDays(today, 5))
+  }];
+
+  dom.window.initGantt('gv-mount-test', tasks, 'cb-test');
+
+  const bar = dom.window.document.querySelector('#gv-mount-test .gantt-bar');
+  assert(bar !== null, 'gantt-bar element must exist in the SVG');
+  bar.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+  assert(fired === 'EDIT:77', 'expected EDIT:77, got "' + fired + '"');
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 
 console.log('\n' + (failed ? '✗' : '✓') + ' ' + passed + ' passed, ' + failed + ' failed\n');

@@ -89,7 +89,13 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 
 	if(show_gantt)
 	{
-		m_gantt_widget = addNew<gantt_view_widget>(tasks, m_type_colors);
+		m_gantt_widget = addNew<gantt_view_widget>(
+		  tasks,
+		  m_type_colors,
+		  [this](long long tid) {
+			  new task_popup_widget(
+			    m_db, m_odb, tid, m_session, m_caps, m_type_colors, m_team_id);
+		  });
 	}
 	else
 	{

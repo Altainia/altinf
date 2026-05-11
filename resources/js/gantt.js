@@ -71,7 +71,7 @@
     return addDays(todayDate(), -pastDays);
   }
 
-  function renderGantt(mount, tasks, viewStart, rangeDays) {
+  function renderGantt(mount, tasks, viewStart, rangeDays, cbId) {
     mount.innerHTML = '';
 
     var viewEnd = addDays(viewStart, rangeDays);
@@ -132,17 +132,17 @@
 
     var slideAmt = Math.max(1, Math.floor(rangeDays / 2));
     prevBtn.addEventListener('click', function () {
-      renderGantt(mount, tasks, addDays(viewStart, -slideAmt), rangeDays);
+      renderGantt(mount, tasks, addDays(viewStart, -slideAmt), rangeDays, cbId);
     });
     todayBtn.addEventListener('click', function () {
-      renderGantt(mount, tasks, todayViewStart(rangeDays), rangeDays);
+      renderGantt(mount, tasks, todayViewStart(rangeDays), rangeDays, cbId);
     });
     nextBtn.addEventListener('click', function () {
-      renderGantt(mount, tasks, addDays(viewStart, slideAmt), rangeDays);
+      renderGantt(mount, tasks, addDays(viewStart, slideAmt), rangeDays, cbId);
     });
     rangeSelect.addEventListener('change', function () {
       var newRange = +rangeSelect.value;
-      renderGantt(mount, tasks, todayViewStart(newRange), newRange);
+      renderGantt(mount, tasks, todayViewStart(newRange), newRange, cbId);
     });
 
     // ── Task filtering and grouping ──────────────────────────────────────────────
@@ -304,6 +304,19 @@
         var bar = svgRect(bx, ry + ROW_H * 0.2, bw, ROW_H * 0.6,
           'fill:' + barFill + ';opacity:0.88');
         bar.setAttribute('rx', 3);
+        bar.setAttribute('class', 'gantt-bar');
+        if (cbId) {
+          bar.style.cursor = 'pointer';
+          (function (taskId) {
+            bar.addEventListener('click', function () {
+              var input = document.getElementById(cbId);
+              if (input) {
+                input.value = 'EDIT:' + taskId;
+                input.dispatchEvent(new Event('change'));
+              }
+            });
+          }(task.id));
+        }
         svg.appendChild(bar);
 
         svg.appendChild(svgLine(0, ry + ROW_H, svgW, ry + ROW_H,
@@ -322,7 +335,7 @@
     }
   }
 
-  window.initGantt = function (mountId, tasks) {
+  window.initGantt = function (mountId, tasks, cbId) {
     var mount = document.getElementById(mountId);
     if (!mount) return;
 
@@ -348,6 +361,6 @@
       defaultStart = todayViewStart(DEFAULT_RANGE_DAYS);
     }
 
-    renderGantt(mount, tasks, defaultStart, DEFAULT_RANGE_DAYS);
+    renderGantt(mount, tasks, defaultStart, DEFAULT_RANGE_DAYS, cbId);
   };
 }());
