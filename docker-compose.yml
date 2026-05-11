@@ -1,15 +1,21 @@
 services:
+  caddy:
+    image: caddy:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+
   altinf:
     image: ghcr.io/altainia/altinf:latest
     restart: unless-stopped
-    ports:
-      - "8080:8080"
-      - "8443:8443"
     volumes:
-      # SQLite database and blog posts — persist across deployments
       - ./data:/data
-      # SSL certificates — mount read-only; populate before first run
-      - ./certs:/certs:ro
     environment:
-      # Set only on first run to create the admin user, then remove it.
       - ALTINF_ADMIN_PASSWORD=${ALTINF_ADMIN_PASSWORD:-}
+
+volumes:
+  caddy_data:
