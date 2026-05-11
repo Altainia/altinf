@@ -83,16 +83,12 @@ COPY wt_config.xml /app/wt_config.xml
 
 # /data  → volume for SQLite DB + posts/
 # /certs → volume for cert.pem, key.pem, dh.pem
-VOLUME ["/data", "/certs"]
+VOLUME ["/data"]
 
-EXPOSE 8080 8443
+EXPOSE 8080
 
 ENTRYPOINT ["/app/altinf", \
-    "--config",        "/app/wt_config.xml", \
-    "--docroot",       "/app/resources", \
-    "--approot",       "/data", \
-    "--http-address",  "0.0.0.0", "--http-port",  "8080", \
-    "--https-address", "0.0.0.0", "--https-port", "8443", \
-    "--ssl-certificate",  "/certs/cert.pem", \
-    "--ssl-private-key",  "/certs/key.pem", \
-    "--ssl-tmp-dh",       "/certs/dh.pem"]
+    "--config",       "/app/wt_config.xml", \
+    "--docroot",      "/app/resources", \
+    "--approot",      "/data", \
+    "--http-address", "0.0.0.0", "--http-port", "8080"]
