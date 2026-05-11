@@ -528,6 +528,10 @@ void kanban_task_editor_page::rebuild_history()
 
 void kanban_task_editor_page::rebuild_comments()
 {
+	if(!m_comment_list || !m_comment_compose)
+	{
+		return;
+	}
 	m_comment_list->clear();
 	m_comment_compose->clear();
 
@@ -555,7 +559,6 @@ void kanban_task_editor_page::rebuild_comments()
 
 			if(c.is_deleted)
 			{
-				// Fix 2: show who deleted and when
 				const std::string msg =
 				  "Comment deleted by " + c.deleted_by +
 				  " \xe2\x80\x94 " + format_ts(c.deleted_at);
@@ -585,7 +588,6 @@ void kanban_task_editor_page::rebuild_comments()
 			}
 			body_wrap->addNew<Wt::WText>(body_html, Wt::TextFormat::UnsafeXHTML);
 
-			// Fix 3: "Edited by" meta line
 			if(!c.last_edited_at.empty())
 			{
 				auto* meta = item->addNew<Wt::WText>(
@@ -624,9 +626,8 @@ void kanban_task_editor_page::rebuild_comments()
 				auto* cancel_edit_btn = edit_btns->addNew<Wt::WPushButton>("Cancel");
 				cancel_edit_btn->setStyleClass("editor-btn editor-btn-cancel");
 
-				// Fix 7: edit confirmation for leads acting on another user's comment
 				edit_btn->clicked().connect(
-				  [this, c_author, is_own, body_wrap, edit_area, actions, alive = m_alive] {
+				  [this, c_author, is_own, body_wrap, edit_area, actions] {
 					  if(is_own)
 					  {
 						  body_wrap->hide();
@@ -662,9 +663,8 @@ void kanban_task_editor_page::rebuild_comments()
 					actions->show();
 				});
 
-				// Fix 7: broadcast after saving edit
 				save_edit_btn->clicked().connect(
-				  [this, cid, edit_ta, alive = m_alive] {
+				  [this, cid, edit_ta, save_edit_btn, alive = m_alive] {
 					  if(!*alive)
 					  {
 						  return;
@@ -674,15 +674,15 @@ void kanban_task_editor_page::rebuild_comments()
 					  {
 						  return;
 					  }
+					  save_edit_btn->setDisabled(true);
 					  m_db.edit_comment(cid, m_username, new_body);
 					  live_hub::instance().broadcast(
 					    "task:" + std::to_string(m_task_id) + ":comments");
 					  rebuild_comments();
 				  });
 
-				// Fix 6: delete confirmation dialog
 				del_btn->clicked().connect(
-				  [this, cid, c_author, is_own, alive = m_alive] {
+				  [this, cid, c_author, is_own] {
 					  auto*             d = new Wt::WDialog("Delete Comment");
 					  const std::string msg =
 					    is_own ? "Are you sure you want to delete this comment?" : "This comment was written by " + c_author + ". Are you sure you want to delete it?";
@@ -710,7 +710,6 @@ void kanban_task_editor_page::rebuild_comments()
 		}
 	}
 
-	// Fix 4: hide compose area for archived tasks
 	if(m_existing && m_existing->is_archived)
 	{
 		return;
@@ -724,15 +723,13 @@ void kanban_task_editor_page::rebuild_comments()
 	auto* post_btn = m_comment_compose->addNew<Wt::WPushButton>("Post Comment");
 	post_btn->setStyleClass("editor-btn kb-comment-post-btn");
 
-	// Fix 5: disable Post button when textarea is empty
 	post_btn->setDisabled(true);
 	ta->keyWentUp().connect([ta, post_btn] {
 		post_btn->setDisabled(ta->text().empty());
 	});
 
-	// Fix 7: broadcast after posting
 	post_btn->clicked().connect(
-	  [this, ta, alive = m_alive] {
+	  [this, ta, post_btn, alive = m_alive] {
 		  if(!*alive)
 		  {
 			  return;
@@ -742,6 +739,7 @@ void kanban_task_editor_page::rebuild_comments()
 		  {
 			  return;
 		  }
+		  post_btn->setDisabled(true);
 		  m_db.add_comment(m_task_id, m_username, body);
 		  live_hub::instance().broadcast(
 		    "task:" + std::to_string(m_task_id) + ":comments");
