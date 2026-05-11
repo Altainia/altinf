@@ -1,7 +1,6 @@
 #pragma once
 
 #include "kanban.hpp"
-#include "auth/permission.hpp"
 
 #include <Wt/Dbo/Session.h>
 
@@ -68,13 +67,6 @@ public:
 	void                                 delete_comment(long long comment_id,
 	                                                    const std::string& actor);
 	std::vector<task_comment_entry>      comments_for_task(long long task_id);
-
-	// Permission helpers (is_org_lead pre-computed by the caller)
-	bool can_view_board(long long team_id, const std::string& username,
-	                    permission::flags perms, bool is_org_lead = false);
-	bool can_edit_board(long long team_id, const std::string& username,
-	                    permission::flags perms, bool is_org_lead = false,
-	                    bool is_team_lead = false);
 
 	// Task types
 	long long                      create_task_type(long long          org_id,

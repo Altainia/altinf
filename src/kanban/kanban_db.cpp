@@ -4,8 +4,6 @@
 #include <Wt/Dbo/backend/Sqlite3.h>
 #include <Wt/WDateTime.h>
 
-#include "auth/permission.hpp"
-
 kanban_db::kanban_db(const std::string& db_path)
 {
 	m_dbo.setConnection(std::make_unique<Wt::Dbo::backend::Sqlite3>(db_path));
@@ -605,33 +603,6 @@ std::vector<task_event_entry> kanban_db::history_for_task(long long task_id)
 		out.push_back(std::move(entry));
 	}
 	return out;
-}
-
-// ---- Permission helpers ----
-
-bool kanban_db::can_view_board(long long          team_id,
-                               const std::string& username,
-                               permission::flags  perms,
-                               bool               is_org_lead)
-{
-	if(perms.has_any(permission::admin) || is_org_lead)
-	{
-		return true;
-	}
-	return is_member(team_id, username);
-}
-
-bool kanban_db::can_edit_board(long long          team_id,
-                               const std::string& username,
-                               permission::flags  perms,
-                               bool               is_org_lead,
-                               bool               is_team_lead)
-{
-	if(perms.has_any(permission::admin) || is_org_lead || is_team_lead)
-	{
-		return true;
-	}
-	return false;
 }
 
 // ---- Task types ----

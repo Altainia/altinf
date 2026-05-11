@@ -2,7 +2,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "auth/permission.hpp"
 #include "kanban/kanban_db.hpp"
 
 static kanban_task_entry make_task(long long          team_id,
@@ -275,66 +274,6 @@ TEST_CASE("kanban_db - self_assign records assigned_to history event")
 	CHECK(history[0].changes[0].field_name == "assigned_to");
 	CHECK(history[0].changes[0].old_value == "");
 	CHECK(history[0].changes[0].new_value == "alice");
-}
-
-// ---- permissions ----
-
-TEST_CASE("kanban_db - can_view_board: admin bypasses membership")
-{
-	kanban_db       db{":memory:"};
-	const long long tid = db.create_team("T", 1);
-	CHECK(db.can_view_board(tid, "anyone", permission::admin));
-}
-
-TEST_CASE("kanban_db - can_view_board: org_lead bypasses membership")
-{
-	kanban_db       db{":memory:"};
-	const long long tid = db.create_team("T", 1);
-	CHECK(db.can_view_board(tid, "lead", permission::none, /*is_org_lead=*/true));
-}
-
-TEST_CASE("kanban_db - can_view_board: member can view, non-member cannot")
-{
-	kanban_db       db{":memory:"};
-	const long long tid = db.create_team("T", 1);
-	db.add_member(tid, "alice");
-	CHECK(db.can_view_board(tid, "alice", permission::none));
-	CHECK(!db.can_view_board(tid, "stranger", permission::none));
-}
-
-TEST_CASE("kanban_db - can_edit_board: org_lead has edit rights")
-{
-	kanban_db       db{":memory:"};
-	const long long tid = db.create_team("T", 1);
-	CHECK(db.can_edit_board(tid, "lead", permission::none,
-	                        /*is_org_lead=*/true,
-	                        /*is_team_lead=*/false));
-}
-
-TEST_CASE("kanban_db - can_edit_board: team_lead has edit rights")
-{
-	kanban_db       db{":memory:"};
-	const long long tid = db.create_team("T", 1);
-	db.add_member(tid, "alice");
-	db.set_team_lead(tid, "alice", true);
-	CHECK(db.can_edit_board(tid, "alice", permission::none,
-	                        /*is_org_lead=*/false,
-	                        /*is_team_lead=*/true));
-}
-
-TEST_CASE("kanban_db - can_edit_board: plain member cannot edit")
-{
-	kanban_db       db{":memory:"};
-	const long long tid = db.create_team("T", 1);
-	db.add_member(tid, "alice");
-	CHECK(!db.can_edit_board(tid, "alice", permission::none));
-}
-
-TEST_CASE("kanban_db - can_edit_board: admin always can edit")
-{
-	kanban_db       db{":memory:"};
-	const long long tid = db.create_team("T", 1);
-	CHECK(db.can_edit_board(tid, "anyone", permission::admin));
 }
 
 // ---- remove_member_from_org_teams ----
