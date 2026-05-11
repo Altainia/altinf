@@ -153,6 +153,35 @@ bool altinf_app::resolve_is_org_lead(long long org_id)
 	return m_org_db->is_org_lead(org_id, m_session.username);
 }
 
+team_cap::flags altinf_app::resolve_team_caps(long long team_id, long long org_id)
+{
+	if(m_session.permissions.has_any(permission::admin))
+	{
+		return team_cap::admin_caps;
+	}
+	if(!m_session.logged_in)
+	{
+		return {};
+	}
+	if(m_org_db->is_org_lead(org_id, m_session.username))
+	{
+		return team_cap::org_lead_caps;
+	}
+	if(m_kanban_db->is_team_lead(team_id, m_session.username))
+	{
+		return team_cap::team_lead_caps;
+	}
+	if(m_kanban_db->is_member(team_id, m_session.username))
+	{
+		return team_cap::team_member_caps;
+	}
+	if(m_org_db->is_org_member(org_id, m_session.username))
+	{
+		return team_cap::org_viewer_caps;
+	}
+	return {};
+}
+
 void altinf_app::show_forbidden()
 {
 	m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);

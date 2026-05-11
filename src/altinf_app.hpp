@@ -5,6 +5,7 @@
 #include "blog/blog_post.hpp"
 #include "kanban/kanban.hpp"
 #include "kanban/kanban_db.hpp"
+#include "kanban/team_cap.hpp"
 #include "links/link.hpp"
 #include "links/link_db.hpp"
 #include "org/org_db.hpp"
@@ -52,4 +53,5 @@ private:
 
 	// Compute lead status for a team, given a pre-resolved org lead flag.
 	bool resolve_is_org_lead(long long org_id);
+	team_cap::flags resolve_team_caps(long long team_id, long long org_id);
 };
