@@ -114,7 +114,7 @@ kanban_task_editor_page::kanban_task_editor_page(
 	{
 		m_title->setText(existing->title);
 	}
-	m_title->setReadOnly(!can_edit && existing != nullptr);
+	m_title->setReadOnly(!can_edit);
 
 	m_description = form->addNew<Wt::WTextArea>();
 	m_description->setPlaceholderText("Description (optional)");
