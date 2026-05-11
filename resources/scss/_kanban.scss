@@ -626,3 +626,42 @@
 }
 
 .kb-comment-post-btn { align-self: flex-start; }
+
+// ── Task popup ─────────────────────────────────────────────────────────────
+
+.kb-popup-field {
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
+  padding:       0.2rem 0.3rem;
+  transition:    background-color 0.2s;
+
+  &--dirty {
+    background-color: hsla(48, 100%, 50%, 0.15);
+    border:           1px solid hsla(48, 100%, 40%, 0.4);
+  }
+}
+
+.kb-popup-display {
+  cursor: pointer;
+
+  &:hover { text-decoration: underline dotted; }
+}
+
+.kb-popup-stale-banner {
+  align-items:      center;
+  background-color: hsla(0, 90%, 50%, 0.1);
+  border:           1px solid hsla(0, 90%, 45%, 0.35);
+  border-radius:    var(--radius);
+  display:          flex;
+  gap:              0.6rem;
+  margin-bottom:    0.75rem;
+  padding:          0.45rem 0.75rem;
+}
+
+.kb-popup-full-link {
+  color:       var(--color-muted);
+  float:       right;
+  font-size:   0.8rem;
+  font-weight: 400;
+  margin-top:  0.2rem;
+}

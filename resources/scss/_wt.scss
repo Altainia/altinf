@@ -75,3 +75,14 @@
 
   .Wt-cal-oom { color: var(--color-muted); }
 }
+
+.Wt-dialog.kb-task-popup {
+  min-width: 560px;
+  max-width: 720px;
+
+  .body {
+    overflow-y: auto;
+    max-height: calc(85vh - 130px);
+    padding:    1rem;
+  }
+}
