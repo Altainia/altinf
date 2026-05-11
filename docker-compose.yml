@@ -1,6 +1,6 @@
 services:
   altinf:
-    build: .
+    image: ghcr.io/altainia/altinf:latest
     restart: unless-stopped
     ports:
       - "8080:8080"
