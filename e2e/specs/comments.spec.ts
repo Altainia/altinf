@@ -36,12 +36,10 @@ async function openTaskEditor(page: Page, title: string) {
 }
 
 async function postComment(page: Page, body: string) {
-  const ta = page.locator('.kb-comment-compose textarea');
-  await ta.click();
-  await ta.pressSequentially(body);
-  // Wait for the Wt keyWentUp round-trip to enable the Post button
-  await expect(page.locator('.kb-comment-post-btn')).toBeEnabled();
-  await page.locator('.kb-comment-post-btn').click();
+  await page.locator('.kb-comment-compose textarea').pressSequentially(body);
+  const postBtn = page.locator('.kb-comment-post-btn');
+  await expect(postBtn).toBeEnabled();
+  await postBtn.click();
   await expect(page.locator('.kb-comment-item').last()).toBeVisible();
 }
 
@@ -117,6 +115,7 @@ test('comments: editing own comment updates body and shows "Edited by" label', a
 
   // Inline textarea appears
   await expect(page.locator('.kb-comment-edit-area textarea')).toBeVisible();
+  // .fill() is safe here — the Save button has no enabled/disabled state tied to keyWentUp
   await page.locator('.kb-comment-edit-area textarea').fill('Revised body');
   await page.locator('.kb-comment-edit-area button', { hasText: 'Save' }).click();
 
@@ -233,9 +232,10 @@ test('comments: comment edited in session B updates in session A without reload'
   await goToBoard(pageB);
   await openTaskEditor(pageB, 'LiveCommentTask');
 
-  // B edits the comment — scope the edit area to the specific comment item
-  const editItem = pageB.locator('.kb-comment-item', { hasText: 'Original from A' });
+  // B edits the comment — use .last() so a retry (with a leftover comment) picks the newest one
+  const editItem = pageB.locator('.kb-comment-item', { hasText: 'Original from A' }).last();
   await editItem.locator('button', { hasText: 'Edit' }).click();
+  // .fill() is safe here — the Save button has no enabled/disabled state tied to keyWentUp
   await editItem.locator('.kb-comment-edit-area textarea').fill('Edited by B');
   await editItem.locator('.kb-comment-edit-area button', { hasText: 'Save' }).click();
 
