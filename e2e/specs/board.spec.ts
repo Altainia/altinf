@@ -136,7 +136,7 @@ test('admin sees + New Task button', async ({ page }) => {
 
 test('admin sees Manage Team link', async ({ page }) => {
   await loginAndGoToBoard(page);
-  await expect(page.locator('.kb-manage-link')).toBeVisible();
+  await expect(page.locator('.kb-manage-link', { hasText: 'Manage Team' })).toBeVisible();
 });
 
 test('board header shows team name', async ({ page }) => {
@@ -536,13 +536,13 @@ test('Gantt view renders today line and label when a task spans today', async ({
 
 test('Manage Team link opens team management page', async ({ page }) => {
   await loginAndGoToBoard(page);
-  await page.locator('.kb-manage-link').click();
+  await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
 });
 
 test('team page shows the current team name in the rename field', async ({ page }) => {
   await loginAndGoToBoard(page);
-  await page.locator('.kb-manage-link').click();
+  await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
   // The default name is "Team"; just assert the field is non-empty.
   const nameInput = page.locator('.kb-team-name-row input');
   await expect(nameInput).not.toHaveValue('');
@@ -550,7 +550,7 @@ test('team page shows the current team name in the rename field', async ({ page 
 
 test('team name can be renamed and the new name appears on the board', async ({ page }) => {
   await loginAndGoToBoard(page);
-  await page.locator('.kb-manage-link').click();
+  await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
 
   const nameInput = page.locator('.kb-team-name-row input');
   await nameInput.fill('Engineering');
@@ -563,7 +563,7 @@ test('team name can be renamed and the new name appears on the board', async ({ 
 
 test('member can be added to the team', async ({ page }) => {
   await loginAndGoToBoard(page);
-  await page.locator('.kb-manage-link').click();
+  await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
 
   // Scope to the team block — the org-members section also has .kb-member-row for admin.
@@ -585,7 +585,7 @@ test('added member appears in the Assigned to dropdown', async ({ page }) => {
 
   // Ensure admin is a team member.  Scope to .kb-team-block to avoid matching
   // the org-members section row which also contains 'admin'.
-  await page.locator('.kb-manage-link').click();
+  await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
   const teamMemberRow = page.locator('.kb-team-block .kb-member-row', { hasText: 'admin' });
   if (!(await teamMemberRow.isVisible())) {
@@ -604,7 +604,7 @@ test('added member appears in the Assigned to dropdown', async ({ page }) => {
 
 test('member can be removed from the team', async ({ page }) => {
   await loginAndGoToBoard(page);
-  await page.locator('.kb-manage-link').click();
+  await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
 
   // Scope to .kb-team-block to avoid matching the org-members section row.
@@ -622,7 +622,7 @@ test('member can be removed from the team', async ({ page }) => {
 
 test('team page back-to-board link returns to the board', async ({ page }) => {
   await loginAndGoToBoard(page);
-  await page.locator('.kb-manage-link').click();
+  await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
   await page.locator('.kb-back-link').click();
   await expect(page.locator('.kb-page')).toBeVisible();

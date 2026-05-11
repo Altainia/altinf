@@ -318,7 +318,7 @@ test('org manage: archive team disappears from second lead\'s page', async ({ br
   await goToManage(bobPage);
 
   await adminPage.locator('.kb-team-block:has(input[value="RenamedLiveTeam"])')
-    .getByRole('button', { name: 'Archive team' }).click();
+    .getByRole('button', { name: 'Archive' }).click();
 
   await expect(bobPage.locator('.kb-team-block:has(input[value="RenamedLiveTeam"])')).not.toBeVisible();
 

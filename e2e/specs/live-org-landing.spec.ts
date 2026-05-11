@@ -133,7 +133,7 @@ test('org landing: team archived by lead disappears from member\'s landing page'
   await goToLanding(frankPage);
 
   await adminPage.locator('.kb-team-block:has(input[value="NewLandingTeam"])')
-    .getByRole('button', { name: 'Archive team' }).click();
+    .getByRole('button', { name: 'Archive' }).click();
 
   await expect(frankPage.locator('.org-team-row', { hasText: 'NewLandingTeam' })).not.toBeVisible();
 
