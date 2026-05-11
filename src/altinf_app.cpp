@@ -329,10 +329,6 @@ void altinf_app::handle_path(const std::string& path)
 			return;
 		}
 
-		const bool is_org_lead  = resolve_is_org_lead(team->org_id);
-		const bool is_team_lead = m_kanban_db->is_team_lead(team_id, m_session.username);
-		const bool is_lead      = is_org_lead || is_team_lead;
-
 		const auto caps = resolve_team_caps(team_id, team->org_id);
 
 		const std::string suffix = suffix_after_id(path, 7);
@@ -359,7 +355,7 @@ void altinf_app::handle_path(const std::string& path)
 		}
 		else if(suffix == "/task/new")
 		{
-			if(!is_lead)
+			if(!caps.has_any(team_cap::create_task))
 			{
 				show_forbidden();
 				return;
@@ -367,7 +363,7 @@ void altinf_app::handle_path(const std::string& path)
 			const auto members = m_kanban_db->members_for_team(team_id);
 			const auto types   = m_kanban_db->types_for_org(team->org_id);
 			m_content->addNew<kanban_task_editor_page>(
-			  *m_kanban_db, *m_org_db, team_id, m_session, is_lead, nullptr, members, types, [this, team_id] {
+			  *m_kanban_db, *m_org_db, team_id, m_session, caps, nullptr, members, types, [this, team_id] {
 				  setInternalPath("/board/" + std::to_string(team_id), true);
 			  });
 		}
@@ -385,23 +381,27 @@ void altinf_app::handle_path(const std::string& path)
 				show_not_found("Task not found.");
 				return;
 			}
-			if(!m_kanban_db->can_view_board(
-			     team_id, m_session.username, m_session.permissions, is_org_lead))
+			if(!caps.has_any(team_cap::view_board))
 			{
 				show_forbidden();
+				return;
+			}
+			if(opt->is_archived && !caps.has_any(team_cap::view_archived))
+			{
+				show_not_found("Task not found.");
 				return;
 			}
 			m_edit_task        = opt;
 			const auto members = m_kanban_db->members_for_team(team_id);
 			const auto types   = m_kanban_db->types_for_org(team->org_id);
 			m_content->addNew<kanban_task_editor_page>(
-			  *m_kanban_db, *m_org_db, team_id, m_session, is_lead, &(*m_edit_task), members, types, [this, team_id] {
+			  *m_kanban_db, *m_org_db, team_id, m_session, caps, &(*m_edit_task), members, types, [this, team_id] {
 				  setInternalPath("/board/" + std::to_string(team_id), true);
 			  });
 		}
 		else if(suffix == "/archive")
 		{
-			if(!is_lead)
+			if(!caps.has_any(team_cap::view_archived))
 			{
 				show_forbidden();
 				return;
@@ -411,7 +411,7 @@ void altinf_app::handle_path(const std::string& path)
 		}
 		else if(suffix == "/manage")
 		{
-			if(!is_lead)
+			if(!caps.has_any(team_cap::manage_team))
 			{
 				show_forbidden();
 				return;

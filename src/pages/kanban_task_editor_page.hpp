@@ -3,6 +3,7 @@
 #include "auth/session_data.hpp"
 #include "kanban/kanban.hpp"
 #include "kanban/kanban_db.hpp"
+#include "kanban/team_cap.hpp"
 #include "org/org_db.hpp"
 
 #include <Wt/WComboBox.h>
@@ -26,7 +27,7 @@ public:
                             org_db&                             odb,
                             long long                           team_id,
                             const session_data&                 session,
-                            bool                                is_lead,
+                            team_cap::flags                     caps,
                             const kanban_task_entry*            existing,
                             const std::vector<std::string>&     members,
                             const std::vector<task_type_entry>& types,
@@ -39,7 +40,7 @@ private:
     org_db&                  m_odb;
     long long                m_team_id;
     std::string              m_username;
-    bool                     m_is_lead;
+    team_cap::flags          m_caps;
     const kanban_task_entry* m_existing;
     std::function<void()>    m_on_save;
 

@@ -60,7 +60,7 @@ kanban_task_editor_page::kanban_task_editor_page(
   org_db&                             odb,
   long long                           team_id,
   const session_data&                 session,
-  bool                                is_lead,
+  team_cap::flags                     caps,
   const kanban_task_entry*            existing,
   const std::vector<std::string>&     members,
   const std::vector<task_type_entry>& types,
@@ -69,7 +69,7 @@ kanban_task_editor_page::kanban_task_editor_page(
   m_odb{odb},
   m_team_id{team_id},
   m_username{session.username},
-  m_is_lead{is_lead},
+  m_caps{caps},
   m_existing{existing},
   m_on_save{std::move(on_save)}
 {
@@ -77,9 +77,9 @@ kanban_task_editor_page::kanban_task_editor_page(
 
 	const bool        is_new           = (existing == nullptr);
 	const std::string current_assignee = existing ? existing->assigned_to : "";
-	const bool        locked_out =
-	  !is_lead && !current_assignee.empty() &&
-	  current_assignee != session.username;
+	const bool        can_edit         = caps.has_any(team_cap::edit_task_fields) && (!existing || !existing->is_archived);
+	const bool        can_assign       = caps.has_any(team_cap::reassign_task) && (!existing || !existing->is_archived);
+	const bool        locked_out       = !can_assign && !current_assignee.empty() && current_assignee != session.username;
 
 	addNew<Wt::WText>(
 	  is_new ? "<h1>New Task</h1>" : "<h1>Edit Task</h1>",
@@ -114,7 +114,7 @@ kanban_task_editor_page::kanban_task_editor_page(
 	{
 		m_title->setText(existing->title);
 	}
-	m_title->setReadOnly(!is_lead && existing != nullptr);
+	m_title->setReadOnly(!can_edit && existing != nullptr);
 
 	m_description = form->addNew<Wt::WTextArea>();
 	m_description->setPlaceholderText("Description (optional)");
@@ -123,6 +123,7 @@ kanban_task_editor_page::kanban_task_editor_page(
 	{
 		m_description->setText(existing->description);
 	}
+	m_description->setReadOnly(!can_edit);
 
 	// ── Assignment & status ───────────────────────────────────────────────────
 	form->addNew<Wt::WText>("<h2>Assignment</h2>", Wt::TextFormat::UnsafeXHTML);
@@ -150,6 +151,7 @@ kanban_task_editor_page::kanban_task_editor_page(
 			  static_cast<int>(std::distance(k_status_vals.begin(), it)));
 		}
 	}
+	m_status->setDisabled(!can_edit);
 
 	auto* assignee_wrap = row->addNew<Wt::WContainerWidget>();
 	assignee_wrap->setStyleClass("kb-editor-field-wrap");
@@ -162,9 +164,8 @@ kanban_task_editor_page::kanban_task_editor_page(
 	m_assignee_values.push_back(""); // index 0 = unassigned
 	m_assigned_to->addItem("(unassigned)");
 
-	if(is_lead)
+	if(can_assign)
 	{
-		// Full member list.
 		for(const auto& m: members)
 		{
 			m_assignee_values.push_back(m);
@@ -173,7 +174,6 @@ kanban_task_editor_page::kanban_task_editor_page(
 	}
 	else
 	{
-		// Only the current user can appear as an option.
 		m_assignee_values.push_back(session.username);
 		m_assigned_to->addItem(session.username);
 	}
@@ -221,6 +221,7 @@ kanban_task_editor_page::kanban_task_editor_page(
 	{
 		m_start_date->setDate(Wt::WDate::currentDate());
 	}
+	m_start_date->setReadOnly(!can_edit);
 	auto* clear_start = start_row->addNew<Wt::WPushButton>("Clear");
 	clear_start->setStyleClass("kb-date-clear");
 	clear_start->clicked().connect([this] { m_start_date->setText(Wt::WString{}); });
@@ -239,6 +240,7 @@ kanban_task_editor_page::kanban_task_editor_page(
 	{
 		m_end_date->setDate(existing->end_date);
 	}
+	m_end_date->setReadOnly(!can_edit);
 	auto* clear_end = end_row->addNew<Wt::WPushButton>("Clear");
 	clear_end->setStyleClass("kb-date-clear");
 	clear_end->clicked().connect([this] { m_end_date->setText(Wt::WString{}); });
@@ -298,6 +300,13 @@ kanban_task_editor_page::kanban_task_editor_page(
 	{
 		add_chip(ty.id, ty.name, ty.color);
 	}
+	if(!can_edit)
+	{
+		for(auto* chip: m_type_chips)
+		{
+			chip->setDisabled(true);
+		}
+	}
 
 	// ── Comments (inline, below type chips) ──────────────────────────────────
 	if(existing)
@@ -307,8 +316,11 @@ kanban_task_editor_page::kanban_task_editor_page(
 		comment_section->addNew<Wt::WText>("<h2>Comments</h2>", Wt::TextFormat::UnsafeXHTML);
 		m_comment_list = comment_section->addNew<Wt::WContainerWidget>();
 		m_comment_list->setStyleClass("kb-comment-list");
-		m_comment_compose = comment_section->addNew<Wt::WContainerWidget>();
-		m_comment_compose->setStyleClass("kb-comment-compose");
+		if(caps.has_any(team_cap::comment))
+		{
+			m_comment_compose = comment_section->addNew<Wt::WContainerWidget>();
+			m_comment_compose->setStyleClass("kb-comment-compose");
+		}
 	}
 
 	// ── Actions ───────────────────────────────────────────────────────────────
@@ -323,23 +335,13 @@ kanban_task_editor_page::kanban_task_editor_page(
 	m_save_btn->setStyleClass("editor-btn");
 	m_save_btn->clicked().connect([this] { save(); });
 
-	if(existing && existing->is_archived)
+	if(!can_edit && !is_new)
 	{
-		m_title->setReadOnly(true);
-		m_description->setReadOnly(true);
-		m_status->setDisabled(true);
-		m_assigned_to->setDisabled(true);
-		m_start_date->setReadOnly(true);
-		m_end_date->setReadOnly(true);
-		for(auto* chip: m_type_chips)
-		{
-			chip->setDisabled(true);
-		}
 		m_save_btn->hide();
 	}
 
-	// Archive/Unarchive only for leads editing existing tasks.
-	if(!is_new && is_lead)
+	// Archive/Unarchive only for users with archive_task capability.
+	if(!is_new && caps.has_any(team_cap::archive_task))
 	{
 		if(existing && existing->is_archived)
 		{
@@ -528,12 +530,15 @@ void kanban_task_editor_page::rebuild_history()
 
 void kanban_task_editor_page::rebuild_comments()
 {
-	if(!m_comment_list || !m_comment_compose)
+	if(!m_comment_list)
 	{
 		return;
 	}
 	m_comment_list->clear();
-	m_comment_compose->clear();
+	if(m_comment_compose)
+	{
+		m_comment_compose->clear();
+	}
 
 	if(m_task_id == 0)
 	{
@@ -597,7 +602,9 @@ void kanban_task_editor_page::rebuild_comments()
 				meta->setStyleClass("kb-comment-meta");
 			}
 
-			const bool can_act = (c.author == m_username) || m_is_lead;
+			const bool can_act = m_caps.has_any(team_cap::comment) &&
+			                     ((c.author == m_username) ||
+			                      m_caps.has_any(team_cap::manage_team));
 			if(can_act)
 			{
 				auto* actions = item->addNew<Wt::WContainerWidget>();
@@ -710,7 +717,7 @@ void kanban_task_editor_page::rebuild_comments()
 		}
 	}
 
-	if(m_existing && m_existing->is_archived)
+	if(!m_comment_compose || (m_existing && m_existing->is_archived))
 	{
 		return;
 	}
@@ -750,6 +757,13 @@ void kanban_task_editor_page::rebuild_comments()
 
 void kanban_task_editor_page::save()
 {
+	if(m_existing &&
+	   (!m_caps.has_any(team_cap::edit_task_fields) || m_existing->is_archived))
+	{
+		m_status_msg->setText("You do not have permission to edit this task.");
+		return;
+	}
+
 	const std::string title = m_title->text().toUTF8();
 	if(title.empty())
 	{
@@ -766,7 +780,7 @@ void kanban_task_editor_page::save()
 
 	// Assignment lock — enforced server-side even if the UI disables the widget.
 	const std::string old_assignee = m_existing ? m_existing->assigned_to : "";
-	if(!m_is_lead && new_assignee != old_assignee)
+	if(!m_caps.has_any(team_cap::reassign_task) && new_assignee != old_assignee)
 	{
 		// A non-lead may only unassign themselves; they cannot assign to others.
 		if(new_assignee != "" && new_assignee != m_username)
