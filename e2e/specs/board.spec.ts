@@ -265,18 +265,20 @@ test('created task card shows Edit button', async ({ page }) => {
 
 // ── task editing ──────────────────────────────────────────────────────────────
 
-test('Edit button opens editor with prefilled title', async ({ page }) => {
+test('Edit button opens task popup with task title', async ({ page }) => {
   await loginAndGoToBoard(page);
   await createTask(page, 'Board Test Task Eta');
   await page.locator('.kb-card', { hasText: 'Board Test Task Eta' }).locator('.kb-card-edit').click();
-  await expect(page.locator('.kb-editor-page')).toBeVisible();
-  await expect(page.locator('input[placeholder="Task title"]')).toHaveValue('Board Test Task Eta');
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toContainText('Board Test Task Eta');
 });
 
 test('edit editor shows Delete button for existing task', async ({ page }) => {
   await loginAndGoToBoard(page);
   await createTask(page, 'Board Test Task Theta');
   await page.locator('.kb-card', { hasText: 'Board Test Task Theta' }).locator('.kb-card-edit').click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await page.locator('.kb-popup-full-link').click();
   await expect(page.locator('.editor-btn-danger')).toBeVisible();
 });
 
@@ -284,6 +286,8 @@ test('saving edited task updates its card on the board', async ({ page }) => {
   await loginAndGoToBoard(page);
   await createTask(page, 'Board Test Task Iota');
   await page.locator('.kb-card', { hasText: 'Board Test Task Iota' }).locator('.kb-card-edit').click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await page.locator('.kb-popup-full-link').click();
   await page.locator('input[placeholder="Task title"]').fill('Board Test Task Iota Renamed');
   await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
   await expect(page.locator('.kb-board')).toBeVisible();
@@ -295,6 +299,8 @@ test('cancel in edit editor returns to board without changing the task', async (
   await loginAndGoToBoard(page);
   await createTask(page, 'Board Test Task Kappa');
   await page.locator('.kb-card', { hasText: 'Board Test Task Kappa' }).locator('.kb-card-edit').click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await page.locator('.kb-popup-full-link').click();
   await page.locator('input[placeholder="Task title"]').fill('Should Not Appear');
   await page.locator('.editor-btn-row .editor-btn-cancel').click();
   await expect(page.locator('.kb-page')).toBeVisible();
@@ -306,6 +312,8 @@ test('Delete button removes the task from the board', async ({ page }) => {
   await loginAndGoToBoard(page);
   await createTask(page, 'Board Test Task Lambda');
   await page.locator('.kb-card', { hasText: 'Board Test Task Lambda' }).locator('.kb-card-edit').click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await page.locator('.kb-popup-full-link').click();
   await page.locator('.editor-btn-danger').click();
   await expect(page.locator('.kb-board')).toBeVisible();
   await expect(page.locator('.kb-card', { hasText: 'Board Test Task Lambda' })).not.toBeVisible();
@@ -322,6 +330,8 @@ test('Clear button on start date removes it after saving', async ({ page }) => {
   await expect(card.locator('.kb-card-dates')).toHaveText('2025-03-01 – 2025-03-31');
 
   await card.locator('.kb-card-edit').click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await page.locator('.kb-popup-full-link').click();
   await expect(page.locator('.kb-editor-page')).toBeVisible();
 
   await page.locator('.kb-editor-field-wrap').filter({ hasText: 'Start date' }).locator('.kb-date-clear').click();
@@ -344,6 +354,8 @@ test('Clear button on end date removes it after saving', async ({ page }) => {
   await expect(card.locator('.kb-card-dates')).toHaveText('2025-04-01 – 2025-04-30');
 
   await card.locator('.kb-card-edit').click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await page.locator('.kb-popup-full-link').click();
   await expect(page.locator('.kb-editor-page')).toBeVisible();
 
   await page.locator('.kb-editor-field-wrap').filter({ hasText: 'End date' }).locator('.kb-date-clear').click();
@@ -365,6 +377,8 @@ test('clearing both dates removes the date row from the card', async ({ page }) 
   await expect(card.locator('.kb-card-dates')).toHaveText('2025-05-01 – 2025-05-31');
 
   await card.locator('.kb-card-edit').click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await page.locator('.kb-popup-full-link').click();
   await expect(page.locator('.kb-editor-page')).toBeVisible();
 
   await page.locator('.kb-editor-field-wrap').filter({ hasText: 'Start date' }).locator('.kb-date-clear').click();

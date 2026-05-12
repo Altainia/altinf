@@ -20,6 +20,8 @@ async function navigateToGantt(page: Page, orgName: string) {
 
 async function openTaskEditor(page: Page, title: string) {
   await page.locator('.kb-card', { hasText: title }).locator('.kb-card-edit').click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await page.locator('.kb-popup-full-link').click();
   await expect(page.locator('.kb-editor-page')).toBeVisible();
 }
 

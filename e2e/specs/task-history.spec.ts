@@ -36,6 +36,8 @@ async function createTask(page: Page, title: string) {
 /** Open the edit editor for a task card. */
 async function openTaskEditor(page: Page, title: string) {
   await page.locator('.kb-card', { hasText: title }).first().locator('.kb-card-edit').click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await page.locator('.kb-popup-full-link').click();
   await expect(page.locator('.kb-editor-page')).toBeVisible();
 }
 
