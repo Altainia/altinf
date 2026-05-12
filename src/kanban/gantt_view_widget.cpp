@@ -48,19 +48,23 @@ gantt_view_widget::gantt_view_widget(std::vector<kanban_task_entry>          tas
 	setStyleClass("gv-wrap");
 
 	auto* cb = addNew<Wt::WLineEdit>();
-	cb->setPositionScheme(Wt::PositionScheme::Absolute);
-	cb->setOffsets(-9999, Wt::Side::Left);
+	cb->setStyleClass("kb-cb-hidden");
 	m_cb_id = cb->id();
 	cb->changed().connect([this, cb] {
 		const std::string p = cb->text().toUTF8();
 		if(p.rfind("EDIT:", 0) == 0 && m_on_edit)
 		{
+			long long tid = 0;
 			try
 			{
-				m_on_edit(std::stoll(p.substr(5)));
+				tid = std::stoll(p.substr(5));
 			}
 			catch(...)
-			{}
+			{
+				cb->setText(Wt::WString{});
+				return;
+			} // malformed payload
+			m_on_edit(tid);
 		}
 		cb->setText(Wt::WString{});
 	});
