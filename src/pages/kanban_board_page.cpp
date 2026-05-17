@@ -94,7 +94,7 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 		  m_type_colors,
 		  [this](long long tid) {
 			  new task_popup_widget(
-			    m_db, m_odb, tid, m_session, m_caps, m_type_colors, m_team_id);
+			    m_db, m_odb, tid, m_session, m_caps, m_team_id);
 		  });
 	}
 	else
@@ -117,7 +117,7 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 		  },
 		  [this](long long tid) {
 			  new task_popup_widget(
-			    m_db, m_odb, tid, m_session, m_caps, m_type_colors, m_team_id);
+			    m_db, m_odb, tid, m_session, m_caps, m_team_id);
 		  });
 	}
 
