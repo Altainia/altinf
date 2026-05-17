@@ -130,6 +130,7 @@
   cursor:         pointer;
   transition:     opacity 0.15s, border-color 0.15s;
 
+  &:hover { border-color: var(--color-accent); }
   &[draggable="true"] { cursor: grab; }
   &[draggable="true"]:active { cursor: grabbing; }
   &--dragging { opacity: 0.45; }

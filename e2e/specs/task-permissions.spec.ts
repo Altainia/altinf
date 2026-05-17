@@ -231,6 +231,19 @@ test('perm_orgonly: archived task URL returns not-found', async ({ browser }) =>
   await ctx.close();
 });
 
+test('perm_orgonly: can open the task popup (read-only)', async ({ browser }) => {
+  const ctx  = await browser.newContext();
+  const page = await ctx.newPage();
+  await loginAs(page, 'perm_orgonly', 'permpass');
+  await page.goto(boardUrl);
+  await expect(page.locator('.kb-board')).toBeVisible();
+  await page.locator('.kb-card').first().click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await page.locator('.kb-task-popup .editor-btn-cancel').click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeHidden();
+  await ctx.close();
+});
+
 // ── perm_outsider tests ───────────────────────────────────────────────────────
 
 test('perm_outsider: board URL is forbidden', async ({ browser }) => {
