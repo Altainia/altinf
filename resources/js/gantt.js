@@ -305,19 +305,27 @@
           'fill:' + barFill + ';opacity:0.88');
         bar.setAttribute('rx', 3);
         bar.setAttribute('class', 'gantt-bar');
+        svg.appendChild(bar);
+
         if (cbId) {
-          bar.style.cursor = 'pointer';
+          var hitRect = svgEl('rect');
+          hitRect.setAttribute('x', 0);
+          hitRect.setAttribute('y', ry);
+          hitRect.setAttribute('width', LABEL_W);
+          hitRect.setAttribute('height', ROW_H);
+          hitRect.setAttribute('style', 'fill:transparent;cursor:pointer');
+          hitRect.setAttribute('class', 'gantt-label-hit');
           (function (taskId) {
-            bar.addEventListener('click', function () {
-              var input = document.getElementById(cbId);
-              if (input) {
-                input.value = 'EDIT:' + taskId;
-                input.dispatchEvent(new Event('change'));
+            hitRect.addEventListener('click', function () {
+              var inp = document.getElementById(cbId);
+              if (inp) {
+                inp.value = 'EDIT:' + taskId;
+                inp.dispatchEvent(new Event('change'));
               }
             });
           }(task.id));
+          svg.appendChild(hitRect);
         }
-        svg.appendChild(bar);
 
         svg.appendChild(svgLine(0, ry + ROW_H, svgW, ry + ROW_H,
           'stroke:var(--color-border);stroke-width:0.5'));

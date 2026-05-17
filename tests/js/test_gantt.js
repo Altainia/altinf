@@ -376,11 +376,12 @@ test('no-start no-end task is rendered with fades on both sides', function () {
 
 console.log('\nEDIT callback');
 
-test('clicking a task bar fires EDIT:<id> on the callback input', function () {
+// ── Test: bar click no longer fires callback ──────────────────────────────
+test('gantt bar click does not trigger EDIT callback', function () {
   const dom = new JSDOM(
     '<!DOCTYPE html><body>' +
-    '<input id="cb-test" style="position:absolute;left:-9999px">' +
-    '<div id="gv-mount-test"></div>' +
+    '<input id="cb-test2" style="position:absolute;left:-9999px">' +
+    '<div id="gv-mount2"></div>' +
     '</body>',
     { runScripts: 'dangerously' }
   );
@@ -388,26 +389,56 @@ test('clicking a task bar fires EDIT:<id> on the callback input', function () {
   window.eval(GANTT_SRC);
 
   let fired = '';
-  dom.window.document.getElementById('cb-test')
+  dom.window.document.getElementById('cb-test2')
     .addEventListener('change', function () { fired = this.value; });
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tasks = [{
-    id: 77,
-    title: 'Bar Task',
-    assigned_to: '',
-    color: '#aabbcc',
+    id: 77, title: 'Bar Task', assigned_to: '', color: '#aabbcc',
     start_date: isoDate(addDays(today, -1)),
     end_date:   isoDate(addDays(today, 5))
   }];
 
-  dom.window.initGantt('gv-mount-test', tasks, 'cb-test');
+  dom.window.initGantt('gv-mount2', tasks, 'cb-test2');
 
-  const bar = dom.window.document.querySelector('#gv-mount-test .gantt-bar');
-  assert(bar !== null, 'gantt-bar element must exist in the SVG');
+  const bar = dom.window.document.querySelector('#gv-mount2 .gantt-bar');
+  assert(bar !== null, 'gantt-bar element must exist');
   bar.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
-  assert(fired === 'EDIT:77', 'expected EDIT:77, got "' + fired + '"');
+  assert(fired === '', 'bar click must not fire callback, got "' + fired + '"');
+});
+
+// ── Test: label hit-rect click fires EDIT callback ────────────────────────
+test('gantt label hit-rect click triggers EDIT callback', function () {
+  const dom = new JSDOM(
+    '<!DOCTYPE html><body>' +
+    '<input id="cb-test3" style="position:absolute;left:-9999px">' +
+    '<div id="gv-mount3"></div>' +
+    '</body>',
+    { runScripts: 'dangerously' }
+  );
+  const { window } = dom;
+  window.eval(GANTT_SRC);
+
+  let fired = '';
+  dom.window.document.getElementById('cb-test3')
+    .addEventListener('change', function () { fired = this.value; });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tasks = [{
+    id: 88, title: 'Label Task', assigned_to: '', color: '#aabbcc',
+    start_date: isoDate(addDays(today, -1)),
+    end_date:   isoDate(addDays(today, 5))
+  }];
+
+  dom.window.initGantt('gv-mount3', tasks, 'cb-test3');
+
+  // The label hit-rect is the <rect> with class 'gantt-label-hit'
+  const hit = dom.window.document.querySelector('#gv-mount3 .gantt-label-hit');
+  assert(hit !== null, 'gantt-label-hit rect must exist');
+  hit.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+  assert(fired === 'EDIT:88', 'expected EDIT:88, got "' + fired + '"');
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────
