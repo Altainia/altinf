@@ -489,7 +489,7 @@ task_editor_form_widget::task_editor_form_widget(
 					c->removeStyleClass("selected");
 				}
 				chip->addStyleClass("selected");
-				const bool same_as_orig = (!m_task_id ? false : chip_id == m_original.type_id);
+				const bool same_as_orig = (chip_id == m_original.type_id);
 				if(same_as_orig)
 				{
 					unmark_field_dirty("type", nullptr);
