@@ -162,3 +162,136 @@ test('direct URL navigation to full editor still works', async ({ page }) => {
   await expect(page.locator('.kb-editor-page')).toBeVisible();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeHidden();
 });
+
+test('blur with no change reverts field to display mode', async ({ page }) => {
+  await loginAs(page, 'admin', 'testpass');
+  await page.goto(teamUrl);
+  await expect(page.locator('.kb-board')).toBeVisible();
+  await page.locator('.kb-card').first().click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  // Click display to enter edit mode
+  const display = page.locator('.kb-task-popup .kb-popup-display').first();
+  await display.click();
+  const input = page.locator('.kb-task-popup input[type="text"]').first();
+  await expect(input).toBeVisible();
+  // Tab away without changing value
+  await input.press('Tab');
+  // Display should reappear, save button must remain disabled
+  await expect(display).toBeVisible();
+  await expect(input).toBeHidden();
+  const saveBtn = page.locator('.kb-task-popup .editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)');
+  await expect(saveBtn).toBeDisabled();
+});
+
+test('close with pending changes shows confirmation dialog', async ({ page }) => {
+  await loginAs(page, 'admin', 'testpass');
+  await page.goto(teamUrl);
+  await expect(page.locator('.kb-board')).toBeVisible();
+  await page.locator('.kb-card').first().click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  // Make a change
+  await page.locator('.kb-task-popup .kb-popup-display').first().click();
+  await page.locator('.kb-task-popup input[type="text"]').first().fill('DirtyTitle');
+  await page.locator('.kb-task-popup input[type="text"]').first().press('Tab');
+  // Click Close button
+  await page.locator('.kb-task-popup .editor-btn-cancel').click();
+  // Confirmation dialog appears
+  await expect(page.locator('.Wt-dialog', { hasText: 'Unsaved Changes' })).toBeVisible();
+  // Click "Keep Editing" — popup stays open
+  await page.locator('.Wt-dialog', { hasText: 'Unsaved Changes' })
+    .locator('button', { hasText: 'Keep Editing' }).click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  // Click Close again, then Discard
+  await page.locator('.kb-task-popup .editor-btn-cancel').click();
+  await page.locator('.Wt-dialog', { hasText: 'Unsaved Changes' })
+    .locator('button', { hasText: 'Discard' }).click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeHidden();
+});
+
+test('escape key with no changes closes popup immediately', async ({ page }) => {
+  await loginAs(page, 'admin', 'testpass');
+  await page.goto(teamUrl);
+  await expect(page.locator('.kb-board')).toBeVisible();
+  await page.locator('.kb-card').first().click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeHidden();
+});
+
+test('escape key with pending changes shows confirmation', async ({ page }) => {
+  await loginAs(page, 'admin', 'testpass');
+  await page.goto(teamUrl);
+  await expect(page.locator('.kb-board')).toBeVisible();
+  await page.locator('.kb-card').first().click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await page.locator('.kb-task-popup .kb-popup-display').first().click();
+  await page.locator('.kb-task-popup input[type="text"]').first().fill('EscDirty');
+  await page.locator('.kb-task-popup input[type="text"]').first().press('Tab');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.Wt-dialog', { hasText: 'Unsaved Changes' })).toBeVisible();
+});
+
+test('popup has History tab that shows task history', async ({ page }) => {
+  await loginAs(page, 'admin', 'testpass');
+  await page.goto(teamUrl);
+  await expect(page.locator('.kb-board')).toBeVisible();
+  await page.locator('.kb-card').first().click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  // History tab must exist
+  const historyTab = page.locator('.kb-task-popup .Wt-tabs li', { hasText: 'History' });
+  await expect(historyTab).toBeVisible();
+  await historyTab.click();
+  // At minimum the history panel should be present (task was created, so there is history)
+  await expect(page.locator('.kb-task-popup .kb-history-entry')).toBeVisible();
+});
+
+test('popup has Archive button that archives the task', async ({ page }) => {
+  await loginAs(page, 'admin', 'testpass');
+  await page.goto(teamUrl);
+  await expect(page.locator('.kb-board')).toBeVisible();
+  // Create a fresh task for this test
+  await page.locator('.kb-new-btn').click();
+  await expect(page.locator('.kb-editor-page')).toBeVisible();
+  await page.locator('input[placeholder="Task title"]').fill('ArchiveViaPopup');
+  await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
+  await expect(page.locator('.kb-board')).toBeVisible();
+  // Open popup
+  await page.locator('.kb-card', { hasText: 'ArchiveViaPopup' }).click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  // Click Archive
+  await page.locator('.kb-task-popup .editor-btn-danger', { hasText: 'Archive' }).click();
+  // Popup closes, task gone from board
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeHidden();
+  await expect(page.locator('.kb-card', { hasText: 'ArchiveViaPopup' })).not.toBeVisible();
+});
+
+test('description renders markdown in display mode', async ({ page }) => {
+  await loginAs(page, 'admin', 'testpass');
+  await page.goto(teamUrl);
+  await expect(page.locator('.kb-board')).toBeVisible();
+  // Create task with markdown description via full editor
+  await page.locator('.kb-new-btn').click();
+  await expect(page.locator('.kb-editor-page')).toBeVisible();
+  await page.locator('input[placeholder="Task title"]').fill('MarkdownDesc');
+  await page.locator('textarea[placeholder="Description (optional)"]').fill('**bold text**');
+  await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
+  await expect(page.locator('.kb-board')).toBeVisible();
+  // Open popup — description display should contain <strong>
+  await page.locator('.kb-card', { hasText: 'MarkdownDesc' }).click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  const descDisplay = page.locator('.kb-task-popup .kb-desc-display');
+  await expect(descDisplay).toBeVisible();
+  await expect(descDisplay.locator('strong')).toBeVisible();
+});
+
+test('gantt label area click opens popup', async ({ page }) => {
+  await loginAs(page, 'admin', 'testpass');
+  await page.goto(teamUrl + '/gantt');
+  await expect(page.locator('.gv-wrap')).toBeVisible();
+  const hit = page.locator('.gantt-label-hit').first();
+  // Only test if at least one task has dates and appears in the gantt
+  const count = await hit.count();
+  if (count === 0) { return; } // no dated tasks — skip
+  await hit.click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+});
