@@ -105,7 +105,9 @@ test.beforeAll(async ({ browser }) => {
   await expect(page.locator('.kb-board')).toBeVisible();
 
   // Open PermTask editor and capture taskUrl.
-  await page.locator('.kb-card', { hasText: 'PermTask' }).first().locator('.kb-card-edit').click();
+  await page.locator('.kb-card', { hasText: 'PermTask' }).first().click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await page.locator('.kb-popup-full-link').click();
   await expect(page.locator('.kb-editor-page')).toBeVisible();
   taskUrl = page.url();
   // Return to board.
@@ -119,7 +121,9 @@ test.beforeAll(async ({ browser }) => {
   await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
   await expect(page.locator('.kb-board')).toBeVisible();
 
-  await page.locator('.kb-card', { hasText: 'PermArchived' }).first().locator('.kb-card-edit').click();
+  await page.locator('.kb-card', { hasText: 'PermArchived' }).first().click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await page.locator('.kb-popup-full-link').click();
   await expect(page.locator('.kb-editor-page')).toBeVisible();
   // Capture archivedTaskUrl before archiving.
   archivedTaskUrl = page.url();

@@ -255,20 +255,20 @@ test('created task card shows its title', async ({ page }) => {
   await expect(card.locator('.kb-card-title')).toContainText('Board Test Task Epsilon');
 });
 
-test('created task card shows Edit button', async ({ page }) => {
+test('clicking a task card opens the popup', async ({ page }) => {
   await loginAndGoToBoard(page);
   await createTask(page, 'Board Test Task Zeta');
-  await expect(
-    page.locator('.kb-card', { hasText: 'Board Test Task Zeta' }).locator('.kb-card-edit')
-  ).toBeVisible();
+  await page.locator('.kb-card', { hasText: 'Board Test Task Zeta' }).click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await page.keyboard.press('Escape');
 });
 
 // ── task editing ──────────────────────────────────────────────────────────────
 
-test('Edit button opens task popup with task title', async ({ page }) => {
+test('clicking a card opens the task popup with its title', async ({ page }) => {
   await loginAndGoToBoard(page);
   await createTask(page, 'Board Test Task Eta');
-  await page.locator('.kb-card', { hasText: 'Board Test Task Eta' }).locator('.kb-card-edit').click();
+  await page.locator('.kb-card', { hasText: 'Board Test Task Eta' }).click();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toContainText('Board Test Task Eta');
 });
@@ -276,7 +276,7 @@ test('Edit button opens task popup with task title', async ({ page }) => {
 test('edit editor shows Delete button for existing task', async ({ page }) => {
   await loginAndGoToBoard(page);
   await createTask(page, 'Board Test Task Theta');
-  await page.locator('.kb-card', { hasText: 'Board Test Task Theta' }).locator('.kb-card-edit').click();
+  await page.locator('.kb-card', { hasText: 'Board Test Task Theta' }).click();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
   await page.locator('.kb-popup-full-link').click();
   await expect(page.locator('.editor-btn-danger')).toBeVisible();
@@ -285,7 +285,7 @@ test('edit editor shows Delete button for existing task', async ({ page }) => {
 test('saving edited task updates its card on the board', async ({ page }) => {
   await loginAndGoToBoard(page);
   await createTask(page, 'Board Test Task Iota');
-  await page.locator('.kb-card', { hasText: 'Board Test Task Iota' }).locator('.kb-card-edit').click();
+  await page.locator('.kb-card', { hasText: 'Board Test Task Iota' }).click();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
   await page.locator('.kb-popup-full-link').click();
   await page.locator('input[placeholder="Task title"]').fill('Board Test Task Iota Renamed');
@@ -298,7 +298,7 @@ test('saving edited task updates its card on the board', async ({ page }) => {
 test('cancel in edit editor returns to board without changing the task', async ({ page }) => {
   await loginAndGoToBoard(page);
   await createTask(page, 'Board Test Task Kappa');
-  await page.locator('.kb-card', { hasText: 'Board Test Task Kappa' }).locator('.kb-card-edit').click();
+  await page.locator('.kb-card', { hasText: 'Board Test Task Kappa' }).click();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
   await page.locator('.kb-popup-full-link').click();
   await page.locator('input[placeholder="Task title"]').fill('Should Not Appear');
@@ -311,7 +311,7 @@ test('cancel in edit editor returns to board without changing the task', async (
 test('Delete button removes the task from the board', async ({ page }) => {
   await loginAndGoToBoard(page);
   await createTask(page, 'Board Test Task Lambda');
-  await page.locator('.kb-card', { hasText: 'Board Test Task Lambda' }).locator('.kb-card-edit').click();
+  await page.locator('.kb-card', { hasText: 'Board Test Task Lambda' }).click();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
   await page.locator('.kb-popup-full-link').click();
   await page.locator('.editor-btn-danger').click();
@@ -329,7 +329,7 @@ test('Clear button on start date removes it after saving', async ({ page }) => {
   // Dates are saved — both should appear on the card.
   await expect(card.locator('.kb-card-dates')).toHaveText('2025-03-01 – 2025-03-31');
 
-  await card.locator('.kb-card-edit').click();
+  await card.click();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
   await page.locator('.kb-popup-full-link').click();
   await expect(page.locator('.kb-editor-page')).toBeVisible();
@@ -353,7 +353,7 @@ test('Clear button on end date removes it after saving', async ({ page }) => {
   const card = page.locator('.kb-card', { hasText: 'Board Test Task Omicron' });
   await expect(card.locator('.kb-card-dates')).toHaveText('2025-04-01 – 2025-04-30');
 
-  await card.locator('.kb-card-edit').click();
+  await card.click();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
   await page.locator('.kb-popup-full-link').click();
   await expect(page.locator('.kb-editor-page')).toBeVisible();
@@ -376,7 +376,7 @@ test('clearing both dates removes the date row from the card', async ({ page }) 
   const card = page.locator('.kb-card', { hasText: 'Board Test Task Rho' });
   await expect(card.locator('.kb-card-dates')).toHaveText('2025-05-01 – 2025-05-31');
 
-  await card.locator('.kb-card-edit').click();
+  await card.click();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
   await page.locator('.kb-popup-full-link').click();
   await expect(page.locator('.kb-editor-page')).toBeVisible();

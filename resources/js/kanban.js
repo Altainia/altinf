@@ -34,20 +34,27 @@
       card.style.borderLeftColor = task.color;
     }
 
+    var _dragged = false;
     if (canEdit) {
       card.setAttribute('draggable', 'true');
       card.addEventListener('dragstart', function (e) {
+        _dragged = true;
         e.dataTransfer.setData('text/plain', String(task.id));
         e.dataTransfer.effectAllowed = 'move';
         card.classList.add('kb-card--dragging');
       });
       card.addEventListener('dragend', function () {
         card.classList.remove('kb-card--dragging');
+        setTimeout(function () { _dragged = false; }, 0);
         document.querySelectorAll('.kb-column--over').forEach(function (c) {
           c.classList.remove('kb-column--over');
         });
       });
     }
+
+    card.addEventListener('click', function () {
+      if (!_dragged) { triggerCallback(cbId, 'EDIT:' + task.id); }
+    });
 
     var title = document.createElement('div');
     title.className = 'kb-card-title';
@@ -66,17 +73,6 @@
       dates.className = 'kb-card-dates';
       dates.textContent = (task.start_date || '?') + ' – ' + (task.end_date || '?');
       card.appendChild(dates);
-    }
-
-    if (canEdit) {
-      var editBtn = document.createElement('button');
-      editBtn.className = 'kb-card-edit';
-      editBtn.textContent = 'Edit';
-      editBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        triggerCallback(cbId, 'EDIT:' + task.id);
-      });
-      card.appendChild(editBtn);
     }
 
     return card;

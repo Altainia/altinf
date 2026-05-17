@@ -127,7 +127,7 @@
   border-left:    3px solid var(--color-border);
   border-radius:  var(--radius);
   padding:        0.5rem 0.7rem;
-  cursor:         default;
+  cursor:         pointer;
   transition:     opacity 0.15s, border-color 0.15s;
 
   &[draggable="true"] { cursor: grab; }
@@ -151,23 +151,6 @@
   font-size:  0.7rem;
   color:      var(--color-muted);
   margin-top: 0.2rem;
-}
-
-.kb-card-edit {
-  display:       block;
-  margin-top:    0.4rem;
-  font-size:     0.72rem;
-  padding:       0.15rem 0.5rem;
-  background:    transparent;
-  border:        1px solid var(--color-border);
-  border-radius: var(--radius);
-  color:         var(--color-muted);
-  cursor:        pointer;
-
-  &:hover {
-    color:        var(--color-text);
-    border-color: var(--color-accent);
-  }
 }
 
 // ── Gantt viewer ──────────────────────────────────────────────────────────────
