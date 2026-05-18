@@ -61,3 +61,12 @@ TEST_CASE("team_cap - admin_caps has all defined capabilities")
 	CHECK(team_cap::admin_caps.has_any(team_cap::manage_team));
 	CHECK(team_cap::admin_caps.has_any(team_cap::comment));
 }
+
+TEST_CASE("team_cap - edit_task_details: not in member caps, is in lead caps")
+{
+	CHECK(!team_cap::team_member_caps.has_any(team_cap::edit_task_details));
+	CHECK(team_cap::team_lead_caps.has_any(team_cap::edit_task_details));
+	CHECK(team_cap::org_lead_caps.has_any(team_cap::edit_task_details));
+	CHECK(team_cap::admin_caps.has_any(team_cap::edit_task_details));
+	CHECK(!team_cap::org_viewer_caps.has_any(team_cap::edit_task_details));
+}

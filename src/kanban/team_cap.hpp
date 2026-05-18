@@ -17,11 +17,12 @@ namespace team_cap
 	inline constexpr flags archive_task     = flags::from_value(1u << 6);
 	inline constexpr flags manage_team      = flags::from_value(1u << 7);
 	inline constexpr flags comment          = flags::from_value(1u << 8);
+	inline constexpr flags edit_task_details = flags::from_value(1u << 9);
 
 	inline constexpr flags org_viewer_caps  = view_board;
 	inline constexpr flags team_member_caps = view_board | edit_task_fields | self_assign | comment;
 	inline constexpr flags team_lead_caps   = team_member_caps | view_archived | reassign_task
-	                                        | create_task | archive_task | manage_team;
+	                                        | create_task | archive_task | manage_team | edit_task_details;
 	inline constexpr flags org_lead_caps    = team_lead_caps;
 	inline constexpr flags admin_caps       = ~flags{};
 }
