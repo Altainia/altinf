@@ -2,6 +2,8 @@
 
 #include <Wt/WAnchor.h>
 #include <Wt/WApplication.h>
+#include <Wt/WContainerWidget.h>
+#include <Wt/WLength.h>
 #include <Wt/WLink.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
@@ -47,9 +49,13 @@ task_popup_widget::task_popup_widget(kanban_db& db, org_db& odb, long long task_
 	close_btn->setStyleClass("editor-btn editor-btn-cancel");
 	close_btn->clicked().connect([this] { try_close(); });
 
+	// Constrain dialog height and make contents scroll.
+	setMaximumSize(Wt::WLength::Auto, Wt::WLength(90, Wt::LengthUnit::ViewportHeight));
+	contents()->setOverflow(Wt::Overflow::Auto, Wt::Orientation::Vertical);
+
 	finished().connect([this, cb_id](Wt::DialogCode) {
-		// Clean up document listeners if popup was closed without firing them
-		// (e.g. Save button, Cancel button).
+		// Remove document listeners if popup closed without them firing
+		// (e.g. Save button, Close button, archive).
 		doJavaScript(
 		  "(function(){"
 		  "  var inp=document.getElementById('" +
@@ -64,20 +70,35 @@ task_popup_widget::task_popup_widget(kanban_db& db, org_db& odb, long long task_
 	show();
 
 	// Wire Escape key and click-outside to try_close().
-	// Listeners are stored on inp.__onEsc / inp.__onDown so finished() can clean up
-	// on non-Escape / non-click close paths (Save, Cancel button).
+	//
+	// fireClose() does NOT remove the listeners — they stay registered so that
+	// Escape / click-outside still work if the user dismisses the "Keep Editing"
+	// confirm dialog and continues editing.  finished() does the final cleanup.
+	//
+	// Guards:
+	//   - document.querySelectorAll('.Wt-dialog').length > 1  → a confirm dialog is
+	//     already on screen; ignore the event to avoid stacking another one.
+	//   - .Wt-datepicker                                      → WDateEdit calendar
+	//     popup is appended to <body> outside .Wt-dialog; ignore clicks on it.
 	doJavaScript(
 	  "(function(cbId){"
 	  "  var inp=document.getElementById(cbId);"
 	  "  if(!inp)return;"
 	  "  function fireClose(){"
-	  "    document.removeEventListener('keydown',inp.__onEsc);"
-	  "    document.removeEventListener('mousedown',inp.__onDown);"
 	  "    inp.value='CLOSE';"
 	  "    inp.dispatchEvent(new Event('change'));"
 	  "  }"
-	  "  function onEsc(e){ if(e.key==='Escape')fireClose(); }"
-	  "  function onDown(e){ if(!e.target.closest('.Wt-dialog'))fireClose(); }"
+	  "  function onEsc(e){"
+	  "    if(e.key==='Escape'"
+	  "       &&document.querySelectorAll('.Wt-dialog').length===1)"
+	  "      fireClose();"
+	  "  }"
+	  "  function onDown(e){"
+	  "    if(document.querySelectorAll('.Wt-dialog').length>1)return;"
+	  "    if(e.target.closest('.Wt-dialog'))return;"
+	  "    if(e.target.closest('.Wt-datepicker'))return;"
+	  "    fireClose();"
+	  "  }"
 	  "  inp.__onEsc=onEsc;"
 	  "  inp.__onDown=onDown;"
 	  "  document.addEventListener('keydown',onEsc);"

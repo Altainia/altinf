@@ -651,8 +651,9 @@
 }
 
 .kb-task-popup {
+  // max-height and overflow-y are set via Wt API (setMaximumSize + setOverflow).
+  // This rule is a CSS-layer fallback for the body scroll container.
   .body {
-    max-height: calc(90vh - 120px);
     overflow-y: auto;
   }
 }
