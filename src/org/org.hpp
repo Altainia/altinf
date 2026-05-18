@@ -179,6 +179,56 @@ inline std::string make_task_assigned_payload(long long          task_id,
 	       ",\"team_name\":\"" + team_name + "\"}";
 }
 
+inline std::string make_task_available_payload(long long          task_id,
+                                               const std::string& task_title,
+                                               long long          team_id,
+                                               const std::string& team_name)
+{
+	return "{\"task_id\":" + std::to_string(task_id) +
+	       ",\"task_title\":\"" + task_title + "\"" +
+	       ",\"team_id\":" + std::to_string(team_id) +
+	       ",\"team_name\":\"" + team_name + "\"}";
+}
+
+inline std::string make_task_unassigned_payload(long long          task_id,
+                                                const std::string& task_title,
+                                                long long          team_id,
+                                                const std::string& team_name)
+{
+	return "{\"task_id\":" + std::to_string(task_id) +
+	       ",\"task_title\":\"" + task_title + "\"" +
+	       ",\"team_id\":" + std::to_string(team_id) +
+	       ",\"team_name\":\"" + team_name + "\"}";
+}
+
+inline std::string make_task_abandoned_payload(long long          task_id,
+                                               const std::string& task_title,
+                                               long long          team_id,
+                                               const std::string& team_name,
+                                               const std::string& abandoned_by)
+{
+	return "{\"task_id\":" + std::to_string(task_id) +
+	       ",\"task_title\":\"" + task_title + "\"" +
+	       ",\"team_id\":" + std::to_string(team_id) +
+	       ",\"team_name\":\"" + team_name + "\"" +
+	       ",\"abandoned_by\":\"" + abandoned_by + "\"}";
+}
+
+inline std::string make_task_coassignee_changed_payload(long long          task_id,
+                                                        const std::string& task_title,
+                                                        long long          team_id,
+                                                        const std::string& team_name,
+                                                        const std::string& changed_user,
+                                                        const std::string& action)
+{
+	return "{\"task_id\":" + std::to_string(task_id) +
+	       ",\"task_title\":\"" + task_title + "\"" +
+	       ",\"team_id\":" + std::to_string(team_id) +
+	       ",\"team_name\":\"" + team_name + "\"" +
+	       ",\"changed_user\":\"" + changed_user + "\"" +
+	       ",\"action\":\"" + action + "\"}";
+}
+
 // Minimal JSON field extractors — safe only for our controlled payloads.
 inline long long json_long(const std::string& json, const std::string& key)
 {
