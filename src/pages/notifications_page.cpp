@@ -295,6 +295,115 @@ void notifications_page::refresh()
 				add_dismiss(row, n.id);
 			}
 		}
+		// ── task_available ────────────────────────────────────────────────────
+		else if(n.type == "task_available")
+		{
+			const long long   task_id    = json_long(n.payload, "task_id");
+			const std::string task_title = json_str(n.payload, "task_title");
+			const long long   team_id    = json_long(n.payload, "team_id");
+			const std::string team_name  = json_str(n.payload, "team_name");
+
+			body->addNew<Wt::WText>("Task \"", Wt::TextFormat::Plain)
+			  ->setStyleClass("notif-msg");
+			body->addNew<Wt::WAnchor>(
+			      Wt::WLink{Wt::LinkType::InternalPath,
+			                "/board/" + std::to_string(team_id) + "/task/" +
+			                  std::to_string(task_id) + "/edit"},
+			      task_title)
+			  ->setStyleClass("notif-link");
+			body->addNew<Wt::WText>(
+			      "\" in team " + team_name +
+			        " is now unassigned \xe2\x80\x94 " + n.created_at,
+			      Wt::TextFormat::Plain)
+			  ->setStyleClass("notif-msg");
+			if(!n.is_read)
+			{
+				add_dismiss(row, n.id);
+			}
+		}
+		// ── task_unassigned ───────────────────────────────────────────────────
+		else if(n.type == "task_unassigned")
+		{
+			const long long   task_id    = json_long(n.payload, "task_id");
+			const std::string task_title = json_str(n.payload, "task_title");
+			const long long   team_id    = json_long(n.payload, "team_id");
+			const std::string team_name  = json_str(n.payload, "team_name");
+
+			body->addNew<Wt::WText>("You were removed from task \"",
+			                        Wt::TextFormat::Plain)
+			  ->setStyleClass("notif-msg");
+			body->addNew<Wt::WAnchor>(
+			      Wt::WLink{Wt::LinkType::InternalPath,
+			                "/board/" + std::to_string(team_id) + "/task/" +
+			                  std::to_string(task_id) + "/edit"},
+			      task_title)
+			  ->setStyleClass("notif-link");
+			body->addNew<Wt::WText>(
+			      "\" in team " + team_name + " \xe2\x80\x94 " + n.created_at,
+			      Wt::TextFormat::Plain)
+			  ->setStyleClass("notif-msg");
+			if(!n.is_read)
+			{
+				add_dismiss(row, n.id);
+			}
+		}
+		// ── task_abandoned ────────────────────────────────────────────────────
+		else if(n.type == "task_abandoned")
+		{
+			const long long   task_id      = json_long(n.payload, "task_id");
+			const std::string task_title   = json_str(n.payload, "task_title");
+			const long long   team_id      = json_long(n.payload, "team_id");
+			const std::string team_name    = json_str(n.payload, "team_name");
+			const std::string abandoned_by = json_str(n.payload, "abandoned_by");
+
+			body->addNew<Wt::WText>(abandoned_by + " abandoned task \"",
+			                        Wt::TextFormat::Plain)
+			  ->setStyleClass("notif-msg");
+			body->addNew<Wt::WAnchor>(
+			      Wt::WLink{Wt::LinkType::InternalPath,
+			                "/board/" + std::to_string(team_id) + "/task/" +
+			                  std::to_string(task_id) + "/edit"},
+			      task_title)
+			  ->setStyleClass("notif-link");
+			body->addNew<Wt::WText>(
+			      "\" in team " + team_name + " \xe2\x80\x94 " + n.created_at,
+			      Wt::TextFormat::Plain)
+			  ->setStyleClass("notif-msg");
+			if(!n.is_read)
+			{
+				add_dismiss(row, n.id);
+			}
+		}
+		// ── task_coassignee_changed ───────────────────────────────────────────
+		else if(n.type == "task_coassignee_changed")
+		{
+			const long long   task_id      = json_long(n.payload, "task_id");
+			const std::string task_title   = json_str(n.payload, "task_title");
+			const long long   team_id      = json_long(n.payload, "team_id");
+			const std::string team_name    = json_str(n.payload, "team_name");
+			const std::string changed_user = json_str(n.payload, "changed_user");
+			const std::string action       = json_str(n.payload, "action");
+
+			const std::string verb =
+			  (action == "added") ? " was added to" : " was removed from";
+			body->addNew<Wt::WText>(changed_user + verb + " task \"",
+			                        Wt::TextFormat::Plain)
+			  ->setStyleClass("notif-msg");
+			body->addNew<Wt::WAnchor>(
+			      Wt::WLink{Wt::LinkType::InternalPath,
+			                "/board/" + std::to_string(team_id) + "/task/" +
+			                  std::to_string(task_id) + "/edit"},
+			      task_title)
+			  ->setStyleClass("notif-link");
+			body->addNew<Wt::WText>(
+			      "\" in team " + team_name + " \xe2\x80\x94 " + n.created_at,
+			      Wt::TextFormat::Plain)
+			  ->setStyleClass("notif-msg");
+			if(!n.is_read)
+			{
+				add_dismiss(row, n.id);
+			}
+		}
 		// ── unknown (future types) ────────────────────────────────────────────
 		else
 		{
