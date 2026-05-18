@@ -68,6 +68,37 @@ struct user_pref_record
 	}
 };
 
+struct user_org_pref_record
+{
+	std::string username;
+	long long   org_id{0};
+	int         notify_task_available{1};
+	int         notify_task_unassigned{1};
+	int         notify_coassignee_changed{1};
+	int         notify_task_abandoned{1};
+
+	template<class Action>
+	void persist(Action& a)
+	{
+		Wt::Dbo::field(a, username,                  "username");
+		Wt::Dbo::field(a, org_id,                    "org_id");
+		Wt::Dbo::field(a, notify_task_available,     "notify_task_available");
+		Wt::Dbo::field(a, notify_task_unassigned,    "notify_task_unassigned");
+		Wt::Dbo::field(a, notify_coassignee_changed, "notify_coassignee_changed");
+		Wt::Dbo::field(a, notify_task_abandoned,     "notify_task_abandoned");
+	}
+};
+
+struct user_org_pref_entry
+{
+	std::string username;
+	long long   org_id{0};
+	bool        notify_task_available{true};
+	bool        notify_task_unassigned{true};
+	bool        notify_coassignee_changed{true};
+	bool        notify_task_abandoned{true};
+};
+
 // ---- Entry structs (plain data, no Dbo) ----
 
 struct org_entry

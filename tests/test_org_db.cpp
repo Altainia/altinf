@@ -371,3 +371,51 @@ TEST_CASE("org_db - archive_org hides org from orgs_for_user")
 	db.archive_org(id, "alice");
 	CHECK(db.orgs_for_user("alice").empty());
 }
+
+// ---- user_org_pref ----
+
+TEST_CASE("org_db - get_user_org_pref returns defaults when no row")
+{
+	org_db     db{":memory:"};
+	const auto p = db.get_user_org_pref("alice", 1);
+	CHECK(p.notify_task_available);
+	CHECK(p.notify_task_unassigned);
+	CHECK(p.notify_coassignee_changed);
+	CHECK(p.notify_task_abandoned);
+}
+
+TEST_CASE("org_db - set_user_org_pref upserts and round-trips")
+{
+	org_db              db{":memory:"};
+	user_org_pref_entry p;
+	p.username                  = "alice";
+	p.org_id                    = 1;
+	p.notify_task_available     = false;
+	p.notify_task_unassigned    = true;
+	p.notify_coassignee_changed = true;
+	p.notify_task_abandoned     = false;
+	db.set_user_org_pref(p);
+
+	const auto back = db.get_user_org_pref("alice", 1);
+	CHECK(!back.notify_task_available);
+	CHECK(back.notify_task_unassigned);
+	CHECK(!back.notify_task_abandoned);
+}
+
+TEST_CASE("org_db - set_user_org_pref updates existing row")
+{
+	org_db              db{":memory:"};
+	user_org_pref_entry p;
+	p.username                  = "alice";
+	p.org_id                    = 1;
+	p.notify_task_available     = false;
+	p.notify_task_unassigned    = true;
+	p.notify_coassignee_changed = true;
+	p.notify_task_abandoned     = true;
+	db.set_user_org_pref(p);
+
+	p.notify_task_available = true; // change it
+	db.set_user_org_pref(p);
+
+	CHECK(db.get_user_org_pref("alice", 1).notify_task_available);
+}

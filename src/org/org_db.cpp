@@ -11,6 +11,7 @@ org_db::org_db(const std::string& db_path)
 	m_dbo.mapClass<org_member_record>("org_member");
 	m_dbo.mapClass<notification_record>("notification");
 	m_dbo.mapClass<user_pref_record>("user_pref");
+	m_dbo.mapClass<user_org_pref_record>("user_org_pref");
 
 	try
 	{
@@ -28,6 +29,24 @@ org_db::org_db(const std::string& db_path)
 	catch(const Wt::Dbo::Exception&)
 	{
 		// Column already exists — ignore.
+	}
+
+	try
+	{
+		m_dbo.execute(
+		  "CREATE TABLE IF NOT EXISTS user_org_pref ("
+		  "id integer primary key autoincrement,"
+		  " version integer not null default 0,"
+		  " username text not null default '',"
+		  " org_id integer not null default 0,"
+		  " notify_task_available integer not null default 1,"
+		  " notify_task_unassigned integer not null default 1,"
+		  " notify_coassignee_changed integer not null default 1,"
+		  " notify_task_abandoned integer not null default 1)");
+	}
+	catch(const Wt::Dbo::Exception&)
+	{
+		// Table already exists — ignore.
 	}
 }
 
@@ -489,4 +508,67 @@ std::vector<org_entry> org_db::archived_orgs()
 		out.push_back(to_entry(p));
 	}
 	return out;
+}
+
+// ---- Per-org user notification preferences ----
+
+user_org_pref_entry org_db::get_user_org_pref(const std::string& username, long long org_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           rows =
+	  m_dbo.find<user_org_pref_record>()
+	    .where("username = ? AND org_id = ?")
+	    .bind(username)
+	    .bind(org_id)
+	    .resultList();
+	if(rows.empty())
+	{
+		user_org_pref_entry defaults;
+		defaults.username = username;
+		defaults.org_id   = org_id;
+		return defaults;
+	}
+	const auto&         r = *rows.begin();
+	user_org_pref_entry out;
+	out.username                  = r->username;
+	out.org_id                    = r->org_id;
+	out.notify_task_available     = r->notify_task_available != 0;
+	out.notify_task_unassigned    = r->notify_task_unassigned != 0;
+	out.notify_coassignee_changed = r->notify_coassignee_changed != 0;
+	out.notify_task_abandoned     = r->notify_task_abandoned != 0;
+	return out;
+}
+
+void org_db::set_user_org_pref(const user_org_pref_entry& pref)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           rows =
+	  m_dbo.find<user_org_pref_record>()
+	    .where("username = ? AND org_id = ?")
+	    .bind(pref.username)
+	    .bind(pref.org_id)
+	    .resultList();
+	std::vector<Wt::Dbo::ptr<user_org_pref_record>> existing;
+	for(const auto& r: rows)
+	{
+		existing.push_back(r);
+	}
+	if(existing.empty())
+	{
+		auto r                                = m_dbo.add(std::make_unique<user_org_pref_record>());
+		r.modify()->username                  = pref.username;
+		r.modify()->org_id                    = pref.org_id;
+		r.modify()->notify_task_available     = pref.notify_task_available ? 1 : 0;
+		r.modify()->notify_task_unassigned    = pref.notify_task_unassigned ? 1 : 0;
+		r.modify()->notify_coassignee_changed = pref.notify_coassignee_changed ? 1 : 0;
+		r.modify()->notify_task_abandoned     = pref.notify_task_abandoned ? 1 : 0;
+	}
+	else
+	{
+		Wt::Dbo::ptr<user_org_pref_record> r  = existing[0];
+		r.modify()->notify_task_available     = pref.notify_task_available ? 1 : 0;
+		r.modify()->notify_task_unassigned    = pref.notify_task_unassigned ? 1 : 0;
+		r.modify()->notify_coassignee_changed = pref.notify_coassignee_changed ? 1 : 0;
+		r.modify()->notify_task_abandoned     = pref.notify_task_abandoned ? 1 : 0;
+	}
 }

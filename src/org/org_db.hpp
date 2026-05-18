@@ -52,6 +52,10 @@ public:
 	void                     set_last_org(const std::string& username, long long org_id);
 	std::optional<long long> get_last_org(const std::string& username);
 
+	// Per-org user notification preferences
+	user_org_pref_entry get_user_org_pref(const std::string& username, long long org_id);
+	void                set_user_org_pref(const user_org_pref_entry& pref);
+
 private:
 	Wt::Dbo::Session m_dbo;
 
