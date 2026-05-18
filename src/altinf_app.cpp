@@ -31,6 +31,7 @@
 #include "pages/org_type_manager_page.hpp"
 #include "pages/post_editor_page.hpp"
 #include "pages/settings_page.hpp"
+#include "pages/team_settings_page.hpp"
 #include "widgets/footer.hpp"
 #include "widgets/live_hub.hpp"
 #include "widgets/nav_bar.hpp"
@@ -416,6 +417,15 @@ void altinf_app::handle_path(const std::string& path)
 			}
 			m_content->addNew<kanban_team_page>(
 			  *m_org_db, *m_kanban_db, *m_user_db, team->org_id, m_session, "/board/" + std::to_string(team_id));
+		}
+		else if(suffix == "/settings")
+		{
+			if(!caps.has_any(team_cap::manage_team))
+			{
+				show_forbidden();
+				return;
+			}
+			m_content->addNew<team_settings_page>(*m_kanban_db, m_session, team_id);
 		}
 		else
 		{

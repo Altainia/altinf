@@ -327,26 +327,12 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 	auto* block = parent->addNew<Wt::WContainerWidget>();
 	block->setStyleClass("kb-team-block");
 
-	// Team header with rename.
+	// Team header — name display only (rename moved to team settings page).
 	auto* hdr = block->addNew<Wt::WContainerWidget>();
 	hdr->setStyleClass("kb-team-name-row");
 
-	auto* name_input = hdr->addNew<Wt::WLineEdit>();
-	name_input->setText(team.name);
-	name_input->setStyleClass("editor-field");
-
-	auto* rename_btn = hdr->addNew<Wt::WPushButton>("Rename");
-	rename_btn->setStyleClass("editor-btn");
-	rename_btn->clicked().connect(
-	  [this, tid = team.id, name_input] {
-		  const std::string n = name_input->text().toUTF8();
-		  if(!n.empty())
-		  {
-			  m_kdb.rename_team(tid, n);
-			  live_hub::instance().broadcast("org:" + std::to_string(m_org_id));
-			  live_hub::instance().broadcast("team:" + std::to_string(tid));
-		  }
-	  });
+	hdr->addNew<Wt::WText>(team.name, Wt::TextFormat::Plain)
+	  ->setStyleClass("kb-team-name-label");
 
 	auto* del_team = hdr->addNew<Wt::WPushButton>("Archive");
 	del_team->setStyleClass("link-action-btn link-delete-btn");

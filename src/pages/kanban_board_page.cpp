@@ -76,6 +76,11 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 		     Wt::WLink{Wt::LinkType::InternalPath, team_url + "/manage"},
 		     "Manage Team")
 		  ->setStyleClass("editor-btn editor-btn-cancel kb-manage-link");
+
+		hdr->addNew<Wt::WAnchor>(
+		     Wt::WLink{Wt::LinkType::InternalPath, team_url + "/settings"},
+		     "Settings")
+		  ->setStyleClass("editor-btn editor-btn-cancel kb-manage-link");
 	}
 
 	if(caps.has_any(team_cap::view_archived))
