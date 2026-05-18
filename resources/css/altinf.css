@@ -1394,8 +1394,7 @@ a:hover {
   margin-top: 0.2rem;
 }
 
-.kb-task-popup .Wt-dialog-contents {
-  max-height: calc(90vh - 120px);
+.kb-task-popup .body {
   overflow-y: auto;
 }
 

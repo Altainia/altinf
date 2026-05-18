@@ -300,3 +300,152 @@ test('gantt label area click opens popup', async ({ page }) => {
   await hit.click();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
 });
+
+// ── Date field tests ──────────────────────────────────────────────────────────
+// These tests pin the edit-mode enter/exit and calendar-selection behaviour
+// for WDateEdit fields in the popup.
+
+async function openPopupForDateTests(page: any) {
+  await loginAs(page, 'admin', 'testpass');
+  await page.goto(teamUrl);
+  await expect(page.locator('.kb-board')).toBeVisible();
+  await page.locator('.kb-card', { hasText: 'PopupTask' }).first().click();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+}
+
+// Locate the wrapper div for a date field by its label text.
+function startDateField(page: any) {
+  return page.locator('.kb-editor-field-wrap.kb-popup-field')
+    .filter({ has: page.locator('.kb-field-label', { hasText: 'Start date' }) });
+}
+
+test('date field: clicking display enters edit mode', async ({ page }) => {
+  await openPopupForDateTests(page);
+  const field   = startDateField(page);
+  const display = field.locator('.kb-popup-display');
+  const input   = field.locator('input[type="text"]').first();
+
+  await expect(display).toBeVisible();
+  await expect(input).toBeHidden();
+
+  await display.click();
+
+  await expect(input).toBeVisible();
+  await expect(display).toBeHidden();
+});
+
+test('date field: clicking away without selecting reverts to display mode', async ({ page }) => {
+  await openPopupForDateTests(page);
+  const field   = startDateField(page);
+  const display = field.locator('.kb-popup-display');
+  const input   = field.locator('input[type="text"]').first();
+
+  await display.click();
+  await expect(input).toBeVisible();
+
+  // Click the popup titlebar — safe non-interactive target inside the dialog.
+  await page.locator('.Wt-dialog.kb-task-popup .titlebar').click();
+
+  await expect(display).toBeVisible();
+  await expect(input).toBeHidden();
+});
+
+// Open the calendar popup by clicking the rightmost 40 px of the WDateEdit
+// input — that's where WDateEdit.js's mouseUp handler calls showPopup().
+async function openCalendar(page: any, field: any) {
+  const input = field.locator('input[type="text"]').first();
+  await expect(input).toBeVisible();
+  const box = await input.boundingBox();
+  if (!box) throw new Error('input bounding box not found');
+  // Click ~10 px from the right edge, vertically centred.
+  await input.click({ position: { x: box.width - 10, y: Math.floor(box.height / 2) } });
+}
+
+test('date field: calendar opens when input is clicked', async ({ page }) => {
+  await openPopupForDateTests(page);
+  const field   = startDateField(page);
+  const display = field.locator('.kb-popup-display');
+
+  await display.click();
+
+  await openCalendar(page, field);
+
+  await page.waitForTimeout(400); // let Wt position the popup
+  const datepickerStyle = await page.evaluate(() => {
+    const dp = document.querySelector('.Wt-datepicker');
+    return dp ? (dp as HTMLElement).style.display : 'NOT FOUND';
+  });
+  console.log('[date-test] .Wt-datepicker display after right-edge click:', datepickerStyle);
+
+  await expect(page.locator('.Wt-cal').first()).toBeVisible();
+});
+
+test('date field: selecting a date from the calendar updates the display', async ({ page }) => {
+  await openPopupForDateTests(page);
+  const field   = startDateField(page);
+  const display = field.locator('.kb-popup-display');
+
+  await display.click();
+  await openCalendar(page, field);
+
+  const calendar = page.locator('.Wt-cal').first();
+  await expect(calendar).toBeVisible({ timeout: 5000 });
+
+  // Click day 15 — use /^15$/ to avoid matching "15" inside "115" etc.
+  const day15 = calendar.locator('td').filter({ hasText: /^15$/ }).first();
+  await expect(day15).toBeVisible();
+  await day15.click();
+
+  // Log state immediately after click (no extra wait — check before server round-trip).
+  const afterClickImmediate = await page.evaluate(() => {
+    const disp = document.querySelector('.kb-editor-field-wrap .kb-popup-display');
+    const inp  = document.querySelector('.kb-editor-field-wrap input[type="text"]');
+    const dp   = document.querySelector('.Wt-datepicker');
+    return {
+      displayStyle: disp ? (disp as HTMLElement).style.display : null,
+      displayText:  disp ? disp.textContent : null,
+      inputStyle:   inp  ? (inp  as HTMLElement).style.display : null,
+      inputValue:   inp  ? (inp  as HTMLInputElement).value    : null,
+      pickerStyle:  dp   ? (dp   as HTMLElement).style.display : null,
+    };
+  });
+  console.log('[date-test] State immediately after day-15 click (pre-server):', afterClickImmediate);
+
+  // Wait for the Wt server round-trip to update the display.
+  await expect(display).toBeVisible({ timeout: 5000 });
+
+  const afterRoundtrip = await page.evaluate(() => {
+    const disp = document.querySelector('.kb-editor-field-wrap .kb-popup-display');
+    const inp  = document.querySelector('.kb-editor-field-wrap input[type="text"]');
+    return {
+      displayStyle: disp ? (disp as HTMLElement).style.display : null,
+      displayText:  disp ? disp.textContent : null,
+      inputStyle:   inp  ? (inp  as HTMLElement).style.display : null,
+      inputValue:   inp  ? (inp  as HTMLInputElement).value    : null,
+    };
+  });
+  console.log('[date-test] State after server round-trip:', afterRoundtrip);
+
+  const text = await display.textContent();
+  console.log('[date-test] Display text:', text);
+  expect(text).toMatch(/15/);
+});
+
+test('date field: selecting a date marks field dirty and enables Save', async ({ page }) => {
+  await openPopupForDateTests(page);
+  const field   = startDateField(page);
+  const display = field.locator('.kb-popup-display');
+  const saveBtn = page.locator('.kb-task-popup .editor-btn-row .editor-btn')
+    .filter({ hasText: 'Save Changes' });
+
+  await expect(saveBtn).toBeDisabled();
+
+  await display.click();
+  await openCalendar(page, field);
+
+  await expect(page.locator('.Wt-cal').first()).toBeVisible({ timeout: 5000 });
+  await page.locator('.Wt-cal').first().locator('td').filter({ hasText: /^15$/ }).first().click();
+
+  // After a valid date selection the field should be dirty → Save enabled.
+  await expect(saveBtn).toBeEnabled({ timeout: 5000 });
+});
