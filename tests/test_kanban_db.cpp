@@ -366,6 +366,31 @@ TEST_CASE("kanban_db - add_assignee: fails on archived task")
 	CHECK(!db.add_assignee(id, "alice", "alice"));
 }
 
+TEST_CASE("kanban_db - add_assignee: fails for non-member")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	// "alice" is NOT added as a member
+	const long long id = db.add_task(make_task(tid, "Work"), "alice");
+
+	CHECK(!db.add_assignee(id, "alice", "alice"));
+}
+
+TEST_CASE("kanban_db - archived_tasks_for_team populates assignees")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	const long long id = db.add_task(make_task(tid, "Work"), "alice");
+	db.add_assignee(id, "alice", "alice");
+	db.archive_task(id, "alice");
+
+	const auto tasks = db.archived_tasks_for_team(tid);
+	REQUIRE(!tasks.empty());
+	CHECK(tasks[0].assignees.size() == 1);
+	CHECK(tasks[0].assignees[0] == "alice");
+}
+
 // ---- remove_member_from_org_teams ----
 
 TEST_CASE("kanban_db - remove_member_from_org_teams removes from all org teams")

@@ -489,6 +489,18 @@ bool kanban_db::add_assignee(long long          task_id,
 		return false;
 	}
 
+	// Inline member check (same transaction as the outer add_assignee):
+	const auto member_rows =
+	  m_dbo.find<team_member_record>()
+	    .where("team_id = ? AND username = ?")
+	    .bind(task_ptr->team_id)
+	    .bind(username)
+	    .resultList();
+	if(member_rows.empty())
+	{
+		return false;
+	}
+
 	const auto existing =
 	  m_dbo.find<task_assignee_record>()
 	    .where("task_id = ? AND username = ?")

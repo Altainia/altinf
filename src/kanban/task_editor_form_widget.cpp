@@ -330,7 +330,7 @@ task_editor_form_widget::task_editor_form_widget(
 	const std::string assignee_init = "";
 	m_assignee_display              = m_assignee_field->addNew<Wt::WText>(
     assignee_init.empty() ? "(unassigned)" : assignee_init, Wt::TextFormat::Plain);
-	m_assignee_display->setStyleClass(can_use_assignee && !is_new ? "kb-popup-display" : "");
+	m_assignee_display->setStyleClass(""); // always read-only until Task 9
 	if(is_new)
 	{
 		m_assignee_display->hide();
@@ -368,29 +368,8 @@ task_editor_form_widget::task_editor_form_widget(
 		m_assignee_edit->hide();
 	}
 
-	if(can_use_assignee && !is_new)
-	{
-		m_assignee_display->clicked().connect([this] {
-			enter_edit_mode(m_assignee_display, m_assignee_edit);
-		});
-		// TODO(Task 9): dirty check against multi-assignee list
-		m_assignee_edit->changed().connect([this] {
-			const int         ai = m_assignee_edit->currentIndex();
-			const std::string v  = (ai >= 0 && ai < static_cast<int>(m_assignee_values.size())) ? m_assignee_values[ai] : "";
-			exit_edit_mode(m_assignee_display, m_assignee_edit, v.empty() ? "(unassigned)" : v);
-			mark_field_dirty("assigned_to", m_assignee_field);
-		});
-		m_assignee_edit->blurred().connect([this] {
-			if(m_assignee_edit->isHidden())
-			{
-				return;
-			}
-			const int         ai = m_assignee_edit->currentIndex();
-			const std::string v  = (ai >= 0 && ai < static_cast<int>(m_assignee_values.size())) ? m_assignee_values[ai] : "";
-			exit_edit_mode(m_assignee_display, m_assignee_edit, v.empty() ? "(unassigned)" : v);
-			mark_field_dirty("assigned_to", m_assignee_field);
-		});
-	}
+	// NOTE(Task 9): assignee combo is intentionally not connected — it is
+	// display-only until the chip-list widget replaces it entirely.
 
 	// ── Date fields ───────────────────────────────────────────────────────────
 	auto* sched_row = form->addNew<Wt::WContainerWidget>();
