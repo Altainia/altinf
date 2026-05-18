@@ -215,7 +215,7 @@ void altinf_app::handle_path(const std::string& path)
 	{
 		const auto slug = path.substr(6);
 		const auto it   = std::find_if(
-		  m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) { return p.slug == slug; });
+      m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) { return p.slug == slug; });
 		if(it != m_posts.end())
 		{
 			m_content->addNew<blog_post_page>(*it, m_session);
@@ -247,7 +247,7 @@ void altinf_app::handle_path(const std::string& path)
 		}
 		const auto slug = path.substr(12);
 		const auto it   = std::find_if(
-		  m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) { return p.slug == slug; });
+      m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) { return p.slug == slug; });
 		if(it == m_posts.end())
 		{
 			show_not_found("Post not found.");
@@ -329,7 +329,8 @@ void altinf_app::handle_path(const std::string& path)
 			return;
 		}
 
-		const auto caps = resolve_team_caps(team_id, team->org_id);
+		const auto caps     = resolve_team_caps(team_id, team->org_id);
+		const auto settings = m_kanban_db->settings_for_team(team_id);
 
 		const std::string suffix = suffix_after_id(path, 7);
 
@@ -341,7 +342,7 @@ void altinf_app::handle_path(const std::string& path)
 				return;
 			}
 			m_content->addNew<kanban_board_page>(
-			  *m_kanban_db, *m_org_db, m_session, team_id, caps, false);
+			  *m_kanban_db, *m_org_db, m_session, team_id, caps, settings, false);
 		}
 		else if(suffix == "/gantt")
 		{
@@ -351,7 +352,7 @@ void altinf_app::handle_path(const std::string& path)
 				return;
 			}
 			m_content->addNew<kanban_board_page>(
-			  *m_kanban_db, *m_org_db, m_session, team_id, caps, true);
+			  *m_kanban_db, *m_org_db, m_session, team_id, caps, settings, true);
 		}
 		else if(suffix == "/task/new")
 		{
@@ -361,7 +362,7 @@ void altinf_app::handle_path(const std::string& path)
 				return;
 			}
 			m_content->addNew<kanban_task_editor_page>(
-			  *m_kanban_db, *m_org_db, team_id, m_session, caps, nullptr, [this, team_id] {
+			  *m_kanban_db, *m_org_db, team_id, m_session, caps, settings, nullptr, [this, team_id] {
 				  setInternalPath("/board/" + std::to_string(team_id), true);
 			  });
 		}
@@ -391,7 +392,7 @@ void altinf_app::handle_path(const std::string& path)
 			}
 			m_edit_task = opt;
 			m_content->addNew<kanban_task_editor_page>(
-			  *m_kanban_db, *m_org_db, team_id, m_session, caps, &(*m_edit_task), [this, team_id] {
+			  *m_kanban_db, *m_org_db, team_id, m_session, caps, settings, &(*m_edit_task), [this, team_id] {
 				  setInternalPath("/board/" + std::to_string(team_id), true);
 			  });
 		}
@@ -589,7 +590,7 @@ void altinf_app::handle_path(const std::string& path)
 		const auto edit_username = path.substr(21);
 		const auto users         = m_user_db->list_users();
 		const auto it            = std::find_if(
-		  users.begin(), users.end(), [&edit_username](const user_entry& e) { return e.username == edit_username; });
+      users.begin(), users.end(), [&edit_username](const user_entry& e) { return e.username == edit_username; });
 		if(it == users.end())
 		{
 			show_not_found("User not found.");

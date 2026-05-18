@@ -1,6 +1,7 @@
 #pragma once
 
 #include "auth/session_data.hpp"
+#include "kanban/kanban.hpp"
 #include "kanban/kanban_db.hpp"
 #include "kanban/kanban_board_widget.hpp"
 #include "kanban/gantt_view_widget.hpp"
@@ -21,6 +22,7 @@ public:
                       const session_data& session,
                       long long           team_id,
                       team_cap::flags     caps,
+                      team_settings_entry settings,
                       bool                show_gantt);
 
     ~kanban_board_page() override;
@@ -32,6 +34,7 @@ private:
     long long                        m_team_id{0};
     long long                        m_org_id{0};
     team_cap::flags                  m_caps;
+    team_settings_entry              m_settings;
     bool                             m_show_gantt{false};
     std::string                      m_username;
     std::string                      m_session_id;

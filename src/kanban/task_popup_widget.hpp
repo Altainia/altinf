@@ -1,6 +1,7 @@
 #pragma once
 
 #include "kanban_db.hpp"
+#include "kanban.hpp"
 #include "team_cap.hpp"
 #include "auth/session_data.hpp"
 #include "org/org_db.hpp"
@@ -21,6 +22,7 @@ public:
                       long long           task_id,
                       const session_data& session,
                       team_cap::flags     caps,
+                      team_settings_entry settings,
                       long long           team_id);
 
     ~task_popup_widget() override;

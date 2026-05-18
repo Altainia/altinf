@@ -16,12 +16,14 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
                                      const session_data& session,
                                      long long           team_id,
                                      team_cap::flags     caps,
+                                     team_settings_entry settings,
                                      bool                show_gantt):
   m_db{db},
   m_odb{odb},
   m_session{session},
   m_team_id{team_id},
   m_caps{caps},
+  m_settings{settings},
   m_show_gantt{show_gantt},
   m_username{session.username}
 {
@@ -87,6 +89,12 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 	// ── Content ───────────────────────────────────────────────────────────────
 	const auto tasks = db.tasks_for_team(team_id);
 
+	const bool is_lead          = m_caps.has_any(team_cap::edit_task_details);
+	const bool can_move_columns = is_lead ||
+	                              (m_caps.has_any(team_cap::edit_task_fields) &&
+	                               m_settings.allow_member_move_columns);
+	const bool can_move_done = is_lead;
+
 	if(show_gantt)
 	{
 		m_gantt_widget = addNew<gantt_view_widget>(
@@ -94,32 +102,38 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 		  m_type_colors,
 		  [this](long long tid) {
 			  new task_popup_widget(
-			    m_db, m_odb, tid, m_session, m_caps, m_team_id);
+			    m_db, m_odb, tid, m_session, m_caps, m_settings, m_team_id);
 		  });
 	}
 	else
 	{
 		m_board_widget = addNew<kanban_board_widget>(
 		  tasks,
-		  m_caps.has_any(team_cap::edit_task_fields),
-		  m_caps.has_any(team_cap::edit_task_details),
+		  can_move_columns,
+		  can_move_done,
 		  m_type_colors,
-		  [this](long long tid, const std::string& status, int sort) {
-			  if(!m_caps.has_any(team_cap::edit_task_fields))
+		  [this, can_move_columns, can_move_done](long long tid, const std::string& status, int sort) {
+			  const auto task = m_db.find_task(tid);
+			  if(!task)
+			  {
+				  return;
+			  }
+			  const bool from_done = (task->status == "done");
+			  const bool to_done   = (status == "done");
+			  if((from_done || to_done) && !can_move_done)
+			  {
+				  return;
+			  }
+			  if(!from_done && !to_done && !can_move_columns)
 			  {
 				  return;
 			  }
 			  m_db.update_task_status(tid, status, sort, m_username);
 			  live_hub::instance().broadcast("team:" + std::to_string(m_team_id));
-			  m_board_widget->refresh(
-			    m_db.tasks_for_team(m_team_id),
-			    m_caps.has_any(team_cap::edit_task_fields),
-			    m_caps.has_any(team_cap::edit_task_details),
-			    m_type_colors);
 		  },
 		  [this](long long tid) {
 			  new task_popup_widget(
-			    m_db, m_odb, tid, m_session, m_caps, m_team_id);
+			    m_db, m_odb, tid, m_session, m_caps, m_settings, m_team_id);
 		  });
 	}
 
@@ -170,6 +184,12 @@ void kanban_board_page::refresh()
 		m_type_colors[ty.id] = ty.color;
 	}
 
+	const bool is_lead          = m_caps.has_any(team_cap::edit_task_details);
+	const bool can_move_columns = is_lead ||
+	                              (m_caps.has_any(team_cap::edit_task_fields) &&
+	                               m_settings.allow_member_move_columns);
+	const bool can_move_done = is_lead;
+
 	const auto tasks = m_db.tasks_for_team(m_team_id);
 	if(m_show_gantt && m_gantt_widget)
 	{
@@ -177,10 +197,6 @@ void kanban_board_page::refresh()
 	}
 	else if(m_board_widget)
 	{
-		m_board_widget->refresh(
-		  tasks,
-		  m_caps.has_any(team_cap::edit_task_fields),
-		  m_caps.has_any(team_cap::edit_task_details),
-		  m_type_colors);
+		m_board_widget->refresh(tasks, can_move_columns, can_move_done, m_type_colors);
 	}
 }

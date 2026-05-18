@@ -20,6 +20,7 @@ public:
 	                        long long                team_id,
 	                        const session_data&      session,
 	                        team_cap::flags          caps,
+	                        team_settings_entry      settings,
 	                        const kanban_task_entry* existing,
 	                        std::function<void()>    on_save);
 };

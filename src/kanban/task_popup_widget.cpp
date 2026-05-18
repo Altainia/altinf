@@ -10,7 +10,7 @@
 
 #include "task_editor_form_widget.hpp"
 
-task_popup_widget::task_popup_widget(kanban_db& db, org_db& odb, long long task_id, const session_data& session, team_cap::flags caps, long long team_id): Wt::WDialog{}
+task_popup_widget::task_popup_widget(kanban_db& db, org_db& odb, long long task_id, const session_data& session, team_cap::flags caps, team_settings_entry settings, long long team_id): Wt::WDialog{}
 {
 	addStyleClass("kb-task-popup");
 
@@ -37,7 +37,7 @@ task_popup_widget::task_popup_widget(kanban_db& db, org_db& odb, long long task_
 	full_link->clicked().connect([this] { reject(); });
 
 	m_form = contents()->addNew<task_editor_form_widget>(
-	  db, odb, task_id, team_id, session, caps, team_settings_entry{}, [this] { accept(); }, [this] { try_close(); });
+	  db, odb, task_id, team_id, session, caps, settings, [this] { accept(); }, [this] { try_close(); });
 
 	// Hidden input: JS → C++ close callback
 	m_close_cb = contents()->addNew<Wt::WLineEdit>();
