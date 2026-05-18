@@ -651,7 +651,7 @@
 }
 
 .kb-task-popup {
-  .Wt-dialog-contents {
+  .body {
     max-height: calc(90vh - 120px);
     overflow-y: auto;
   }

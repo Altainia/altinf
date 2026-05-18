@@ -48,38 +48,40 @@ task_popup_widget::task_popup_widget(kanban_db& db, org_db& odb, long long task_
 	close_btn->clicked().connect([this] { try_close(); });
 
 	finished().connect([this, cb_id](Wt::DialogCode) {
-		// Remove Escape listener in case popup was closed by a non-Escape path.
+		// Clean up document listeners if popup was closed without firing them
+		// (e.g. Save button, Cancel button).
 		doJavaScript(
 		  "(function(){"
 		  "  var inp=document.getElementById('" +
 		  cb_id +
 		  "');"
-		  "  if(inp&&inp.__onEsc)document.removeEventListener('keydown',inp.__onEsc);"
+		  "  if(!inp)return;"
+		  "  if(inp.__onEsc)document.removeEventListener('keydown',inp.__onEsc);"
+		  "  if(inp.__onDown)document.removeEventListener('mousedown',inp.__onDown);"
 		  "})();");
 		delete this;
 	});
 	show();
 
-	// Wire Escape key and modal-cover click to try_close().
-	// Store onEsc on inp.__onEsc so finished() can remove it on non-Escape close paths.
+	// Wire Escape key and click-outside to try_close().
+	// Listeners are stored on inp.__onEsc / inp.__onDown so finished() can clean up
+	// on non-Escape / non-click close paths (Save, Cancel button).
 	doJavaScript(
 	  "(function(cbId){"
 	  "  var inp=document.getElementById(cbId);"
 	  "  if(!inp)return;"
 	  "  function fireClose(){"
+	  "    document.removeEventListener('keydown',inp.__onEsc);"
+	  "    document.removeEventListener('mousedown',inp.__onDown);"
 	  "    inp.value='CLOSE';"
 	  "    inp.dispatchEvent(new Event('change'));"
 	  "  }"
-	  "  function onEsc(e){"
-	  "    if(e.key==='Escape'){"
-	  "      document.removeEventListener('keydown',onEsc);"
-	  "      fireClose();"
-	  "    }"
-	  "  }"
+	  "  function onEsc(e){ if(e.key==='Escape')fireClose(); }"
+	  "  function onDown(e){ if(!e.target.closest('.Wt-dialog'))fireClose(); }"
 	  "  inp.__onEsc=onEsc;"
+	  "  inp.__onDown=onDown;"
 	  "  document.addEventListener('keydown',onEsc);"
-	  "  var cover=document.querySelector('.Wt-dialogcover');"
-	  "  if(cover)cover.addEventListener('click',fireClose,{once:true});"
+	  "  document.addEventListener('mousedown',onDown);"
 	  "})('" +
 	  cb_id + "');");
 }
