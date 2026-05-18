@@ -31,6 +31,7 @@ public:
                             long long             team_id,
                             const session_data&   session,
                             team_cap::flags       caps,
+                            team_settings_entry   settings,
                             std::function<void()> on_saved,
                             std::function<void()> on_cancel);
 
@@ -47,6 +48,7 @@ private:
     long long             m_org_id{0};
     std::string           m_username;
     team_cap::flags       m_caps;
+    team_settings_entry   m_settings;
     std::string           m_session_id;
     std::shared_ptr<bool> m_alive{std::make_shared<bool>(true)};
     std::function<void()> m_on_saved;
@@ -66,9 +68,8 @@ private:
     Wt::WText*            m_status_display{nullptr};
     Wt::WContainerWidget* m_status_field{nullptr};
 
-    Wt::WComboBox*        m_assignee_edit{nullptr};
-    Wt::WText*            m_assignee_display{nullptr};
-    Wt::WContainerWidget* m_assignee_field{nullptr};
+    Wt::WContainerWidget* m_assignee_list{nullptr};
+    Wt::WComboBox*        m_add_member_combo{nullptr};
 
     Wt::WDateEdit*        m_start_date_edit{nullptr};
     Wt::WText*            m_start_date_display{nullptr};
@@ -80,7 +81,7 @@ private:
 
     long long                          m_type_id{0};
     std::vector<Wt::WContainerWidget*> m_type_chips;
-    std::vector<std::string>           m_assignee_values;
+    std::vector<std::string>           m_status_vals_used;
 
     Wt::WContainerWidget* m_stale_banner{nullptr};
     bool                  m_stale{false};

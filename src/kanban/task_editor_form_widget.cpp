@@ -69,6 +69,7 @@ task_editor_form_widget::task_editor_form_widget(
   long long             team_id,
   const session_data&   session,
   team_cap::flags       caps,
+  team_settings_entry   settings,
   std::function<void()> on_saved,
   std::function<void()> on_cancel): m_db{db},
                                     m_odb{odb},
@@ -76,6 +77,7 @@ task_editor_form_widget::task_editor_form_widget(
                                     m_team_id{team_id},
                                     m_username{session.username},
                                     m_caps{caps},
+                                    m_settings{settings},
                                     m_on_saved{std::move(on_saved)},
                                     m_on_cancel{std::move(on_cancel)}
 {
@@ -95,12 +97,13 @@ task_editor_form_widget::task_editor_form_widget(
 	const auto team_opt = m_db.find_team(team_id);
 	m_org_id            = team_opt ? team_opt->org_id : 0;
 
-	const bool can_edit = caps.has_any(team_cap::edit_task_fields) &&
-	                      (is_new || !m_original.is_archived);
-	const bool can_assign = caps.has_any(team_cap::reassign_task) &&
-	                        (is_new || !m_original.is_archived);
-	// TODO(Task 9): replace with multi-assignee check
-	const bool can_use_assignee = can_assign;
+	const bool is_lead         = caps.has_any(team_cap::edit_task_details);
+	const bool not_archived    = is_new || !m_original.is_archived;
+	const bool can_edit        = is_lead && not_archived;
+	const bool can_edit_status = not_archived &&
+	                             (is_lead || (caps.has_any(team_cap::edit_task_fields) &&
+	                                          m_settings.allow_member_move_columns));
+	const bool can_reassign = caps.has_any(team_cap::reassign_task) && not_archived;
 
 	// ── Stale banner ──────────────────────────────────────────────────────────
 	if(!is_new)
@@ -251,47 +254,53 @@ task_editor_form_widget::task_editor_form_widget(
 	const std::string status_init = is_new ? "todo" : m_original.status;
 	m_status_display              = m_status_field->addNew<Wt::WText>(
     status_lbl(status_init), Wt::TextFormat::Plain);
-	m_status_display->setStyleClass(can_edit && !is_new ? "kb-popup-display" : "");
+	m_status_display->setStyleClass(can_edit_status && !is_new ? "kb-popup-display" : "");
 	if(is_new)
 	{
 		m_status_display->hide();
 	}
 	m_status_edit = m_status_field->addNew<Wt::WComboBox>();
 	m_status_edit->setStyleClass("editor-field");
-	for(const auto& lbl: k_status_labels)
+	for(size_t i = 0; i < k_status_vals.size(); ++i)
 	{
-		m_status_edit->addItem(lbl);
+		if(k_status_vals[i] == "done" && !is_lead)
+		{
+			continue;
+		}
+		m_status_vals_used.push_back(k_status_vals[i]);
+		m_status_edit->addItem(k_status_labels[i]);
 	}
 	{
-		const auto it = std::find(k_status_vals.begin(), k_status_vals.end(), status_init);
-		if(it != k_status_vals.end())
+		const auto it = std::find(
+		  m_status_vals_used.begin(), m_status_vals_used.end(), status_init);
+		if(it != m_status_vals_used.end())
 		{
 			m_status_edit->setCurrentIndex(
-			  static_cast<int>(std::distance(k_status_vals.begin(), it)));
+			  static_cast<int>(std::distance(m_status_vals_used.begin(), it)));
 		}
 	}
 	if(!is_new)
 	{
-		if(can_edit)
+		if(can_edit_status)
 		{
 			m_status_edit->hide();
 		}
 		else
 		{
-			// Read-only view: show the select as disabled so tests can locate and check it.
 			m_status_edit->setDisabled(true);
 			m_status_display->hide();
 		}
 	}
 
-	if(can_edit && !is_new)
+	if(can_edit_status && !is_new)
 	{
 		m_status_display->clicked().connect([this] {
 			enter_edit_mode(m_status_display, m_status_edit);
 		});
 		m_status_edit->changed().connect([this] {
 			const int         si = m_status_edit->currentIndex();
-			const std::string v  = (si >= 0 && si < static_cast<int>(k_status_vals.size())) ? k_status_vals[si] : m_original.status;
+			const std::string v =
+			  (si >= 0 && si < static_cast<int>(m_status_vals_used.size())) ? m_status_vals_used[si] : m_original.status;
 			exit_edit_mode(m_status_display, m_status_edit, status_lbl(v));
 			if(v == m_original.status)
 			{
@@ -308,7 +317,8 @@ task_editor_form_widget::task_editor_form_widget(
 				return;
 			}
 			const int         si = m_status_edit->currentIndex();
-			const std::string v  = (si >= 0 && si < static_cast<int>(k_status_vals.size())) ? k_status_vals[si] : m_original.status;
+			const std::string v =
+			  (si >= 0 && si < static_cast<int>(m_status_vals_used.size())) ? m_status_vals_used[si] : m_original.status;
 			exit_edit_mode(m_status_display, m_status_edit, status_lbl(v));
 			if(v == m_original.status)
 			{
@@ -321,55 +331,165 @@ task_editor_form_widget::task_editor_form_widget(
 		});
 	}
 
-	// Assignee
-	m_assignee_field = row->addNew<Wt::WContainerWidget>();
-	m_assignee_field->setStyleClass("kb-editor-field-wrap kb-popup-field");
-	m_assignee_field->addNew<Wt::WText>("Assigned to", Wt::TextFormat::Plain)
+	// ── Assignees ─────────────────────────────────────────────────────────────────
+	m_assignee_list = row->addNew<Wt::WContainerWidget>();
+	m_assignee_list->setStyleClass("kb-editor-field-wrap kb-popup-field");
+	m_assignee_list->addNew<Wt::WText>("Assignees", Wt::TextFormat::Plain)
 	  ->setStyleClass("kb-field-label");
-	// TODO(Task 9): derive display from m_original.assignees vector
-	const std::string assignee_init = "";
-	m_assignee_display              = m_assignee_field->addNew<Wt::WText>(
-    assignee_init.empty() ? "(unassigned)" : assignee_init, Wt::TextFormat::Plain);
-	m_assignee_display->setStyleClass(""); // always read-only until Task 9
-	if(is_new)
-	{
-		m_assignee_display->hide();
-	}
 
-	m_assignee_values.push_back("");
-	m_assignee_edit = m_assignee_field->addNew<Wt::WComboBox>();
-	m_assignee_edit->setStyleClass("editor-field");
-	m_assignee_edit->addItem("(unassigned)");
-	const auto members = m_db.members_for_team(team_id);
-	if(can_assign)
-	{
-		for(const auto& mem: members)
+	auto* chips_container = m_assignee_list->addNew<Wt::WContainerWidget>();
+	chips_container->setStyleClass("kb-assignee-chips");
+
+	auto rebuild_chips = [this, chips_container, can_reassign, not_archived]() {
+		chips_container->clear();
+		const auto current = m_db.assignees_for_task(m_task_id);
+		for(const auto& user: current)
 		{
-			m_assignee_values.push_back(mem);
-			m_assignee_edit->addItem(mem);
+			auto* chip = chips_container->addNew<Wt::WContainerWidget>();
+			chip->setStyleClass("kb-assignee-chip");
+			chip->addNew<Wt::WText>(user, Wt::TextFormat::Plain);
+
+			const bool is_self            = (user == m_username);
+			const bool sole               = (current.size() == 1);
+			const bool can_remove_as_lead = can_reassign;
+			const bool can_remove_as_member =
+			  !can_reassign && is_self && not_archived &&
+			  (sole ? m_settings.allow_abandon : m_settings.allow_self_assign_assigned);
+
+			if(can_remove_as_lead || can_remove_as_member)
+			{
+				auto* rm = chip->addNew<Wt::WPushButton>("\xc3\x97");
+				rm->setStyleClass("kb-assignee-rm");
+				rm->clicked().connect(
+				  [this, user, sole, can_reassign, chips_container]() {
+					  auto do_remove = [this, user, chips_container]() {
+						  m_db.remove_assignee(m_task_id, user, m_username);
+						  live_hub::instance().broadcast(
+						    "team:" + std::to_string(m_team_id));
+						  chips_container->clear();
+						  const auto updated = m_db.assignees_for_task(m_task_id);
+						  for(const auto& u: updated)
+						  {
+							  auto* c = chips_container->addNew<Wt::WContainerWidget>();
+							  c->setStyleClass("kb-assignee-chip");
+							  c->addNew<Wt::WText>(u, Wt::TextFormat::Plain);
+						  }
+					  };
+
+					  if(can_reassign && sole && !m_settings.allow_abandon)
+					  {
+						  auto* dlg = addNew<Wt::WDialog>("Confirm abandon");
+						  dlg->contents()->addNew<Wt::WText>(
+						    "This task has no other assignees. Removing " + user +
+						      " will leave it unassigned. Proceed?",
+						    Wt::TextFormat::Plain);
+						  auto* yes =
+						    dlg->footer()->addNew<Wt::WPushButton>("Yes, abandon");
+						  yes->setStyleClass("editor-btn");
+						  auto* no = dlg->footer()->addNew<Wt::WPushButton>("Cancel");
+						  no->setStyleClass("editor-btn editor-btn-cancel");
+						  yes->clicked().connect([dlg, do_remove]() mutable {
+							  dlg->reject();
+							  do_remove();
+						  });
+						  no->clicked().connect([dlg]() { dlg->reject(); });
+						  dlg->show();
+					  }
+					  else
+					  {
+						  do_remove();
+					  }
+				  });
+			}
 		}
-	}
-	else
-	{
-		m_assignee_values.push_back(session.username);
-		m_assignee_edit->addItem(session.username);
-	}
-	{
-		const auto it = std::find(
-		  m_assignee_values.begin(), m_assignee_values.end(), assignee_init);
-		if(it != m_assignee_values.end())
-		{
-			m_assignee_edit->setCurrentIndex(
-			  static_cast<int>(std::distance(m_assignee_values.begin(), it)));
-		}
-	}
+	};
+
 	if(!is_new)
 	{
-		m_assignee_edit->hide();
+		rebuild_chips();
 	}
 
-	// NOTE(Task 9): assignee combo is intentionally not connected — it is
-	// display-only until the chip-list widget replaces it entirely.
+	const bool already_assigned =
+	  !is_new &&
+	  std::find(
+	    m_original.assignees.begin(), m_original.assignees.end(), m_username) !=
+	    m_original.assignees.end();
+	const bool can_self_add =
+	  !can_reassign && not_archived && !is_new && !already_assigned &&
+	  (m_original.assignees.empty() ? m_settings.allow_self_assign_unassigned : m_settings.allow_self_assign_assigned);
+
+	if(can_self_add)
+	{
+		auto* self_btn = m_assignee_list->addNew<Wt::WPushButton>("Assign to me");
+		self_btn->setStyleClass("editor-btn");
+		self_btn->clicked().connect([this, chips_container]() {
+			if(m_db.add_assignee(m_task_id, m_username, m_username))
+			{
+				live_hub::instance().broadcast(
+				  "team:" + std::to_string(m_team_id));
+				chips_container->clear();
+				const auto updated = m_db.assignees_for_task(m_task_id);
+				for(const auto& u: updated)
+				{
+					auto* c = chips_container->addNew<Wt::WContainerWidget>();
+					c->setStyleClass("kb-assignee-chip");
+					c->addNew<Wt::WText>(u, Wt::TextFormat::Plain);
+				}
+			}
+		});
+	}
+
+	if(can_reassign && !is_new)
+	{
+		auto* add_row = m_assignee_list->addNew<Wt::WContainerWidget>();
+		add_row->setStyleClass("kb-assignee-add-row");
+		m_add_member_combo = add_row->addNew<Wt::WComboBox>();
+		m_add_member_combo->setStyleClass("editor-field");
+		m_add_member_combo->addItem("(select member)");
+		const auto team_members = m_db.members_for_team(m_team_id);
+		for(const auto& mem: team_members)
+		{
+			m_add_member_combo->addItem(mem);
+		}
+		auto* add_btn = add_row->addNew<Wt::WPushButton>("Add");
+		add_btn->setStyleClass("editor-btn");
+		add_btn->clicked().connect([this, chips_container]() {
+			const int idx = m_add_member_combo->currentIndex();
+			if(idx <= 0)
+			{
+				return;
+			}
+			const auto mems = m_db.members_for_team(m_team_id);
+			const int  mi   = idx - 1;
+			if(mi < 0 || mi >= static_cast<int>(mems.size()))
+			{
+				return;
+			}
+			const std::string new_user = mems[mi];
+			if(m_db.add_assignee(m_task_id, new_user, m_username))
+			{
+				if(new_user != m_username)
+				{
+					const auto team_opt = m_db.find_team(m_team_id);
+					const auto task_opt = m_db.find_task(m_task_id);
+					m_odb.push_notification(
+					  new_user, "task_assigned", make_task_assigned_payload(m_task_id, task_opt ? task_opt->title : "", m_team_id, team_opt ? team_opt->name : ""));
+					live_hub::instance().broadcast("user:" + new_user);
+				}
+				live_hub::instance().broadcast(
+				  "team:" + std::to_string(m_team_id));
+				chips_container->clear();
+				const auto updated = m_db.assignees_for_task(m_task_id);
+				for(const auto& u: updated)
+				{
+					auto* c = chips_container->addNew<Wt::WContainerWidget>();
+					c->setStyleClass("kb-assignee-chip");
+					c->addNew<Wt::WText>(u, Wt::TextFormat::Plain);
+				}
+				m_add_member_combo->setCurrentIndex(0);
+			}
+		});
+	}
 
 	// ── Date fields ───────────────────────────────────────────────────────────
 	auto* sched_row = form->addNew<Wt::WContainerWidget>();
@@ -598,7 +718,7 @@ task_editor_form_widget::task_editor_form_widget(
 	{
 		m_save_btn->setEnabled(false);
 	}
-	if(!can_edit && !is_new)
+	if(!can_edit && !can_edit_status && !is_new)
 	{
 		m_save_btn->hide();
 	}
@@ -785,7 +905,13 @@ void task_editor_form_widget::save()
 	// Distinguish new vs edit
 	const bool creating = (m_original.id == 0);
 
-	if(!creating && (!m_caps.has_any(team_cap::edit_task_fields) || m_original.is_archived))
+	if(!creating &&
+	   (!m_caps.has_any(team_cap::edit_task_fields) &&
+	    !m_caps.has_any(team_cap::edit_task_details)))
+	{
+		return;
+	}
+	if(!creating && m_original.is_archived)
 	{
 		return;
 	}
@@ -807,11 +933,15 @@ void task_editor_form_widget::save()
 
 	const int         si = m_status_edit->currentIndex();
 	const std::string status =
-	  (si >= 0 && si < static_cast<int>(k_status_vals.size())) ? k_status_vals[si] : (creating ? "todo" : m_original.status);
+	  (si >= 0 && si < static_cast<int>(m_status_vals_used.size())) ? m_status_vals_used[si] : (creating ? "todo" : m_original.status);
 
-	// TODO(Task 9): replace single-assignee combo with multi-assignee UI
-	// For now the assignee combo is a placeholder; no assignee changes are
-	// persisted via update_task() — use add_assignee/remove_assignee instead.
+	if(!creating && !m_caps.has_any(team_cap::edit_task_details))
+	{
+		if(status == "done" || m_original.status == "done")
+		{
+			return;
+		}
+	}
 
 	kanban_task_entry t;
 	t.team_id     = m_team_id;
@@ -826,6 +956,15 @@ void task_editor_form_widget::save()
 	if(const auto d = m_end_date_edit->date(); d.isValid())
 	{
 		t.end_date = d;
+	}
+
+	if(!m_caps.has_any(team_cap::edit_task_details) && !creating)
+	{
+		t.title       = m_original.title;
+		t.description = m_original.description;
+		t.start_date  = m_original.start_date;
+		t.end_date    = m_original.end_date;
+		t.type_id     = m_original.type_id;
 	}
 
 	if(creating)
@@ -879,7 +1018,7 @@ void task_editor_form_widget::rebuild_history()
 	}
 
 	static const std::map<std::string, std::string> k_field_labels = {
-	  {"status", "Status"}, {"title", "Title"}, {"description", "Description"}, {"assigned_to", "Assigned to"}, {"start_date", "Start date"}, {"end_date", "End date"}, {"type", "Type"}};
+	  {"status", "Status"}, {"title", "Title"}, {"description", "Description"}, {"assignees", "Assignees"}, {"start_date", "Start date"}, {"end_date", "End date"}, {"type", "Type"}};
 	static const std::map<std::string, std::string> k_status_display = {
 	  {"todo", "To Do"}, {"in_progress", "In Progress"}, {"review", "Review"}, {"done", "Done"}};
 

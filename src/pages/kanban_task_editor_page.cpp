@@ -25,7 +25,7 @@ kanban_task_editor_page::kanban_task_editor_page(
 	const std::string board_url = "/board/" + std::to_string(team_id);
 
 	addNew<task_editor_form_widget>(
-	  db, odb, task_id, team_id, session, caps,
+	  db, odb, task_id, team_id, session, caps, team_settings_entry{},
 	  on_save, // on_saved
 	  [board_url] {
 		  Wt::WApplication::instance()->setInternalPath(board_url, true);
