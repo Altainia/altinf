@@ -47,24 +47,37 @@ task_popup_widget::task_popup_widget(kanban_db& db, org_db& odb, long long task_
 	close_btn->setStyleClass("editor-btn editor-btn-cancel");
 	close_btn->clicked().connect([this] { try_close(); });
 
-	finished().connect([this](Wt::DialogCode) { delete this; });
+	finished().connect([this, cb_id](Wt::DialogCode) {
+		// Remove Escape listener in case popup was closed by a non-Escape path.
+		doJavaScript(
+		  "(function(){"
+		  "  var inp=document.getElementById('" +
+		  cb_id +
+		  "');"
+		  "  if(inp&&inp.__onEsc)document.removeEventListener('keydown',inp.__onEsc);"
+		  "})();");
+		delete this;
+	});
 	show();
 
-	// Wire Escape key and modal-cover click to try_close()
+	// Wire Escape key and modal-cover click to try_close().
+	// Store onEsc on inp.__onEsc so finished() can remove it on non-Escape close paths.
 	doJavaScript(
 	  "(function(cbId){"
+	  "  var inp=document.getElementById(cbId);"
+	  "  if(!inp)return;"
 	  "  function fireClose(){"
-	  "    var inp=document.getElementById(cbId);"
-	  "    if(!inp)return;"
 	  "    inp.value='CLOSE';"
 	  "    inp.dispatchEvent(new Event('change'));"
 	  "  }"
-	  "  document.addEventListener('keydown',function onEsc(e){"
+	  "  function onEsc(e){"
 	  "    if(e.key==='Escape'){"
 	  "      document.removeEventListener('keydown',onEsc);"
 	  "      fireClose();"
 	  "    }"
-	  "  });"
+	  "  }"
+	  "  inp.__onEsc=onEsc;"
+	  "  document.addEventListener('keydown',onEsc);"
 	  "  var cover=document.querySelector('.Wt-dialogcover');"
 	  "  if(cover)cover.addEventListener('click',fireClose,{once:true});"
 	  "})('" +

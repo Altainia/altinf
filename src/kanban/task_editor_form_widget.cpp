@@ -615,6 +615,8 @@ task_editor_form_widget::task_editor_form_widget(
 				{
 					live_hub::instance().unsubscribe(
 					  "task:" + std::to_string(m_task_id), m_session_id);
+					live_hub::instance().unsubscribe(
+					  "task:" + std::to_string(m_task_id) + ":comments", m_session_id);
 					m_task_id = 0;
 				}
 				m_db.archive_task(tid, m_username);
