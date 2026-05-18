@@ -1,5 +1,6 @@
 #include <Wt/WDate.h>
 
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 
 #include "kanban/kanban_db.hpp"
@@ -230,50 +231,139 @@ TEST_CASE("kanban_db - tasks_for_team empty when no tasks")
 	CHECK(db.tasks_for_team(tid).empty());
 }
 
-TEST_CASE("kanban_db - self_assign succeeds on unassigned task")
+// ---- multi-assignee ----
+
+TEST_CASE("kanban_db - add_assignee: success on unassigned task")
 {
 	kanban_db       db{":memory:"};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
-	const long long id = db.add_task(make_task(tid, "Work"), "test");
-	CHECK(db.self_assign(id, "alice"));
-	CHECK(db.find_task(id)->assigned_to == "alice");
+	const long long id = db.add_task(make_task(tid, "Work"), "alice");
+
+	CHECK(db.add_assignee(id, "alice", "alice"));
+	const auto a = db.assignees_for_task(id);
+	REQUIRE(a.size() == 1);
+	CHECK(a[0] == "alice");
 }
 
-TEST_CASE("kanban_db - self_assign fails when already assigned")
+TEST_CASE("kanban_db - add_assignee: two users")
 {
 	kanban_db       db{":memory:"};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	db.add_member(tid, "bob");
-	auto t             = make_task(tid, "Work");
-	t.assigned_to      = "alice";
-	const long long id = db.add_task(t, "test");
-	CHECK(!db.self_assign(id, "bob"));
+	const long long id = db.add_task(make_task(tid, "Work"), "alice");
+
+	CHECK(db.add_assignee(id, "alice", "alice"));
+	CHECK(db.add_assignee(id, "bob", "alice"));
+	const auto a = db.assignees_for_task(id);
+	CHECK(a.size() == 2);
 }
 
-TEST_CASE("kanban_db - self_assign fails for non-member")
-{
-	kanban_db       db{":memory:"};
-	const long long tid = db.create_team("T", 1);
-	const long long id  = db.add_task(make_task(tid, "Work"), "test");
-	CHECK(!db.self_assign(id, "stranger"));
-}
-
-TEST_CASE("kanban_db - self_assign records assigned_to history event")
+TEST_CASE("kanban_db - add_assignee: idempotent")
 {
 	kanban_db       db{":memory:"};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
-	const long long id = db.add_task(make_task(tid, "Work"), "creator");
-	db.self_assign(id, "alice");
-	const auto history = db.history_for_task(id);
-	REQUIRE(history.size() == 2); // created + updated
-	CHECK(history[0].event_type == "updated");
-	REQUIRE(history[0].changes.size() == 1);
-	CHECK(history[0].changes[0].field_name == "assigned_to");
-	CHECK(history[0].changes[0].old_value == "");
-	CHECK(history[0].changes[0].new_value == "alice");
+	const long long id = db.add_task(make_task(tid, "Work"), "alice");
+
+	db.add_assignee(id, "alice", "alice");
+	CHECK(!db.add_assignee(id, "alice", "alice")); // already assigned → false
+	CHECK(db.assignees_for_task(id).size() == 1);
+}
+
+TEST_CASE("kanban_db - add_assignee: rejects done task")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	const long long id = db.add_task(make_task(tid, "Work", "done"), "alice");
+
+	CHECK(!db.add_assignee(id, "alice", "alice"));
+}
+
+TEST_CASE("kanban_db - remove_assignee: success")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	db.add_member(tid, "bob");
+	const long long id = db.add_task(make_task(tid, "Work"), "alice");
+	db.add_assignee(id, "alice", "alice");
+	db.add_assignee(id, "bob", "alice");
+
+	CHECK(db.remove_assignee(id, "bob", "alice"));
+	const auto a = db.assignees_for_task(id);
+	REQUIRE(a.size() == 1);
+	CHECK(a[0] == "alice");
+}
+
+TEST_CASE("kanban_db - remove_assignee: false when not assigned")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	const long long id  = db.add_task(make_task(tid, "Work"), "alice");
+
+	CHECK(!db.remove_assignee(id, "alice", "alice"));
+}
+
+TEST_CASE("kanban_db - tasks_for_team populates assignees")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	db.add_member(tid, "bob");
+	const long long id = db.add_task(make_task(tid, "Work"), "alice");
+	db.add_assignee(id, "alice", "alice");
+	db.add_assignee(id, "bob", "alice");
+
+	const auto tasks = db.tasks_for_team(tid);
+	REQUIRE(!tasks.empty());
+	CHECK(tasks[0].assignees.size() == 2);
+}
+
+TEST_CASE("kanban_db - find_task populates assignees")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	const long long id = db.add_task(make_task(tid, "Work"), "alice");
+	db.add_assignee(id, "alice", "alice");
+
+	const auto t = db.find_task(id);
+	REQUIRE(t.has_value());
+	REQUIRE(t->assignees.size() == 1);
+	CHECK(t->assignees[0] == "alice");
+}
+
+TEST_CASE("kanban_db - add_assignee records history event")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	const long long id = db.add_task(make_task(tid, "Work"), "alice");
+	db.add_assignee(id, "alice", "alice");
+
+	const auto hist = db.history_for_task(id);
+	const bool has_event =
+	  std::any_of(hist.begin(), hist.end(), [](const task_event_entry& e) {
+		  return e.event_type == "updated" &&
+		         std::any_of(e.changes.begin(), e.changes.end(), [](const task_field_change_entry& c) {
+			         return c.field_name == "assignees";
+		         });
+	  });
+	CHECK(has_event);
+}
+
+TEST_CASE("kanban_db - add_assignee: fails on archived task")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	const long long id = db.add_task(make_task(tid, "Work"), "alice");
+	db.archive_task(id, "alice");
+
+	CHECK(!db.add_assignee(id, "alice", "alice"));
 }
 
 // ---- remove_member_from_org_teams ----

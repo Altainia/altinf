@@ -99,10 +99,8 @@ task_editor_form_widget::task_editor_form_widget(
 	                      (is_new || !m_original.is_archived);
 	const bool can_assign = caps.has_any(team_cap::reassign_task) &&
 	                        (is_new || !m_original.is_archived);
-	const bool can_use_assignee =
-	  can_assign ||
-	  (!is_new && !m_original.assigned_to.empty() &&
-	   m_original.assigned_to == session.username);
+	// TODO(Task 9): replace with multi-assignee check
+	const bool can_use_assignee = can_assign;
 
 	// ── Stale banner ──────────────────────────────────────────────────────────
 	if(!is_new)
@@ -328,7 +326,8 @@ task_editor_form_widget::task_editor_form_widget(
 	m_assignee_field->setStyleClass("kb-editor-field-wrap kb-popup-field");
 	m_assignee_field->addNew<Wt::WText>("Assigned to", Wt::TextFormat::Plain)
 	  ->setStyleClass("kb-field-label");
-	const std::string assignee_init = is_new ? "" : m_original.assigned_to;
+	// TODO(Task 9): derive display from m_original.assignees vector
+	const std::string assignee_init = "";
 	m_assignee_display              = m_assignee_field->addNew<Wt::WText>(
     assignee_init.empty() ? "(unassigned)" : assignee_init, Wt::TextFormat::Plain);
 	m_assignee_display->setStyleClass(can_use_assignee && !is_new ? "kb-popup-display" : "");
@@ -374,18 +373,12 @@ task_editor_form_widget::task_editor_form_widget(
 		m_assignee_display->clicked().connect([this] {
 			enter_edit_mode(m_assignee_display, m_assignee_edit);
 		});
+		// TODO(Task 9): dirty check against multi-assignee list
 		m_assignee_edit->changed().connect([this] {
 			const int         ai = m_assignee_edit->currentIndex();
 			const std::string v  = (ai >= 0 && ai < static_cast<int>(m_assignee_values.size())) ? m_assignee_values[ai] : "";
 			exit_edit_mode(m_assignee_display, m_assignee_edit, v.empty() ? "(unassigned)" : v);
-			if(v == m_original.assigned_to)
-			{
-				unmark_field_dirty("assigned_to", m_assignee_field);
-			}
-			else
-			{
-				mark_field_dirty("assigned_to", m_assignee_field);
-			}
+			mark_field_dirty("assigned_to", m_assignee_field);
 		});
 		m_assignee_edit->blurred().connect([this] {
 			if(m_assignee_edit->isHidden())
@@ -395,14 +388,7 @@ task_editor_form_widget::task_editor_form_widget(
 			const int         ai = m_assignee_edit->currentIndex();
 			const std::string v  = (ai >= 0 && ai < static_cast<int>(m_assignee_values.size())) ? m_assignee_values[ai] : "";
 			exit_edit_mode(m_assignee_display, m_assignee_edit, v.empty() ? "(unassigned)" : v);
-			if(v == m_original.assigned_to)
-			{
-				unmark_field_dirty("assigned_to", m_assignee_field);
-			}
-			else
-			{
-				mark_field_dirty("assigned_to", m_assignee_field);
-			}
+			mark_field_dirty("assigned_to", m_assignee_field);
 		});
 	}
 
@@ -844,29 +830,15 @@ void task_editor_form_widget::save()
 	const std::string status =
 	  (si >= 0 && si < static_cast<int>(k_status_vals.size())) ? k_status_vals[si] : (creating ? "todo" : m_original.status);
 
-	const int         ai = m_assignee_edit->currentIndex();
-	const std::string new_assignee =
-	  (ai >= 0 && ai < static_cast<int>(m_assignee_values.size())) ? m_assignee_values[ai] : "";
-	const std::string old_assignee = creating ? "" : m_original.assigned_to;
-
-	if(!creating && !m_caps.has_any(team_cap::reassign_task) && new_assignee != old_assignee)
-	{
-		if(!new_assignee.empty() && new_assignee != m_username)
-		{
-			return;
-		}
-		if(!old_assignee.empty() && old_assignee != m_username)
-		{
-			return;
-		}
-	}
+	// TODO(Task 9): replace single-assignee combo with multi-assignee UI
+	// For now the assignee combo is a placeholder; no assignee changes are
+	// persisted via update_task() — use add_assignee/remove_assignee instead.
 
 	kanban_task_entry t;
 	t.team_id     = m_team_id;
 	t.status      = status;
 	t.title       = title;
 	t.description = m_desc_edit->text().toUTF8();
-	t.assigned_to = new_assignee;
 	t.type_id     = m_type_id;
 	if(const auto d = m_start_date_edit->date(); d.isValid())
 	{
@@ -893,14 +865,6 @@ void task_editor_form_widget::save()
 		{
 			mark_stale();
 			return;
-		}
-
-		if(!new_assignee.empty() && new_assignee != old_assignee &&
-		   new_assignee != m_username)
-		{
-			const auto team = m_db.find_team(m_team_id);
-			m_odb.push_notification(new_assignee, "task_assigned", make_task_assigned_payload(t.id, title, m_team_id, team ? team->name : ""));
-			live_hub::instance().broadcast("user:" + new_assignee);
 		}
 
 		live_hub::instance().unsubscribe("task:" + std::to_string(m_task_id), m_session_id);

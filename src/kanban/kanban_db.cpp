@@ -15,6 +15,7 @@ kanban_db::kanban_db(const std::string& db_path)
 	m_dbo.mapClass<task_field_change_record>("task_field_change");
 	m_dbo.mapClass<task_comment_record>("task_comment");
 	m_dbo.mapClass<task_comment_event_record>("task_comment_event");
+	m_dbo.mapClass<task_assignee_record>("task_assignee");
 
 	try
 	{
@@ -59,6 +60,13 @@ kanban_db::kanban_db(const std::string& db_path)
 	  " occurred_at text not null default '',"
 	  " event_type text not null default '',"
 	  " body_snapshot text not null default '')");
+
+	migrate(
+	  "CREATE TABLE IF NOT EXISTS task_assignee ("
+	  "id integer primary key autoincrement,"
+	  " version integer not null default 0,"
+	  " task_id integer not null default 0,"
+	  " username text not null default '')");
 }
 
 // ---- static helpers ----
@@ -76,7 +84,6 @@ kanban_task_entry kanban_db::to_entry(const Wt::Dbo::ptr<kanban_task_record>& p)
 	e.status      = p->status;
 	e.title       = p->title;
 	e.description = p->description;
-	e.assigned_to = p->assigned_to;
 	e.start_date  = p->start_date;
 	e.end_date    = p->end_date;
 	e.type_id     = p->type_id;
@@ -370,7 +377,6 @@ long long kanban_db::add_task(const kanban_task_entry& e, const std::string& act
 	p.modify()->status      = e.status.empty() ? "todo" : e.status;
 	p.modify()->title       = e.title;
 	p.modify()->description = e.description;
-	p.modify()->assigned_to = e.assigned_to;
 	p.modify()->start_date  = e.start_date;
 	p.modify()->end_date    = e.end_date;
 	p.modify()->type_id     = e.type_id;
@@ -423,7 +429,6 @@ void kanban_db::update_task(const kanban_task_entry& e, const std::string& actor
 	diff("status", p->status, e.status);
 	diff("title", p->title, e.title);
 	diff("description", p->description, e.description);
-	diff("assigned_to", p->assigned_to, e.assigned_to);
 	diff("start_date", date_str(p->start_date), date_str(e.start_date));
 	diff("end_date", date_str(p->end_date), date_str(e.end_date));
 	diff("type", type_name(p->type_id), type_name(e.type_id));
@@ -431,7 +436,6 @@ void kanban_db::update_task(const kanban_task_entry& e, const std::string& actor
 	p.modify()->status      = e.status;
 	p.modify()->title       = e.title;
 	p.modify()->description = e.description;
-	p.modify()->assigned_to = e.assigned_to;
 	p.modify()->start_date  = e.start_date;
 	p.modify()->end_date    = e.end_date;
 	p.modify()->type_id     = e.type_id;
@@ -441,6 +445,7 @@ void kanban_db::update_task(const kanban_task_entry& e, const std::string& actor
 	{
 		record_event(e.id, actor, "updated", changes);
 	}
+	maybe_clear_assignees_for_done(e.id, e.status, actor);
 }
 
 void kanban_db::update_task_status(long long          id,
@@ -464,33 +469,92 @@ void kanban_db::update_task_status(long long          id,
 	{
 		record_event(id, actor, "updated", {{"status", old_status, status}});
 	}
+	maybe_clear_assignees_for_done(id, status, actor);
 }
 
-bool kanban_db::self_assign(long long task_id, const std::string& username)
+bool kanban_db::add_assignee(long long          task_id,
+                             const std::string& username,
+                             const std::string& actor)
 {
 	Wt::Dbo::Transaction t{m_dbo};
-	const auto           results =
+	const auto           tasks =
 	  m_dbo.find<kanban_task_record>().where("id = ?").bind(task_id).resultList();
-	if(results.empty())
+	if(tasks.empty())
 	{
 		return false;
 	}
-	Wt::Dbo::ptr<kanban_task_record> p = *results.begin();
-	if(!p->assigned_to.empty())
-	{
-		return false; // Already assigned — self-assign not permitted.
-	}
-	if(!is_member(p->team_id, username))
+	const Wt::Dbo::ptr<kanban_task_record> task_ptr = *tasks.begin();
+	if(task_ptr->status == "done" || task_ptr->is_archived)
 	{
 		return false;
 	}
-	if(p->is_archived)
+
+	const auto existing =
+	  m_dbo.find<task_assignee_record>()
+	    .where("task_id = ? AND username = ?")
+	    .bind(task_id)
+	    .bind(username)
+	    .resultList();
+	if(!existing.empty())
 	{
-		return false;
+		return false; // already assigned
 	}
-	p.modify()->assigned_to = username;
-	record_event(task_id, username, "updated", {{"assigned_to", {}, username}});
+
+	auto r               = m_dbo.add(std::make_unique<task_assignee_record>());
+	r.modify()->task_id  = task_id;
+	r.modify()->username = username;
+
+	record_event(task_id, actor, "updated", {{"assignees", {}, username + " added"}});
 	return true;
+}
+
+bool kanban_db::remove_assignee(long long          task_id,
+                                const std::string& username,
+                                const std::string& actor)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           tasks =
+	  m_dbo.find<kanban_task_record>().where("id = ?").bind(task_id).resultList();
+	if(tasks.empty())
+	{
+		return false;
+	}
+	if((*tasks.begin())->is_archived)
+	{
+		return false;
+	}
+
+	const auto rows =
+	  m_dbo.find<task_assignee_record>()
+	    .where("task_id = ? AND username = ?")
+	    .bind(task_id)
+	    .bind(username)
+	    .resultList();
+	if(rows.empty())
+	{
+		return false;
+	}
+
+	(*rows.begin()).remove();
+	record_event(task_id, actor, "updated", {{"assignees", username + " removed", {}}});
+	return true;
+}
+
+std::vector<std::string> kanban_db::assignees_for_task(long long task_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           rows =
+	  m_dbo.find<task_assignee_record>()
+	    .where("task_id = ?")
+	    .bind(task_id)
+	    .orderBy("username")
+	    .resultList();
+	std::vector<std::string> out;
+	for(const auto& r: rows)
+	{
+		out.push_back(r->username);
+	}
+	return out;
 }
 
 std::optional<kanban_task_entry> kanban_db::find_task(long long id)
@@ -502,7 +566,18 @@ std::optional<kanban_task_entry> kanban_db::find_task(long long id)
 	{
 		return std::nullopt;
 	}
-	return to_entry(*results.begin());
+	auto       entry = to_entry(*results.begin());
+	const auto arows =
+	  m_dbo.find<task_assignee_record>()
+	    .where("task_id = ?")
+	    .bind(id)
+	    .orderBy("username")
+	    .resultList();
+	for(const auto& r: arows)
+	{
+		entry.assignees.push_back(r->username);
+	}
+	return entry;
 }
 
 std::vector<kanban_task_entry> kanban_db::tasks_for_team(long long team_id)
@@ -516,7 +591,18 @@ std::vector<kanban_task_entry> kanban_db::tasks_for_team(long long team_id)
 	std::vector<kanban_task_entry> out;
 	for(const auto& p: results)
 	{
-		out.push_back(to_entry(p));
+		auto       entry = to_entry(p);
+		const auto arows =
+		  m_dbo.find<task_assignee_record>()
+		    .where("task_id = ?")
+		    .bind(p.id())
+		    .orderBy("username")
+		    .resultList();
+		for(const auto& r: arows)
+		{
+			entry.assignees.push_back(r->username);
+		}
+		out.push_back(std::move(entry));
 	}
 	return out;
 }
@@ -532,7 +618,18 @@ std::vector<kanban_task_entry> kanban_db::archived_tasks_for_team(long long team
 	std::vector<kanban_task_entry> out;
 	for(const auto& p: results)
 	{
-		out.push_back(to_entry(p));
+		auto       entry = to_entry(p);
+		const auto arows =
+		  m_dbo.find<task_assignee_record>()
+		    .where("task_id = ?")
+		    .bind(p.id())
+		    .orderBy("username")
+		    .resultList();
+		for(const auto& r: arows)
+		{
+			entry.assignees.push_back(r->username);
+		}
+		out.push_back(std::move(entry));
 	}
 	return out;
 }
@@ -711,6 +808,40 @@ void kanban_db::record_comment_event(long long          comment_id,
 	ev.modify()->event_type    = event_type;
 	ev.modify()->body_snapshot = body_snapshot;
 	m_dbo.flush();
+}
+
+void kanban_db::maybe_clear_assignees_for_done(long long          task_id,
+                                               const std::string& new_status,
+                                               const std::string& actor)
+{
+	if(new_status != "done")
+	{
+		return;
+	}
+	const auto rows =
+	  m_dbo.find<task_assignee_record>()
+	    .where("task_id = ?")
+	    .bind(task_id)
+	    .resultList();
+	if(rows.empty())
+	{
+		return;
+	}
+	std::string removed_names;
+	for(const auto& r: rows)
+	{
+		if(!removed_names.empty())
+		{
+			removed_names += ", ";
+		}
+		removed_names += r->username;
+	}
+	for(const auto& r: rows)
+	{
+		Wt::Dbo::ptr<task_assignee_record> row = r;
+		row.remove();
+	}
+	record_event(task_id, actor, "updated", {{"assignees", removed_names, "(done \xe2\x80\x94 assignees cleared)"}});
 }
 
 // ---- Comments ----

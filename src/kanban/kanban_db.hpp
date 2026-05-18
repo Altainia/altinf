@@ -48,8 +48,11 @@ public:
 	                                                    const std::string& status,
 	                                                    int                sort_order,
 	                                                    const std::string& actor);
-	// Assigns an unassigned task to username; no-op if already assigned.
-	bool                             self_assign(long long task_id, const std::string& username);
+	// Returns false if the task is in "done", is archived, or username is already assigned.
+	bool                             add_assignee(long long task_id, const std::string& username, const std::string& actor);
+	// Returns false if username is not currently an assignee or task is archived.
+	bool                             remove_assignee(long long task_id, const std::string& username, const std::string& actor);
+	std::vector<std::string>         assignees_for_task(long long task_id);
 	void                             archive_task(long long id, const std::string& actor);
 	void                             unarchive_task(long long id, const std::string& actor);
 	std::optional<kanban_task_entry> find_task(long long id);
@@ -94,4 +97,7 @@ private:
 	                           const std::string& actor,
 	                           const std::string& event_type,
 	                           const std::string& body_snapshot);
+	void maybe_clear_assignees_for_done(long long          task_id,
+	                                     const std::string& new_status,
+	                                     const std::string& actor);
 };

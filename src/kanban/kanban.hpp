@@ -74,7 +74,6 @@ struct kanban_task_record
 		Wt::Dbo::field(a, status,      "status");
 		Wt::Dbo::field(a, title,       "title");
 		Wt::Dbo::field(a, description, "description");
-		Wt::Dbo::field(a, assigned_to, "assigned_to");
 		Wt::Dbo::field(a, start_date,  "start_date");
 		Wt::Dbo::field(a, end_date,    "end_date");
 		Wt::Dbo::field(a, type_id,     "type_id");
@@ -97,6 +96,19 @@ struct task_event_record
 		Wt::Dbo::field(a, actor,       "actor");
 		Wt::Dbo::field(a, occurred_at, "occurred_at");
 		Wt::Dbo::field(a, event_type,  "event_type");
+	}
+};
+
+struct task_assignee_record
+{
+	long long   task_id{0};
+	std::string username;
+
+	template<class Action>
+	void persist(Action& a)
+	{
+		Wt::Dbo::field(a, task_id,  "task_id");
+		Wt::Dbo::field(a, username, "username");
 	}
 };
 
@@ -143,13 +155,13 @@ struct task_type_entry
 
 struct kanban_task_entry
 {
-	long long   id{0};
-	long long   team_id{0};
-	std::string status;
-	std::string title;
-	std::string description;
-	std::string assigned_to;
-	Wt::WDate   start_date;
+	long long                id{0};
+	long long                team_id{0};
+	std::string              status;
+	std::string              title;
+	std::string              description;
+	std::vector<std::string> assignees;
+	Wt::WDate                start_date;
 	Wt::WDate   end_date;
 	long long   type_id{0};
 	int         sort_order{0};

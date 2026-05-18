@@ -114,7 +114,7 @@ std::string kanban_board_widget::serialize_tasks(const std::vector<kanban_task_e
 		   << "\"id\":" << t.id << ','
 		   << "\"status\":\"" << escape_json(t.status) << "\","
 		   << "\"title\":\"" << escape_json(t.title) << "\","
-		   << "\"assigned_to\":\"" << escape_json(t.assigned_to) << "\","
+		   << "\"assigned_to\":\"" << escape_json(t.assignees.empty() ? "" : t.assignees[0]) << "\","
 		   << "\"color\":\"" << escape_json(color) << "\","
 		   << "\"start_date\":\"" << date_str(t.start_date) << "\","
 		   << "\"end_date\":\"" << date_str(t.end_date) << "\""
