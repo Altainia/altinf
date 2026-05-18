@@ -136,6 +136,11 @@ void nav_bar::update()
 		  ->setStyleClass("nav-link");
 	}
 
+	// ── Settings ──────────────────────────────────────────────────────────────
+	m_auth_area->addNew<Wt::WAnchor>(
+	             Wt::WLink{Wt::LinkType::InternalPath, "/settings"}, "Settings")
+	  ->setStyleClass("nav-link");
+
 	// ── Notification bell ─────────────────────────────────────────────────────
 	if(m_org_db)
 	{

@@ -30,6 +30,7 @@
 #include "pages/org_landing_page.hpp"
 #include "pages/org_type_manager_page.hpp"
 #include "pages/post_editor_page.hpp"
+#include "pages/settings_page.hpp"
 #include "widgets/footer.hpp"
 #include "widgets/live_hub.hpp"
 #include "widgets/nav_bar.hpp"
@@ -516,6 +517,16 @@ void altinf_app::handle_path(const std::string& path)
 		}
 		m_notifications_page = m_content->addNew<notifications_page>(
 		  *m_org_db, m_session, [this] { m_nav->refresh_bell(); });
+	}
+	// ── Settings ──────────────────────────────────────────────────────────────
+	else if(path == "/settings")
+	{
+		if(!m_session.logged_in)
+		{
+			setInternalPath("/login", true);
+			return;
+		}
+		m_content->addNew<settings_page>(*m_org_db, m_session);
 	}
 	// ── Accounts ──────────────────────────────────────────────────────────────
 	else if(path == "/admin/accounts")
