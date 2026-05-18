@@ -8,7 +8,7 @@ const ORG = 'LiveNavOrg';
 async function goToManage(page: Page) {
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
-  await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).click();
+  await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).first().click();
   await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
 }
@@ -17,20 +17,28 @@ test.beforeAll(async ({ browser }) => {
   const page = await browser.newPage();
   await loginAs(page, 'admin', 'testpass');
 
-  // Create user 'grace'.
+  // Create user 'grace' — skip if already exists (idempotent for re-runs).
   await page.locator('.nav-link', { hasText: 'Accounts' }).click();
-  await page.locator('.account-new-btn').click();
-  await page.locator('input[placeholder="Username (required)"]').fill('grace');
-  await page.locator('input[placeholder="Password (required)"]').fill('gracepass');
-  await page.locator('input[placeholder="Confirm password"]').fill('gracepass');
-  await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel)').click();
   await expect(page.locator('.account-manager-page')).toBeVisible();
+  const graceExists = await page.locator('.account-row', { hasText: 'grace' }).isVisible();
+  if (!graceExists) {
+    await page.locator('.account-new-btn').click();
+    await page.locator('input[placeholder="Username (required)"]').fill('grace');
+    await page.locator('input[placeholder="Password (required)"]').fill('gracepass');
+    await page.locator('input[placeholder="Confirm password"]').fill('gracepass');
+    await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel)').click();
+    await expect(page.locator('.account-manager-page')).toBeVisible();
+  }
 
-  // Create org.
+  // Create org — skip if already present.
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
-  await page.locator('input[placeholder="Organization name"]').fill(ORG);
-  await page.locator('.org-create-form .editor-btn').click();
-  await expect(page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) })).toBeVisible();
+  await expect(page.locator('.org-admin-page')).toBeVisible();
+  const orgExists = await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).isVisible();
+  if (!orgExists) {
+    await page.locator('input[placeholder="Organization name"]').fill(ORG);
+    await page.locator('.org-create-form .editor-btn').click();
+    await expect(page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) })).toBeVisible();
+  }
 
   await page.close();
 });

@@ -6,7 +6,7 @@ test.describe.configure({ mode: 'serial' });
 async function navigateToBoard(page: Page, orgName: string) {
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
-  await page.locator('.org-list-link', { hasText: new RegExp(`^${orgName}$`) }).click();
+  await page.locator('.org-list-link', { hasText: new RegExp(`^${orgName}$`) }).first().click();
   await expect(page.locator('.org-landing-page')).toBeVisible();
   await page.locator('.org-team-link').first().click();
   await expect(page.locator('.kb-board')).toBeVisible();
@@ -19,10 +19,19 @@ async function navigateToGantt(page: Page, orgName: string) {
 }
 
 async function openTaskEditor(page: Page, title: string) {
-  await page.locator('.kb-card', { hasText: title }).click();
+  await page.locator('.kb-card', { hasText: title }).first().click();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
   await page.locator('.kb-popup-full-link').click();
   await expect(page.locator('.kb-editor-page')).toBeVisible();
+}
+
+async function editTitleField(page: Page, value: string) {
+  // Existing-task editor uses click-to-edit: click the display span first.
+  await page.locator('.kb-editor-page .kb-popup-title-field .kb-popup-display').click();
+  await page.locator('input[placeholder="Task title"]').fill(value);
+  // Tab away to trigger blur signal and mark field dirty (enables Save button)
+  await page.locator('input[placeholder="Task title"]').press('Tab');
+  await expect(page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)')).toBeEnabled();
 }
 
 async function saveTaskEditor(page: Page) {
@@ -36,15 +45,24 @@ test.beforeAll(async ({ browser }) => {
 
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
-  await page.locator('input[placeholder="Organization name"]').fill('LiveBoardOrg');
-  await page.locator('.org-create-form .editor-btn').click();
-  await expect(page.locator('.org-list-link', { hasText: /^LiveBoardOrg$/ })).toBeVisible();
-  await page.locator('.org-list-link', { hasText: /^LiveBoardOrg$/ }).click();
-  await page.getByRole('link', { name: 'Manage organization' }).click();
-  await expect(page.locator('.kb-team-page')).toBeVisible();
-  await page.locator('input[placeholder="Team name"]').fill('LiveBoardTeam');
-  await page.getByRole('button', { name: 'Create' }).click();
-  await expect(page.locator('.kb-team-block')).toBeVisible();
+
+  const orgExists = (await page.locator('.org-list-link', { hasText: /^LiveBoardOrg$/ }).count()) > 0;
+  if (!orgExists) {
+    await page.locator('input[placeholder="Organization name"]').fill('LiveBoardOrg');
+    await page.locator('.org-create-form .editor-btn').click();
+    await expect(page.locator('.org-list-link', { hasText: /^LiveBoardOrg$/ })).toBeVisible();
+  }
+  await page.locator('.org-list-link', { hasText: /^LiveBoardOrg$/ }).first().click();
+  await expect(page.locator('.org-landing-page')).toBeVisible();
+
+  const teamExists = (await page.locator('.org-team-link').count()) > 0;
+  if (!teamExists) {
+    await page.getByRole('link', { name: 'Manage organization' }).click();
+    await expect(page.locator('.kb-team-page')).toBeVisible();
+    await page.locator('input[placeholder="Team name"]').fill('LiveBoardTeam');
+    await page.getByRole('button', { name: 'Create' }).click();
+    await expect(page.locator('.kb-team-block')).toBeVisible();
+  }
 
   await page.close();
 });
@@ -84,7 +102,7 @@ test('board: task title edited by A updates on B', async ({ browser }) => {
   await navigateToBoard(pageB, 'LiveBoardOrg');
 
   await openTaskEditor(pageA, 'LiveNewTask');
-  await pageA.locator('input[placeholder="Task title"]').fill('LiveRenamedTask');
+  await editTitleField(pageA, 'LiveRenamedTask');
   await saveTaskEditor(pageA);
 
   await expect(pageB.locator('.kb-card', { hasText: 'LiveRenamedTask' })).toBeVisible();
@@ -230,17 +248,29 @@ test('gantt: date change by A updates bar on B gantt view', async ({ browser }) 
 
   // B navigates to the Gantt and sees DateTask
   await navigateToGantt(pageB, 'LiveBoardOrg');
-  await expect(pageB.locator('.gv-scroll svg text', { hasText: 'DateTask' })).toBeVisible();
+  await expect(pageB.locator('.gv-scroll svg text', { hasText: 'DateTask' }).first()).toBeVisible();
 
   // Snapshot B's current SVG markup before A's edit — we'll verify it changes.
   const svgBefore = await pageB.locator('.gv-scroll svg').evaluate(el => el.outerHTML);
 
   // A edits DateTask and extends the end date to widen the bar
   await openTaskEditor(pageA, 'DateTask');
+  // Click the end date display to enter edit mode, then fill the date input.
+  await pageA.locator('.kb-editor-field-wrap').filter({ hasText: 'End date' }).locator('.kb-popup-display').click();
   const endInputEdit = pageA.locator('.kb-editor-field-wrap').filter({ hasText: 'End date' }).locator('input').first();
   await endInputEdit.fill('2025-03-31');
-  await endInputEdit.press('Tab');
+  // Fire a blur event on the end date input to trigger Wt's blurred() signal.
+  await pageA.evaluate(() => {
+    const endWrap = Array.from(document.querySelectorAll('.kb-editor-field-wrap'))
+      .find(el => el.textContent?.includes('End date'));
+    const input = endWrap?.querySelector('input') as HTMLInputElement | null;
+    if (input) {
+      input.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+    }
+  });
   await pageA.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+  // Wait for Save to be enabled (blur signal must have fired and marked field dirty).
+  await expect(pageA.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)')).toBeEnabled();
   await saveTaskEditor(pageA);
 
   // B's Gantt must re-render via live push: wait until the SVG markup changes.
@@ -250,7 +280,7 @@ test('gantt: date change by A updates bar on B gantt view', async ({ browser }) 
     { timeout: 15000 },
   );
   // DateTask is still present in the re-rendered Gantt (bar widened to 30 days).
-  await expect(pageB.locator('.gv-scroll svg text', { hasText: 'DateTask' })).toBeVisible();
+  await expect(pageB.locator('.gv-scroll svg text', { hasText: 'DateTask' }).first()).toBeVisible();
 
   await ctxA.close();
   await ctxB.close();

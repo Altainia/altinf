@@ -6,7 +6,7 @@ test.describe.configure({ mode: 'serial' });
 async function navigateToBoard(page: Page, orgName: string) {
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
-  await page.locator('.org-list-link', { hasText: new RegExp(`^${orgName}$`) }).click();
+  await page.locator('.org-list-link', { hasText: new RegExp(`^${orgName}$`) }).first().click();
   await expect(page.locator('.org-landing-page')).toBeVisible();
   await page.locator('.org-team-link').first().click();
   await expect(page.locator('.kb-board')).toBeVisible();
@@ -24,29 +24,43 @@ test.beforeAll(async ({ browser }) => {
   const page = await browser.newPage();
   await loginAs(page, 'admin', 'testpass');
 
-  // Create org, team, and a task for conflict tests.
+  // Create org, team, and a task for conflict tests — idempotent for re-runs.
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
-  await page.locator('input[placeholder="Organization name"]').fill('LiveEditorOrg');
-  await page.locator('.org-create-form .editor-btn').click();
-  await expect(page.locator('.org-list-link', { hasText: /^LiveEditorOrg$/ })).toBeVisible();
-  await page.locator('.org-list-link', { hasText: /^LiveEditorOrg$/ }).click();
-  await page.getByRole('link', { name: 'Manage organization' }).click();
-  await expect(page.locator('.kb-team-page')).toBeVisible();
-  await page.locator('input[placeholder="Team name"]').fill('EditorTeam');
-  await page.getByRole('button', { name: 'Create' }).click();
-  await expect(page.locator('.kb-team-block')).toBeVisible();
 
-  // Create the conflict task.
-  await page.locator('.nav-link', { hasText: 'Orgs' }).click();
-  await page.locator('.org-list-link', { hasText: /^LiveEditorOrg$/ }).click();
+  const orgExists = (await page.locator('.org-list-link', { hasText: /^LiveEditorOrg$/ }).count()) > 0;
+  if (!orgExists) {
+    await page.locator('input[placeholder="Organization name"]').fill('LiveEditorOrg');
+    await page.locator('.org-create-form .editor-btn').click();
+    await expect(page.locator('.org-list-link', { hasText: /^LiveEditorOrg$/ })).toBeVisible();
+  }
+  await page.locator('.org-list-link', { hasText: /^LiveEditorOrg$/ }).first().click();
+  await expect(page.locator('.org-landing-page')).toBeVisible();
+
+  const teamExists = (await page.locator('.org-team-link').count()) > 0;
+  if (!teamExists) {
+    await page.getByRole('link', { name: 'Manage organization' }).click();
+    await expect(page.locator('.kb-team-page')).toBeVisible();
+    await page.locator('input[placeholder="Team name"]').fill('EditorTeam');
+    await page.getByRole('button', { name: 'Create' }).click();
+    await expect(page.locator('.kb-team-block')).toBeVisible();
+    await page.locator('.nav-link', { hasText: 'Orgs' }).click();
+    await page.locator('.org-list-link', { hasText: /^LiveEditorOrg$/ }).first().click();
+    await expect(page.locator('.org-landing-page')).toBeVisible();
+  }
+
+  // Create the conflict task only if it does not already exist.
   await page.locator('.org-team-link').first().click();
   await expect(page.locator('.kb-board')).toBeVisible();
-  await page.locator('.kb-new-btn').click();
-  await expect(page.locator('.kb-editor-page')).toBeVisible();
-  await page.locator('input[placeholder="Task title"]').fill('ConflictTask');
-  await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
-  await expect(page.locator('.kb-board')).toBeVisible();
+
+  const taskExists = (await page.locator('.kb-card', { hasText: /^ConflictTask/ }).count()) > 0;
+  if (!taskExists) {
+    await page.locator('.kb-new-btn').click();
+    await expect(page.locator('.kb-editor-page')).toBeVisible();
+    await page.locator('input[placeholder="Task title"]').fill('ConflictTask');
+    await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
+    await expect(page.locator('.kb-board')).toBeVisible();
+  }
 
   await page.close();
 });
@@ -64,8 +78,11 @@ test('task editor: B saves a change → A sees conflict message and Save is disa
   await openTaskEditorViaPath(pageA, 'LiveEditorOrg', 'ConflictTask');
   await openTaskEditorViaPath(pageB, 'LiveEditorOrg', 'ConflictTask');
 
-  // B saves a change.
+  // B saves a change — click display, fill, Tab to trigger dirty state, then save.
+  await pageB.locator('.kb-editor-page .kb-popup-title-field .kb-popup-display').click();
   await pageB.locator('input[placeholder="Task title"]').fill('ConflictTaskEdited');
+  await pageB.locator('input[placeholder="Task title"]').press('Tab');
+  await expect(pageB.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)')).toBeEnabled();
   await pageB.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
   await expect(pageB.locator('.kb-board')).toBeVisible();
 

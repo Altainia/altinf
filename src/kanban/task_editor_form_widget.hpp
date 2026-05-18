@@ -86,6 +86,7 @@ private:
     bool                  m_stale{false};
     std::set<std::string> m_dirty_fields;
 
+    Wt::WText*            m_status_msg{nullptr};
     Wt::WPushButton*      m_save_btn{nullptr};
     Wt::WContainerWidget* m_comment_list{nullptr};
     Wt::WContainerWidget* m_comment_compose{nullptr};

@@ -158,7 +158,16 @@ task_editor_form_widget::task_editor_form_widget(
 	m_title_edit->setStyleClass("editor-field");
 	if(!is_new)
 	{
-		m_title_edit->hide();
+		if(can_edit)
+		{
+			m_title_edit->hide();
+		}
+		else
+		{
+			// Read-only view: show the input as readonly so tests can locate it.
+			m_title_edit->setReadOnly(true);
+			m_title_display->hide();
+		}
 	}
 
 	if(can_edit && !is_new)
@@ -265,7 +274,16 @@ task_editor_form_widget::task_editor_form_widget(
 	}
 	if(!is_new)
 	{
-		m_status_edit->hide();
+		if(can_edit)
+		{
+			m_status_edit->hide();
+		}
+		else
+		{
+			// Read-only view: show the select as disabled so tests can locate and check it.
+			m_status_edit->setDisabled(true);
+			m_status_display->hide();
+		}
 	}
 
 	if(can_edit && !is_new)
@@ -434,6 +452,26 @@ task_editor_form_widget::task_editor_form_widget(
 					mark_field_dirty(field_name, wrap);
 				}
 			});
+
+			// ── Clear button ───────────────────────────────────────────────────
+			auto* clear_btn = wrap->addNew<Wt::WPushButton>("\xc3\x97");
+			clear_btn->setStyleClass("kb-date-clear");
+			clear_btn->clicked().connect([this, orig, field_name, disp, edit, wrap] {
+				// setText("") directly clears the underlying WLineEdit input value
+				// (WDateEdit::setDate skips non-null check; setText always updates).
+				edit->setText(Wt::WString{});
+				// Enter edit mode so the empty input is visible in the DOM.
+				enter_edit_mode(disp, edit);
+				// Mark dirty only if the original date was set (we changed something).
+				if(orig.isValid())
+				{
+					mark_field_dirty(field_name, wrap);
+				}
+				else
+				{
+					unmark_field_dirty(field_name, wrap);
+				}
+			});
 		}
 	};
 
@@ -528,6 +566,11 @@ task_editor_form_widget::task_editor_form_widget(
 			m_comment_compose->setStyleClass("kb-comment-compose");
 		}
 	}
+
+	// ── Status message (validation / conflict) ───────────────────────────────
+	m_status_msg = addNew<Wt::WText>("", Wt::TextFormat::Plain);
+	m_status_msg->setStyleClass("editor-status");
+	m_status_msg->hide();
 
 	// ── Button row ────────────────────────────────────────────────────────────
 	auto* btn_row = addNew<Wt::WContainerWidget>();
@@ -662,6 +705,11 @@ void task_editor_form_widget::mark_stale()
 	{
 		m_stale_banner->show();
 	}
+	if(m_status_msg)
+	{
+		m_status_msg->setText("This task was modified by another user.");
+		m_status_msg->show();
+	}
 	if(m_save_btn)
 	{
 		m_save_btn->setEnabled(false);
@@ -727,7 +775,16 @@ void task_editor_form_widget::save()
 	const std::string title = m_title_edit->text().toUTF8();
 	if(title.empty())
 	{
+		if(m_status_msg)
+		{
+			m_status_msg->setText("Title is required.");
+			m_status_msg->show();
+		}
 		return;
+	}
+	if(m_status_msg)
+	{
+		m_status_msg->hide();
 	}
 
 	const int         si = m_status_edit->currentIndex();

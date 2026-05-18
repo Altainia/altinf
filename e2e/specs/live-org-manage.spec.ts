@@ -8,7 +8,7 @@ const ORG = 'LiveManageOrg';
 async function goToManage(page: Page) {
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
-  await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).click();
+  await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).first().click();
   await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
 }
@@ -17,49 +17,69 @@ test.beforeAll(async ({ browser }) => {
   const page = await browser.newPage();
   await loginAs(page, 'admin', 'testpass');
 
-  // Create a second user 'bob' for the org tests.
+  // Create user 'bob' — skip if already exists (idempotent for re-runs).
   await page.locator('.nav-link', { hasText: 'Accounts' }).click();
   await expect(page.locator('.account-manager-page')).toBeVisible();
-  await page.locator('.account-new-btn').click();
-  await expect(page.locator('.account-editor-page')).toBeVisible();
-  await page.locator('input[placeholder="Username (required)"]').fill('bob');
-  await page.locator('input[placeholder="Password (required)"]').fill('bobpass');
-  await page.locator('input[placeholder="Confirm password"]').fill('bobpass');
-  // Give bob org_create so he can be an org lead.
-  await page.locator('label', { hasText: 'Create Orgs' }).click();
-  await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel)').click();
-  await expect(page.locator('.account-manager-page')).toBeVisible();
+  const bobExists = await page.locator('.account-row', { hasText: 'bob' }).isVisible();
+  if (!bobExists) {
+    await page.locator('.account-new-btn').click();
+    await expect(page.locator('.account-editor-page')).toBeVisible();
+    await page.locator('input[placeholder="Username (required)"]').fill('bob');
+    await page.locator('input[placeholder="Password (required)"]').fill('bobpass');
+    await page.locator('input[placeholder="Confirm password"]').fill('bobpass');
+    // Give bob org_create so he can be an org lead.
+    await page.locator('label', { hasText: 'Create Orgs' }).click();
+    await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel)').click();
+    await expect(page.locator('.account-manager-page')).toBeVisible();
+  }
 
-  // Create the org.
+  // Create the org — skip if already present.
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
-  await page.locator('input[placeholder="Organization name"]').fill(ORG);
-  await page.locator('.org-create-form .editor-btn').click();
-  await expect(page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) })).toBeVisible();
+  await expect(page.locator('.org-admin-page')).toBeVisible();
+  const orgExists = await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).isVisible();
+  if (!orgExists) {
+    await page.locator('input[placeholder="Organization name"]').fill(ORG);
+    await page.locator('.org-create-form .editor-btn').click();
+    await expect(page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) })).toBeVisible();
+  }
 
-  // Invite bob as a lead so he can also navigate to the manage page.
-  await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).click();
+  // Navigate to the org manage page.
+  await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).first().click();
   await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
-  await page.locator('.kb-member-input').fill('bob');
-  await page.locator('.kb-lead-check').click();
-  await page.getByRole('button', { name: 'Send invite' }).click();
-  await expect(page.locator('.editor-status')).toContainText('Invite sent to bob');
 
-  // Accept the invite as bob.
-  const bobCtx = await browser.newContext();
-  const bobPage = await bobCtx.newPage();
-  await loginAs(bobPage, 'bob', 'bobpass');
-  await bobPage.locator('.nav-bell-link').click();
-  await expect(bobPage.locator('.notifications-page')).toBeVisible();
-  await bobPage.getByRole('button', { name: 'Accept' }).click();
-  await expect(bobPage.locator('.nav-bell-badge')).not.toBeVisible();
-  await bobCtx.close();
+  // Invite bob as a lead — skip if already a member.
+  const bobIsMember = await page.locator('.kb-members-container .kb-member-row', { hasText: 'bob' }).isVisible();
+  const bobHasPending = await page.locator('.kb-pending-row', { hasText: 'bob' }).isVisible();
+  if (!bobIsMember && !bobHasPending) {
+    await page.locator('.kb-member-input').fill('bob');
+    await page.locator('.kb-lead-check').click();
+    await page.getByRole('button', { name: 'Send invite' }).click();
+    await expect(page.locator('.editor-status')).toContainText('Invite sent to bob');
 
-  // Create a team for the org.
-  await goToManage(page);
-  await page.locator('input[placeholder="Team name"]').fill('ManageTeam');
-  await page.getByRole('button', { name: 'Create' }).click();
-  await expect(page.locator('.kb-team-block')).toBeVisible();
+    // Accept the invite as bob.
+    const bobCtx = await browser.newContext();
+    const bobPage = await bobCtx.newPage();
+    await loginAs(bobPage, 'bob', 'bobpass');
+    await bobPage.locator('.nav-bell-link').click();
+    await expect(bobPage.locator('.notifications-page')).toBeVisible();
+    await bobPage.getByRole('button', { name: 'Accept' }).click();
+    await expect(bobPage.locator('.nav-bell-badge')).not.toBeVisible();
+    await bobCtx.close();
+  }
+
+  // Create a team for the org — skip if already present.
+  await page.locator('.nav-link', { hasText: 'Orgs' }).click();
+  await expect(page.locator('.org-admin-page')).toBeVisible();
+  await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).first().click();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
+  await expect(page.locator('.kb-team-page')).toBeVisible();
+  const teamExists = await page.locator('.kb-team-block').isVisible();
+  if (!teamExists) {
+    await page.locator('input[placeholder="Team name"]').fill('ManageTeam');
+    await page.getByRole('button', { name: 'Create' }).click();
+    await expect(page.locator('.kb-team-block')).toBeVisible();
+  }
 
   await page.close();
 });

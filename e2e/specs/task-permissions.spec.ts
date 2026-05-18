@@ -172,7 +172,11 @@ test('perm_member: can save a title change and see updated card', async ({ brows
   await loginAs(page, 'perm_member', 'permpass');
   await page.goto(taskUrl);
   await expect(page.locator('.kb-editor-page')).toBeVisible();
+  // Click the title display to enter edit mode before filling.
+  await page.locator('.kb-editor-page .kb-popup-title-field .kb-popup-display').click();
   await page.locator('input[placeholder="Task title"]').fill('PermTask-Edited');
+  await page.locator('input[placeholder="Task title"]').press('Tab');
+  await expect(page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)')).toBeEnabled();
   await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
   await expect(page.locator('.kb-board')).toBeVisible();
   await expect(page.locator('.kb-card', { hasText: 'PermTask-Edited' })).toBeVisible();
@@ -239,7 +243,7 @@ test('perm_orgonly: can open the task popup (read-only)', async ({ browser }) =>
   await expect(page.locator('.kb-board')).toBeVisible();
   await page.locator('.kb-card').first().click();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
-  await page.locator('.kb-task-popup .editor-btn-cancel').click();
+  await page.keyboard.press('Escape');
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeHidden();
   await ctx.close();
 });

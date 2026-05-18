@@ -82,9 +82,12 @@ test('history tab: title change appears in history with correct label and values
   // Create the task.
   await createTask(page, 'HistoryTask1');
 
-  // Open the editor and rename the task.
+  // Open the editor and rename the task — click display to enter edit mode first.
   await openTaskEditor(page, 'HistoryTask1');
+  await page.locator('.kb-editor-page .kb-popup-title-field .kb-popup-display').click();
   await page.locator('input[placeholder="Task title"]').fill('HistoryTask1 Renamed');
+  await page.locator('input[placeholder="Task title"]').press('Tab');
+  await expect(page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)')).toBeEnabled();
   await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
   await expect(page.locator('.kb-board')).toBeVisible();
 

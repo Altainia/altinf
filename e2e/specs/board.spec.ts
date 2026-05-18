@@ -17,7 +17,7 @@ async function loginAndGoToBoard(page: Page) {
   // from concurrently-running notification tests that also log in as admin.
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
-  await page.locator('.org-list-link', { hasText: 'BoardTestOrg' }).click();
+  await page.locator('.org-list-link', { hasText: 'BoardTestOrg' }).first().click();
   await expect(page.locator('.org-landing-page')).toBeVisible();
   await page.locator('.org-team-link').first().click();
   await expect(page.locator('.kb-page')).toBeVisible();
@@ -31,21 +31,27 @@ test.beforeAll(async ({ browser }) => {
   const page = await browser.newPage();
   await login(page);
 
-  // Create the test org.
+  // Create the test org — idempotent for re-runs.
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
-  await page.locator('input[placeholder="Organization name"]').fill('BoardTestOrg');
-  await page.locator('.org-create-form .editor-btn').click();
-  await expect(page.locator('.org-list-link', { hasText: 'BoardTestOrg' })).toBeVisible();
 
-  // Navigate to the org manage page and create a team.
-  await page.locator('.org-list-link', { hasText: 'BoardTestOrg' }).click();
+  const orgExists = (await page.locator('.org-list-link', { hasText: /^BoardTestOrg$/ }).count()) > 0;
+  if (!orgExists) {
+    await page.locator('input[placeholder="Organization name"]').fill('BoardTestOrg');
+    await page.locator('.org-create-form .editor-btn').click();
+    await expect(page.locator('.org-list-link', { hasText: /^BoardTestOrg$/ })).toBeVisible();
+  }
+  await page.locator('.org-list-link', { hasText: /^BoardTestOrg$/ }).first().click();
   await expect(page.locator('.org-landing-page')).toBeVisible();
-  await page.getByRole('link', { name: 'Manage organization' }).click();
-  await expect(page.locator('.kb-team-page')).toBeVisible();
-  await page.locator('input[placeholder="Team name"]').fill('Test Team');
-  await page.getByRole('button', { name: 'Create' }).click();
-  await expect(page.locator('.kb-team-block')).toBeVisible();
+
+  const teamExists = (await page.locator('.org-team-link').count()) > 0;
+  if (!teamExists) {
+    await page.getByRole('link', { name: 'Manage organization' }).click();
+    await expect(page.locator('.kb-team-page')).toBeVisible();
+    await page.locator('input[placeholder="Team name"]').fill('Test Team');
+    await page.getByRole('button', { name: 'Create' }).click();
+    await expect(page.locator('.kb-team-block')).toBeVisible();
+  }
 
   await page.close();
 });
@@ -285,10 +291,15 @@ test('edit editor shows Delete button for existing task', async ({ page }) => {
 test('saving edited task updates its card on the board', async ({ page }) => {
   await loginAndGoToBoard(page);
   await createTask(page, 'Board Test Task Iota');
-  await page.locator('.kb-card', { hasText: 'Board Test Task Iota' }).click();
+  await page.locator('.kb-card', { hasText: 'Board Test Task Iota' }).first().click();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
   await page.locator('.kb-popup-full-link').click();
+  // Click the title display to enter edit mode, fill, then Tab to trigger dirty state
+  await page.locator('.kb-editor-page .kb-popup-title-field .kb-popup-display').click();
   await page.locator('input[placeholder="Task title"]').fill('Board Test Task Iota Renamed');
+  await page.locator('input[placeholder="Task title"]').press('Tab');
+  // Wait for Save button to become enabled
+  await expect(page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)')).toBeEnabled();
   await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
   await expect(page.locator('.kb-board')).toBeVisible();
   await expect(page.locator('.kb-card-title', { hasText: /^Board Test Task Iota Renamed$/ })).toBeVisible();
@@ -301,6 +312,8 @@ test('cancel in edit editor returns to board without changing the task', async (
   await page.locator('.kb-card', { hasText: 'Board Test Task Kappa' }).click();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
   await page.locator('.kb-popup-full-link').click();
+  // Click title display to enter edit mode before filling
+  await page.locator('.kb-editor-page .kb-popup-title-field .kb-popup-display').click();
   await page.locator('input[placeholder="Task title"]').fill('Should Not Appear');
   await page.locator('.editor-btn-row .editor-btn-cancel').click();
   await expect(page.locator('.kb-page')).toBeVisible();
@@ -325,7 +338,7 @@ test('Clear button on start date removes it after saving', async ({ page }) => {
   await loginAndGoToBoard(page);
   await createTaskWithDates(page, 'Board Test Task Xi', '2025-03-01', '2025-03-31');
 
-  const card = page.locator('.kb-card', { hasText: 'Board Test Task Xi' });
+  const card = page.locator('.kb-card', { hasText: 'Board Test Task Xi' }).first();
   // Dates are saved — both should appear on the card.
   await expect(card.locator('.kb-card-dates')).toHaveText('2025-03-01 – 2025-03-31');
 
@@ -350,7 +363,7 @@ test('Clear button on end date removes it after saving', async ({ page }) => {
   await loginAndGoToBoard(page);
   await createTaskWithDates(page, 'Board Test Task Omicron', '2025-04-01', '2025-04-30');
 
-  const card = page.locator('.kb-card', { hasText: 'Board Test Task Omicron' });
+  const card = page.locator('.kb-card', { hasText: 'Board Test Task Omicron' }).first();
   await expect(card.locator('.kb-card-dates')).toHaveText('2025-04-01 – 2025-04-30');
 
   await card.click();
@@ -373,7 +386,7 @@ test('clearing both dates removes the date row from the card', async ({ page }) 
   await loginAndGoToBoard(page);
   await createTaskWithDates(page, 'Board Test Task Rho', '2025-05-01', '2025-05-31');
 
-  const card = page.locator('.kb-card', { hasText: 'Board Test Task Rho' });
+  const card = page.locator('.kb-card', { hasText: 'Board Test Task Rho' }).first();
   await expect(card.locator('.kb-card-dates')).toHaveText('2025-05-01 – 2025-05-31');
 
   await card.click();

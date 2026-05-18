@@ -12,7 +12,7 @@ async function goToLanding(page: Page) {
   if (hasOrgsLink) {
     await orgsLink.click();
     await expect(page.locator('.org-admin-page')).toBeVisible();
-    await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).click();
+    await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).first().click();
   } else {
     // Regular member: use the org name link in the nav bar.
     await page.locator('.nav-org-link', { hasText: ORG }).click();
@@ -30,41 +30,64 @@ test.beforeAll(async ({ browser }) => {
   const page = await browser.newPage();
   await loginAs(page, 'admin', 'testpass');
 
-  // Create a fresh user 'frank' for landing page tests.
+  // Create user 'frank' — skip if already exists (idempotent for re-runs).
   await page.locator('.nav-link', { hasText: 'Accounts' }).click();
-  await page.locator('.account-new-btn').click();
-  await page.locator('input[placeholder="Username (required)"]').fill('frank');
-  await page.locator('input[placeholder="Password (required)"]').fill('frankpass');
-  await page.locator('input[placeholder="Confirm password"]').fill('frankpass');
-  await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel)').click();
   await expect(page.locator('.account-manager-page')).toBeVisible();
+  const frankExists = await page.locator('.account-row', { hasText: 'frank' }).isVisible();
+  if (!frankExists) {
+    await page.locator('.account-new-btn').click();
+    await page.locator('input[placeholder="Username (required)"]').fill('frank');
+    await page.locator('input[placeholder="Password (required)"]').fill('frankpass');
+    await page.locator('input[placeholder="Confirm password"]').fill('frankpass');
+    await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel)').click();
+    await expect(page.locator('.account-manager-page')).toBeVisible();
+  }
 
-  // Create the org and invite frank.
+  // Create the org — skip if already present.
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
-  await page.locator('input[placeholder="Organization name"]').fill(ORG);
-  await page.locator('.org-create-form .editor-btn').click();
-  await expect(page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) })).toBeVisible();
-  await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).click();
+  await expect(page.locator('.org-admin-page')).toBeVisible();
+  const orgExists = await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).isVisible();
+  if (!orgExists) {
+    await page.locator('input[placeholder="Organization name"]').fill(ORG);
+    await page.locator('.org-create-form .editor-btn').click();
+    await expect(page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) })).toBeVisible();
+  }
+
+  await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).first().click();
   await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
-  await page.locator('.kb-member-input').fill('frank');
-  await page.getByRole('button', { name: 'Send invite' }).click();
-  await expect(page.locator('.editor-status')).toContainText('Invite sent to frank');
 
-  // Create a team.
-  await page.locator('input[placeholder="Team name"]').fill('LandingTeam');
-  await page.getByRole('button', { name: 'Create' }).click();
-  await expect(page.locator('.kb-team-block:has(input[value="LandingTeam"])')).toBeVisible();
+  // Invite frank — skip if already a member or pending.
+  const frankIsMember = await page.locator('.kb-members-container .kb-member-row', { hasText: 'frank' }).isVisible();
+  const frankHasPending = await page.locator('.kb-pending-row', { hasText: 'frank' }).isVisible();
+  if (!frankIsMember && !frankHasPending) {
+    await page.locator('.kb-member-input').fill('frank');
+    await page.getByRole('button', { name: 'Send invite' }).click();
+    await expect(page.locator('.editor-status')).toContainText('Invite sent to frank');
 
-  // Frank accepts the invite.
-  const frankCtx = await browser.newContext();
-  const frankPage = await frankCtx.newPage();
-  await loginAs(frankPage, 'frank', 'frankpass');
-  await frankPage.locator('.nav-bell-link').click();
-  await expect(frankPage.locator('.notifications-page')).toBeVisible();
-  await frankPage.getByRole('button', { name: 'Accept' }).click();
-  await expect(frankPage.locator('.nav-bell-badge')).not.toBeVisible();
-  await frankCtx.close();
+    // Frank accepts the invite.
+    const frankCtx = await browser.newContext();
+    const frankPage = await frankCtx.newPage();
+    await loginAs(frankPage, 'frank', 'frankpass');
+    await frankPage.locator('.nav-bell-link').click();
+    await expect(frankPage.locator('.notifications-page')).toBeVisible();
+    await frankPage.getByRole('button', { name: 'Accept' }).click();
+    await expect(frankPage.locator('.nav-bell-badge')).not.toBeVisible();
+    await frankCtx.close();
+  }
+
+  // Create a team — skip if already present.
+  await page.locator('.nav-link', { hasText: 'Orgs' }).click();
+  await expect(page.locator('.org-admin-page')).toBeVisible();
+  await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).first().click();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
+  await expect(page.locator('.kb-team-page')).toBeVisible();
+  const teamExists = await page.locator('.kb-team-block:has(input[value="LandingTeam"])').isVisible();
+  if (!teamExists) {
+    await page.locator('input[placeholder="Team name"]').fill('LandingTeam');
+    await page.getByRole('button', { name: 'Create' }).click();
+    await expect(page.locator('.kb-team-block:has(input[value="LandingTeam"])')).toBeVisible();
+  }
 
   await page.close();
 });

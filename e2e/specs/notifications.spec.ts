@@ -43,7 +43,7 @@ async function navigateToOrgManage(page: Page, orgName: string) {
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
   await expect(page.locator('.org-admin-page')).toBeVisible();
   // Exact-match regex prevents 'PushTestOrg' from also matching 'PushTestOrg2'.
-  await page.locator('.org-list-link', { hasText: new RegExp(`^${orgName}$`) }).click();
+  await page.locator('.org-list-link', { hasText: new RegExp(`^${orgName}$`) }).first().click();
   await expect(page.locator('.org-landing-page')).toBeVisible();
   await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
@@ -54,9 +54,25 @@ async function navigateToOrgManage(page: Page, orgName: string) {
 test.beforeAll(async ({ browser }) => {
   const page = await browser.newPage();
   await loginAs(page, 'admin', 'testpass');
-  await createUser(page, 'alice', 'alicepass');
-  await createOrg(page, 'PushTestOrg');
-  await createOrg(page, 'PushTestOrg2');
+
+  // Create user 'alice' — skip if already exists (idempotent for re-runs).
+  await page.locator('.nav-link', { hasText: 'Accounts' }).click();
+  await expect(page.locator('.account-manager-page')).toBeVisible();
+  const aliceExists = await page.locator('.account-row', { hasText: 'alice' }).isVisible();
+  if (!aliceExists) {
+    await createUser(page, 'alice', 'alicepass');
+  }
+
+  // Create orgs — skip if already present.
+  await page.locator('.nav-link', { hasText: 'Orgs' }).click();
+  await expect(page.locator('.org-admin-page')).toBeVisible();
+  if (!(await page.locator('.org-list-link', { hasText: /^PushTestOrg$/ }).isVisible())) {
+    await createOrg(page, 'PushTestOrg');
+  }
+  if (!(await page.locator('.org-list-link', { hasText: /^PushTestOrg2$/ }).isVisible())) {
+    await createOrg(page, 'PushTestOrg2');
+  }
+
   await page.close();
 });
 
