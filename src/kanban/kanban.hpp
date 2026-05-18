@@ -129,6 +129,72 @@ struct task_field_change_record
 	}
 };
 
+struct team_settings_record
+{
+	long long org_id{0};
+	long long team_id{0}; // 0 = org-wide default
+	int allow_member_move_columns{1};
+	int allow_self_assign_unassigned{1};
+	int allow_self_assign_assigned{1};
+	int allow_abandon{1};
+
+	template<class Action>
+	void persist(Action& a)
+	{
+		Wt::Dbo::field(a, org_id,                       "org_id");
+		Wt::Dbo::field(a, team_id,                      "team_id");
+		Wt::Dbo::field(a, allow_member_move_columns,    "allow_member_move_columns");
+		Wt::Dbo::field(a, allow_self_assign_unassigned, "allow_self_assign_unassigned");
+		Wt::Dbo::field(a, allow_self_assign_assigned,   "allow_self_assign_assigned");
+		Wt::Dbo::field(a, allow_abandon,                "allow_abandon");
+	}
+};
+
+struct team_settings_entry
+{
+	long long org_id{0};
+	long long team_id{0};
+	bool allow_member_move_columns{true};
+	bool allow_self_assign_unassigned{true};
+	bool allow_self_assign_assigned{true};
+	bool allow_abandon{true};
+};
+
+struct team_settings_event_record
+{
+	long long   org_id{0};
+	long long   team_id{0};
+	std::string actor;
+	std::string occurred_at;
+	std::string field_name;
+	std::string old_value;
+	std::string new_value;
+
+	template<class Action>
+	void persist(Action& a)
+	{
+		Wt::Dbo::field(a, org_id,       "org_id");
+		Wt::Dbo::field(a, team_id,      "team_id");
+		Wt::Dbo::field(a, actor,        "actor");
+		Wt::Dbo::field(a, occurred_at,  "occurred_at");
+		Wt::Dbo::field(a, field_name,   "field_name");
+		Wt::Dbo::field(a, old_value,    "old_value");
+		Wt::Dbo::field(a, new_value,    "new_value");
+	}
+};
+
+struct team_settings_event_entry
+{
+	long long   id{0};
+	long long   org_id{0};
+	long long   team_id{0};
+	std::string actor;
+	std::string occurred_at;
+	std::string field_name;
+	std::string old_value;
+	std::string new_value;
+};
+
 // ---- Entry structs (plain data, no Dbo) ----
 
 struct team_entry

@@ -71,6 +71,12 @@ public:
 	                                                    const std::string& actor);
 	std::vector<task_comment_entry>      comments_for_task(long long task_id);
 
+	// Team settings
+	team_settings_entry                    settings_for_team(long long team_id);
+	void                                   set_team_settings(const team_settings_entry& s,
+	                                                         const std::string& actor);
+	std::vector<team_settings_event_entry> settings_events_for_team(long long team_id);
+
 	// Task types
 	long long                      create_task_type(long long          org_id,
 	                                                const std::string& name,

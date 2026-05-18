@@ -870,3 +870,106 @@ TEST_CASE("kanban_db - add_assignee rejects task already in done status")
 
 	CHECK(!db.add_assignee(id, "alice", "alice"));
 }
+
+// ---- team settings ----
+
+TEST_CASE("kanban_db - settings_for_team returns all-true defaults when no row exists")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 42);
+
+	const auto s = db.settings_for_team(tid);
+	CHECK(s.allow_member_move_columns);
+	CHECK(s.allow_self_assign_unassigned);
+	CHECK(s.allow_self_assign_assigned);
+	CHECK(s.allow_abandon);
+}
+
+TEST_CASE("kanban_db - set_team_settings persists team-specific override")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 42);
+
+	team_settings_entry s;
+	s.org_id                       = 42;
+	s.team_id                      = tid;
+	s.allow_member_move_columns    = false;
+	s.allow_self_assign_unassigned = true;
+	s.allow_self_assign_assigned   = true;
+	s.allow_abandon                = true;
+	db.set_team_settings(s, "lead");
+
+	const auto back = db.settings_for_team(tid);
+	CHECK(!back.allow_member_move_columns);
+	CHECK(back.allow_self_assign_unassigned);
+}
+
+TEST_CASE("kanban_db - org-wide default applies when no team row")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 42);
+
+	team_settings_entry org_default;
+	org_default.org_id                       = 42;
+	org_default.team_id                      = 0; // 0 = org-wide
+	org_default.allow_member_move_columns    = false;
+	org_default.allow_self_assign_unassigned = true;
+	org_default.allow_self_assign_assigned   = true;
+	org_default.allow_abandon                = true;
+	db.set_team_settings(org_default, "lead");
+
+	const auto s = db.settings_for_team(tid); // no team-specific row
+	CHECK(!s.allow_member_move_columns);
+}
+
+TEST_CASE("kanban_db - team-specific row overrides org default")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 42);
+
+	team_settings_entry org_default;
+	org_default.org_id                       = 42;
+	org_default.team_id                      = 0;
+	org_default.allow_member_move_columns    = false;
+	org_default.allow_self_assign_unassigned = false;
+	org_default.allow_self_assign_assigned   = false;
+	org_default.allow_abandon                = false;
+	db.set_team_settings(org_default, "lead");
+
+	team_settings_entry team_override;
+	team_override.org_id                       = 42;
+	team_override.team_id                      = tid;
+	team_override.allow_member_move_columns    = true;
+	team_override.allow_self_assign_unassigned = true;
+	team_override.allow_self_assign_assigned   = true;
+	team_override.allow_abandon                = true;
+	db.set_team_settings(team_override, "lead");
+
+	const auto s = db.settings_for_team(tid);
+	CHECK(s.allow_member_move_columns);
+	CHECK(s.allow_abandon);
+}
+
+TEST_CASE("kanban_db - set_team_settings records audit event")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 42);
+
+	team_settings_entry s;
+	s.org_id                       = 42;
+	s.team_id                      = tid;
+	s.allow_member_move_columns    = false;
+	s.allow_self_assign_unassigned = true;
+	s.allow_self_assign_assigned   = true;
+	s.allow_abandon                = true;
+	db.set_team_settings(s, "lead");
+
+	const auto events = db.settings_events_for_team(tid);
+	REQUIRE(!events.empty());
+	CHECK(events[0].actor == "lead");
+	const bool found_move =
+	  std::any_of(events.begin(), events.end(), [](const team_settings_event_entry& e) {
+		  return e.field_name == "allow_member_move_columns" && e.new_value == "0";
+	  });
+	CHECK(found_move);
+}

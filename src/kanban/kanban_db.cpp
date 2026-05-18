@@ -16,6 +16,8 @@ kanban_db::kanban_db(const std::string& db_path)
 	m_dbo.mapClass<task_comment_record>("task_comment");
 	m_dbo.mapClass<task_comment_event_record>("task_comment_event");
 	m_dbo.mapClass<task_assignee_record>("task_assignee");
+	m_dbo.mapClass<team_settings_record>("team_settings");
+	m_dbo.mapClass<team_settings_event_record>("team_settings_event");
 
 	try
 	{
@@ -67,6 +69,29 @@ kanban_db::kanban_db(const std::string& db_path)
 	  " version integer not null default 0,"
 	  " task_id integer not null default 0,"
 	  " username text not null default '')");
+
+	migrate(
+	  "CREATE TABLE IF NOT EXISTS team_settings ("
+	  "id integer primary key autoincrement,"
+	  " version integer not null default 0,"
+	  " org_id integer not null default 0,"
+	  " team_id integer not null default 0,"
+	  " allow_member_move_columns integer not null default 1,"
+	  " allow_self_assign_unassigned integer not null default 1,"
+	  " allow_self_assign_assigned integer not null default 1,"
+	  " allow_abandon integer not null default 1)");
+
+	migrate(
+	  "CREATE TABLE IF NOT EXISTS team_settings_event ("
+	  "id integer primary key autoincrement,"
+	  " version integer not null default 0,"
+	  " org_id integer not null default 0,"
+	  " team_id integer not null default 0,"
+	  " actor text not null default '',"
+	  " occurred_at text not null default '',"
+	  " field_name text not null default '',"
+	  " old_value text not null default '',"
+	  " new_value text not null default '')");
 }
 
 // ---- static helpers ----
@@ -856,6 +881,173 @@ void kanban_db::maybe_clear_assignees_for_done(long long          task_id,
 		row.remove();
 	}
 	record_event(task_id, actor, "updated", {{"assignees", removed_names, "(done \xe2\x80\x94 assignees cleared)"}});
+}
+
+// ---- Team settings ----
+
+team_settings_entry kanban_db::settings_for_team(long long team_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	// Try team-specific row first.
+	const auto team_rows =
+	  m_dbo.find<team_settings_record>()
+	    .where("team_id = ?")
+	    .bind(team_id)
+	    .resultList();
+	if(!team_rows.empty())
+	{
+		const auto&         r = *team_rows.begin();
+		team_settings_entry e;
+		e.org_id                       = r->org_id;
+		e.team_id                      = r->team_id;
+		e.allow_member_move_columns    = r->allow_member_move_columns != 0;
+		e.allow_self_assign_unassigned = r->allow_self_assign_unassigned != 0;
+		e.allow_self_assign_assigned   = r->allow_self_assign_assigned != 0;
+		e.allow_abandon                = r->allow_abandon != 0;
+		return e;
+	}
+
+	// Find the team's org_id for the org-wide default lookup.
+	long long  org_id = 0;
+	const auto teams =
+	  m_dbo.find<team_record>().where("id = ?").bind(team_id).resultList();
+	if(!teams.empty())
+	{
+		org_id = (*teams.begin())->org_id;
+	}
+
+	// Try org-wide default (team_id = 0).
+	const auto org_rows =
+	  m_dbo.find<team_settings_record>()
+	    .where("org_id = ? AND team_id = 0")
+	    .bind(org_id)
+	    .resultList();
+	if(!org_rows.empty())
+	{
+		const auto&         r = *org_rows.begin();
+		team_settings_entry e;
+		e.org_id                       = r->org_id;
+		e.team_id                      = 0;
+		e.allow_member_move_columns    = r->allow_member_move_columns != 0;
+		e.allow_self_assign_unassigned = r->allow_self_assign_unassigned != 0;
+		e.allow_self_assign_assigned   = r->allow_self_assign_assigned != 0;
+		e.allow_abandon                = r->allow_abandon != 0;
+		return e;
+	}
+
+	// Hard-coded defaults (all true).
+	team_settings_entry e;
+	e.org_id  = org_id;
+	e.team_id = 0;
+	return e;
+}
+
+void kanban_db::set_team_settings(const team_settings_entry& s,
+                                  const std::string&         actor)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const std::string now =
+	  Wt::WDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss").toUTF8();
+
+	// Find existing row (collect into vector to avoid double-iterating cursor).
+	const auto rows =
+	  m_dbo.find<team_settings_record>()
+	    .where("org_id = ? AND team_id = ?")
+	    .bind(s.org_id)
+	    .bind(s.team_id)
+	    .resultList();
+
+	std::vector<Wt::Dbo::ptr<team_settings_record>> existing;
+	for(const auto& r: rows)
+	{
+		existing.push_back(r);
+	}
+
+	auto record_change = [&](const std::string& field,
+	                         const std::string& old_v,
+	                         const std::string& new_v) {
+		if(old_v == new_v)
+		{
+			return;
+		}
+		auto ev                  = m_dbo.add(std::make_unique<team_settings_event_record>());
+		ev.modify()->org_id      = s.org_id;
+		ev.modify()->team_id     = s.team_id;
+		ev.modify()->actor       = actor;
+		ev.modify()->occurred_at = now;
+		ev.modify()->field_name  = field;
+		ev.modify()->old_value   = old_v;
+		ev.modify()->new_value   = new_v;
+	};
+
+	auto to_s = [](bool b) { return b ? "1" : "0"; };
+
+	if(existing.empty())
+	{
+		// New row — record changes from defaults (all true).
+		record_change("allow_member_move_columns", "1", to_s(s.allow_member_move_columns));
+		record_change("allow_self_assign_unassigned", "1", to_s(s.allow_self_assign_unassigned));
+		record_change("allow_self_assign_assigned", "1", to_s(s.allow_self_assign_assigned));
+		record_change("allow_abandon", "1", to_s(s.allow_abandon));
+
+		auto r                                   = m_dbo.add(std::make_unique<team_settings_record>());
+		r.modify()->org_id                       = s.org_id;
+		r.modify()->team_id                      = s.team_id;
+		r.modify()->allow_member_move_columns    = s.allow_member_move_columns ? 1 : 0;
+		r.modify()->allow_self_assign_unassigned = s.allow_self_assign_unassigned ? 1 : 0;
+		r.modify()->allow_self_assign_assigned   = s.allow_self_assign_assigned ? 1 : 0;
+		r.modify()->allow_abandon                = s.allow_abandon ? 1 : 0;
+	}
+	else
+	{
+		Wt::Dbo::ptr<team_settings_record> r = existing[0];
+		record_change("allow_member_move_columns",
+		              to_s(r->allow_member_move_columns != 0),
+		              to_s(s.allow_member_move_columns));
+		record_change("allow_self_assign_unassigned",
+		              to_s(r->allow_self_assign_unassigned != 0),
+		              to_s(s.allow_self_assign_unassigned));
+		record_change("allow_self_assign_assigned",
+		              to_s(r->allow_self_assign_assigned != 0),
+		              to_s(s.allow_self_assign_assigned));
+		record_change("allow_abandon",
+		              to_s(r->allow_abandon != 0),
+		              to_s(s.allow_abandon));
+
+		r.modify()->allow_member_move_columns    = s.allow_member_move_columns ? 1 : 0;
+		r.modify()->allow_self_assign_unassigned = s.allow_self_assign_unassigned ? 1 : 0;
+		r.modify()->allow_self_assign_assigned   = s.allow_self_assign_assigned ? 1 : 0;
+		r.modify()->allow_abandon                = s.allow_abandon ? 1 : 0;
+	}
+}
+
+std::vector<team_settings_event_entry>
+  kanban_db::settings_events_for_team(long long team_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           rows =
+	  m_dbo.find<team_settings_event_record>()
+	    .where("team_id = ?")
+	    .bind(team_id)
+	    .orderBy("id DESC")
+	    .resultList();
+	std::vector<team_settings_event_entry> out;
+	for(const auto& r: rows)
+	{
+		team_settings_event_entry e;
+		e.id          = r.id();
+		e.org_id      = r->org_id;
+		e.team_id     = r->team_id;
+		e.actor       = r->actor;
+		e.occurred_at = r->occurred_at;
+		e.field_name  = r->field_name;
+		e.old_value   = r->old_value;
+		e.new_value   = r->new_value;
+		out.push_back(std::move(e));
+	}
+	return out;
 }
 
 // ---- Comments ----
