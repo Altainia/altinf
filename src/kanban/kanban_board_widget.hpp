@@ -16,13 +16,15 @@ class kanban_board_widget: public Wt::WContainerWidget
 {
 public:
 	kanban_board_widget(std::vector<kanban_task_entry>                          tasks,
-	                    bool                                                    can_edit,
+	                    bool                                                    can_move_columns,
+	                    bool                                                    can_move_done,
 	                    const std::map<long long, std::string>&                 type_colors,
 	                    std::function<void(long long, const std::string&, int)> on_move,
 	                    std::function<void(long long)>                          on_edit);
 
-	void refresh(std::vector<kanban_task_entry>         tasks,
-	             bool                                   can_edit,
+	void refresh(std::vector<kanban_task_entry>          tasks,
+	             bool                                    can_move_columns,
+	             bool                                    can_move_done,
 	             const std::map<long long, std::string>& type_colors);
 
 private:
@@ -32,5 +34,5 @@ private:
 	std::map<long long, std::string> m_type_colors;
 
 	std::string serialize_tasks(const std::vector<kanban_task_entry>& tasks) const;
-	void        init_js(const std::string& json, bool can_edit);
+	void        init_js(const std::string& json, bool can_move_columns, bool can_move_done);
 };

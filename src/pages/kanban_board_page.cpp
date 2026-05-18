@@ -102,6 +102,7 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 		m_board_widget = addNew<kanban_board_widget>(
 		  tasks,
 		  m_caps.has_any(team_cap::edit_task_fields),
+		  m_caps.has_any(team_cap::edit_task_details),
 		  m_type_colors,
 		  [this](long long tid, const std::string& status, int sort) {
 			  if(!m_caps.has_any(team_cap::edit_task_fields))
@@ -113,6 +114,7 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 			  m_board_widget->refresh(
 			    m_db.tasks_for_team(m_team_id),
 			    m_caps.has_any(team_cap::edit_task_fields),
+			    m_caps.has_any(team_cap::edit_task_details),
 			    m_type_colors);
 		  },
 		  [this](long long tid) {
@@ -178,6 +180,7 @@ void kanban_board_page::refresh()
 		m_board_widget->refresh(
 		  tasks,
 		  m_caps.has_any(team_cap::edit_task_fields),
+		  m_caps.has_any(team_cap::edit_task_details),
 		  m_type_colors);
 	}
 }

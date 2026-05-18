@@ -25,7 +25,7 @@
     el.dispatchEvent(new Event('change'));
   }
 
-  function makeCard(task, canEdit, cbId) {
+  function makeCard(task, canMoveColumns, canMoveDone, cbId) {
     var card = document.createElement('div');
     card.className = 'kb-card';
     card.dataset.id = task.id;
@@ -34,8 +34,9 @@
       card.style.borderLeftColor = task.color;
     }
 
+    var canDrag = (task.status === 'done') ? canMoveDone : canMoveColumns;
     var _dragged = false;
-    if (canEdit) {
+    if (canDrag) {
       card.setAttribute('draggable', 'true');
       card.addEventListener('dragstart', function (e) {
         _dragged = true;
@@ -61,10 +62,10 @@
     title.textContent = task.title;
     card.appendChild(title);
 
-    if (task.assigned_to) {
+    if (task.assignees && task.assignees.length > 0) {
       var assignee = document.createElement('div');
       assignee.className = 'kb-card-assignee';
-      assignee.textContent = task.assigned_to;
+      assignee.textContent = task.assignees.join(', ');
       card.appendChild(assignee);
     }
 
@@ -78,7 +79,7 @@
     return card;
   }
 
-  window.initKanban = function (mountId, tasks, cbId, canEdit) {
+  window.initKanban = function (mountId, tasks, cbId, canMoveColumns, canMoveDone) {
     var mount = document.getElementById(mountId);
     if (!mount) return;
     mount.innerHTML = '';
@@ -106,11 +107,12 @@
       var cards = document.createElement('div');
       cards.className = 'kb-cards';
       byStatus[col.id].forEach(function (task) {
-        cards.appendChild(makeCard(task, canEdit, cbId));
+        cards.appendChild(makeCard(task, canMoveColumns, canMoveDone, cbId));
       });
       colEl.appendChild(cards);
 
-      if (canEdit) {
+      var colAcceptsDrop = (col.id === 'done') ? canMoveDone : canMoveColumns;
+      if (colAcceptsDrop) {
         colEl.addEventListener('dragover', function (e) {
           e.preventDefault();
           e.dataTransfer.dropEffect = 'move';

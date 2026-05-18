@@ -42,7 +42,8 @@ static std::string date_str(const Wt::WDate& d)
 
 kanban_board_widget::kanban_board_widget(
   std::vector<kanban_task_entry>                          tasks,
-  bool                                                    can_edit,
+  bool                                                    can_move_columns,
+  bool                                                    can_move_done,
   const std::map<long long, std::string>&                 type_colors,
   std::function<void(long long, const std::string&, int)> on_move,
   std::function<void(long long)>                          on_edit):
@@ -85,15 +86,16 @@ kanban_board_widget::kanban_board_widget(
 		  }
 	  });
 
-	init_js(serialize_tasks(tasks), can_edit);
+	init_js(serialize_tasks(tasks), can_move_columns, can_move_done);
 }
 
 void kanban_board_widget::refresh(std::vector<kanban_task_entry>          tasks,
-                                  bool                                    can_edit,
+                                  bool                                    can_move_columns,
+                                  bool                                    can_move_done,
                                   const std::map<long long, std::string>& type_colors)
 {
 	m_type_colors = type_colors;
-	init_js(serialize_tasks(tasks), can_edit);
+	init_js(serialize_tasks(tasks), can_move_columns, can_move_done);
 }
 
 std::string kanban_board_widget::serialize_tasks(const std::vector<kanban_task_entry>& tasks) const
@@ -114,7 +116,20 @@ std::string kanban_board_widget::serialize_tasks(const std::vector<kanban_task_e
 		   << "\"id\":" << t.id << ','
 		   << "\"status\":\"" << escape_json(t.status) << "\","
 		   << "\"title\":\"" << escape_json(t.title) << "\","
-		   << "\"assigned_to\":\"" << escape_json(t.assignees.empty() ? "" : t.assignees[0]) << "\","
+		   << "\"assignees\":[";
+		{
+			bool first_a = true;
+			for(const auto& a: t.assignees)
+			{
+				if(!first_a)
+				{
+					ss << ',';
+				}
+				first_a = false;
+				ss << '"' << escape_json(a) << '"';
+			}
+		}
+		ss << "],"
 		   << "\"color\":\"" << escape_json(color) << "\","
 		   << "\"start_date\":\"" << date_str(t.start_date) << "\","
 		   << "\"end_date\":\"" << date_str(t.end_date) << "\""
@@ -124,7 +139,12 @@ std::string kanban_board_widget::serialize_tasks(const std::vector<kanban_task_e
 	return ss.str();
 }
 
-void kanban_board_widget::init_js(const std::string& json, bool can_edit)
+void kanban_board_widget::init_js(const std::string& json,
+                                  bool               can_move_columns,
+                                  bool               can_move_done)
 {
-	doJavaScript("initKanban('" + m_mount_id + "'," + json + ",'" + m_cb_id + "'," + (can_edit ? "true" : "false") + ");");
+	doJavaScript(
+	  "initKanban('" + m_mount_id + "'," + json + ",'" + m_cb_id + "'," +
+	  (can_move_columns ? "true" : "false") + "," +
+	  (can_move_done ? "true" : "false") + ");");
 }

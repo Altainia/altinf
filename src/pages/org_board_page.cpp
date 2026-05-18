@@ -72,7 +72,8 @@ org_board_page::org_board_page(org_db&             odb,
 		// Org leads can edit all teams; capture tid by value for the lambdas.
 		auto* board = section->addNew<kanban_board_widget>(
 		  tasks,
-		  true, // is_lead — org leads always have edit rights
+		  true, // org leads always have column-move rights
+		  true, // org leads always have done-move rights
 		  m_type_colors,
 		  [&kdb, tid, actor = session.username](long long task_id, const std::string& status, int sort) {
 			  kdb.update_task_status(task_id, status, sort, actor);
