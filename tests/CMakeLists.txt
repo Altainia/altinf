@@ -71,6 +71,16 @@ target_include_directories(test_live_hub PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_live_hub PRIVATE Catch2::Catch2WithMain Wt::Wt)
 catch_discover_tests(test_live_hub)
 
+# test_kanban_notifications
+add_executable(test_kanban_notifications test_kanban_notifications.cpp
+  ${CMAKE_SOURCE_DIR}/src/kanban/kanban_db.cpp
+  ${CMAKE_SOURCE_DIR}/src/kanban/kanban_notifications.cpp
+  ${CMAKE_SOURCE_DIR}/src/org/org_db.cpp
+  ${CMAKE_SOURCE_DIR}/src/widgets/live_hub.cpp)
+target_include_directories(test_kanban_notifications PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_kanban_notifications PRIVATE Catch2::Catch2WithMain Wt::Wt wtdbo wtdbosqlite3)
+catch_discover_tests(test_kanban_notifications)
+
 # test_user_db — needs OpenSSL for SHA-256 and token generation
 add_executable(test_user_db test_user_db.cpp
   ${CMAKE_SOURCE_DIR}/src/auth/user_db.cpp)
