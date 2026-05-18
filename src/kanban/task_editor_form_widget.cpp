@@ -752,7 +752,12 @@ void task_editor_form_widget::enter_edit_mode(Wt::WText* display, Wt::WWidget* e
 {
 	display->hide();
 	edit->show();
-	edit->setFocus(true);
+	// WDateEdit: clicking the calendar popup takes focus away from the input and
+	// fires blurred() before the new date is written back, so do not auto-focus it.
+	if(!dynamic_cast<Wt::WDateEdit*>(edit))
+	{
+		edit->setFocus(true);
+	}
 }
 
 void task_editor_form_widget::exit_edit_mode(
