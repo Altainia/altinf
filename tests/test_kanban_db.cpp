@@ -811,3 +811,62 @@ TEST_CASE("kanban_db - comments_for_task includes deleted comments as placeholde
 	CHECK(comments[1].is_deleted);
 	CHECK(comments[1].body.empty());
 }
+
+// ---- done-column assignee clearing ----
+
+TEST_CASE("kanban_db - update_task_status to done clears assignees")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	db.add_member(tid, "bob");
+	const long long id = db.add_task(make_task(tid, "Work"), "alice");
+	db.add_assignee(id, "alice", "alice");
+	db.add_assignee(id, "bob", "alice");
+
+	db.update_task_status(id, "done", 0, "alice");
+	CHECK(db.assignees_for_task(id).empty());
+}
+
+TEST_CASE("kanban_db - update_task_status to done records assignee-cleared event")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	const long long id = db.add_task(make_task(tid, "Work"), "alice");
+	db.add_assignee(id, "alice", "alice");
+
+	db.update_task_status(id, "done", 0, "alice");
+
+	const auto hist = db.history_for_task(id);
+	const bool has_clear =
+	  std::any_of(hist.begin(), hist.end(), [](const task_event_entry& e) {
+		  return std::any_of(e.changes.begin(), e.changes.end(), [](const task_field_change_entry& c) {
+			  return c.field_name == "assignees" &&
+			         c.new_value.find("done") != std::string::npos;
+		  });
+	  });
+	CHECK(has_clear);
+}
+
+TEST_CASE("kanban_db - update_task_status non-done does not clear assignees")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	const long long id = db.add_task(make_task(tid, "Work"), "alice");
+	db.add_assignee(id, "alice", "alice");
+
+	db.update_task_status(id, "in_progress", 0, "alice");
+	CHECK(db.assignees_for_task(id).size() == 1);
+}
+
+TEST_CASE("kanban_db - add_assignee rejects task already in done status")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	const long long id = db.add_task(make_task(tid, "Work", "done"), "alice");
+
+	CHECK(!db.add_assignee(id, "alice", "alice"));
+}

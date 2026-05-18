@@ -835,11 +835,9 @@ void kanban_db::maybe_clear_assignees_for_done(long long          task_id,
 	    .where("task_id = ?")
 	    .bind(task_id)
 	    .resultList();
-	if(rows.empty())
-	{
-		return;
-	}
-	std::string removed_names;
+
+	std::vector<Wt::Dbo::ptr<task_assignee_record>> to_remove;
+	std::string                                     removed_names;
 	for(const auto& r: rows)
 	{
 		if(!removed_names.empty())
@@ -847,10 +845,14 @@ void kanban_db::maybe_clear_assignees_for_done(long long          task_id,
 			removed_names += ", ";
 		}
 		removed_names += r->username;
+		to_remove.push_back(r);
 	}
-	for(const auto& r: rows)
+	if(to_remove.empty())
 	{
-		Wt::Dbo::ptr<task_assignee_record> row = r;
+		return;
+	}
+	for(auto& row: to_remove)
+	{
 		row.remove();
 	}
 	record_event(task_id, actor, "updated", {{"assignees", removed_names, "(done \xe2\x80\x94 assignees cleared)"}});
