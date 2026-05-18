@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <map>
 
+#include "kanban/kanban_notifications.hpp"
 #include "org/org.hpp"
 #include "widgets/live_hub.hpp"
 
@@ -365,6 +366,9 @@ task_editor_form_widget::task_editor_form_widget(
           [this, user, sole, can_reassign, rebuild_chips_fn]() {
             auto do_remove = [this, user, rebuild_chips_fn]() {
               m_db.remove_assignee(m_task_id, user, m_username);
+              const auto remaining = m_db.assignees_for_task(m_task_id);
+              notify_assignee_removed(
+                m_db, m_odb, m_task_id, m_team_id, m_org_id, user, m_username, remaining);
               live_hub::instance().broadcast(
                 "team:" + std::to_string(m_team_id));
               (*rebuild_chips_fn)();
@@ -419,6 +423,8 @@ task_editor_form_widget::task_editor_form_widget(
 		self_btn->clicked().connect([this, rebuild_chips_fn]() {
 			if(m_db.add_assignee(m_task_id, m_username, m_username))
 			{
+				notify_assignee_added(
+				  m_db, m_odb, m_task_id, m_team_id, m_org_id, m_username, m_username);
 				live_hub::instance().broadcast("team:" + std::to_string(m_team_id));
 				(*rebuild_chips_fn)();
 			}
@@ -454,14 +460,8 @@ task_editor_form_widget::task_editor_form_widget(
 			const std::string new_user = mems[mi];
 			if(m_db.add_assignee(m_task_id, new_user, m_username))
 			{
-				if(new_user != m_username)
-				{
-					const auto team_opt = m_db.find_team(m_team_id);
-					const auto task_opt = m_db.find_task(m_task_id);
-					m_odb.push_notification(
-					  new_user, "task_assigned", make_task_assigned_payload(m_task_id, task_opt ? task_opt->title : "", m_team_id, team_opt ? team_opt->name : ""));
-					live_hub::instance().broadcast("user:" + new_user);
-				}
+				notify_assignee_added(
+				  m_db, m_odb, m_task_id, m_team_id, m_org_id, new_user, m_username);
 				live_hub::instance().broadcast("team:" + std::to_string(m_team_id));
 				(*rebuild_chips_fn)();
 				m_add_member_combo->setCurrentIndex(0);
