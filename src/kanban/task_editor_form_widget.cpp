@@ -440,7 +440,39 @@ task_editor_form_widget::task_editor_form_widget(
 		if(can_edit && !is_new)
 		{
 			disp->clicked().connect([disp, edit, this] { enter_edit_mode(disp, edit); });
+
+			// changed() fires after WDateEdit updates its text from the calendar
+			// (setFromCalendar → changed().emit()), so edit->date() is the new value.
+			// Also corrects the Safari case: if blurred() already exited with the old
+			// date, changed() fixes the display text without re-entering edit mode.
+			edit->changed().connect([this, orig, field_name, disp, edit, wrap] {
+				const auto d   = edit->date();
+				const auto txt = date_disp(d);
+				if(disp->isHidden())
+				{
+					exit_edit_mode(disp, edit, txt);
+				}
+				else
+				{
+					disp->setText(txt);
+				}
+				if(d == orig)
+				{
+					unmark_field_dirty(field_name, wrap);
+				}
+				else
+				{
+					mark_field_dirty(field_name, wrap);
+				}
+			});
+
+			// blurred() handles "click away without selecting a date".
+			// Guard prevents double-exit when changed() already ran first.
 			edit->blurred().connect([this, orig, field_name, disp, edit, wrap] {
+				if(!disp->isHidden())
+				{
+					return;
+				}
 				const auto d = edit->date();
 				exit_edit_mode(disp, edit, date_disp(d));
 				if(d == orig)
@@ -752,12 +784,7 @@ void task_editor_form_widget::enter_edit_mode(Wt::WText* display, Wt::WWidget* e
 {
 	display->hide();
 	edit->show();
-	// WDateEdit: clicking the calendar popup takes focus away from the input and
-	// fires blurred() before the new date is written back, so do not auto-focus it.
-	if(!dynamic_cast<Wt::WDateEdit*>(edit))
-	{
-		edit->setFocus(true);
-	}
+	edit->setFocus(true);
 }
 
 void task_editor_form_widget::exit_edit_mode(
