@@ -92,6 +92,9 @@ a:hover {
   cursor: default;
 }
 
+.Wt-calendar {
+  background-color: var(--color-bg);
+}
 .Wt-calendar select {
   background-color: var(--color-bg);
   color: var(--color-text);
@@ -562,6 +565,7 @@ a:hover {
 .editor-btn-row {
   display: flex;
   gap: 0.75rem;
+  margin-top: 2rem;
 }
 
 .editor-btn {

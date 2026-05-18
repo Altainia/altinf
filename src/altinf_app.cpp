@@ -215,7 +215,7 @@ void altinf_app::handle_path(const std::string& path)
 	{
 		const auto slug = path.substr(6);
 		const auto it   = std::find_if(
-      m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) { return p.slug == slug; });
+		  m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) { return p.slug == slug; });
 		if(it != m_posts.end())
 		{
 			m_content->addNew<blog_post_page>(*it, m_session);
@@ -247,7 +247,7 @@ void altinf_app::handle_path(const std::string& path)
 		}
 		const auto slug = path.substr(12);
 		const auto it   = std::find_if(
-      m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) { return p.slug == slug; });
+		  m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) { return p.slug == slug; });
 		if(it == m_posts.end())
 		{
 			show_not_found("Post not found.");
@@ -360,10 +360,8 @@ void altinf_app::handle_path(const std::string& path)
 				show_forbidden();
 				return;
 			}
-			const auto members = m_kanban_db->members_for_team(team_id);
-			const auto types   = m_kanban_db->types_for_org(team->org_id);
 			m_content->addNew<kanban_task_editor_page>(
-			  *m_kanban_db, *m_org_db, team_id, m_session, caps, nullptr, members, types, [this, team_id] {
+			  *m_kanban_db, *m_org_db, team_id, m_session, caps, nullptr, [this, team_id] {
 				  setInternalPath("/board/" + std::to_string(team_id), true);
 			  });
 		}
@@ -391,11 +389,9 @@ void altinf_app::handle_path(const std::string& path)
 				show_not_found("Task not found.");
 				return;
 			}
-			m_edit_task        = opt;
-			const auto members = m_kanban_db->members_for_team(team_id);
-			const auto types   = m_kanban_db->types_for_org(team->org_id);
+			m_edit_task = opt;
 			m_content->addNew<kanban_task_editor_page>(
-			  *m_kanban_db, *m_org_db, team_id, m_session, caps, &(*m_edit_task), members, types, [this, team_id] {
+			  *m_kanban_db, *m_org_db, team_id, m_session, caps, &(*m_edit_task), [this, team_id] {
 				  setInternalPath("/board/" + std::to_string(team_id), true);
 			  });
 		}
@@ -593,7 +589,7 @@ void altinf_app::handle_path(const std::string& path)
 		const auto edit_username = path.substr(21);
 		const auto users         = m_user_db->list_users();
 		const auto it            = std::find_if(
-      users.begin(), users.end(), [&edit_username](const user_entry& e) { return e.username == edit_username; });
+		  users.begin(), users.end(), [&edit_username](const user_entry& e) { return e.username == edit_username; });
 		if(it == users.end())
 		{
 			show_not_found("User not found.");

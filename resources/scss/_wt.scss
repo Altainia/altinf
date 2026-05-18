@@ -54,6 +54,8 @@
 }
 
 .Wt-calendar {
+  background-color: var(--color-bg);
+  
   select {
     background-color: var(--color-bg);
     color:            var(--color-text);

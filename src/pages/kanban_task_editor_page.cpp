@@ -12,9 +12,7 @@ kanban_task_editor_page::kanban_task_editor_page(
   const session_data&      session,
   team_cap::flags          caps,
   const kanban_task_entry* existing,
-  const std::vector<std::string>& /*members*/,
-  const std::vector<task_type_entry>& /*types*/,
-  std::function<void()> on_save)
+  std::function<void()>    on_save)
 {
 	setStyleClass("page kb-editor-page");
 

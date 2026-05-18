@@ -29,9 +29,9 @@ task_popup_widget::task_popup_widget(kanban_db& db, org_db& odb, long long task_
 
 	setWindowTitle(task_opt->title);
 
-	const std::string edit_url = "/board/" + std::to_string(team_id) +
-	                             "/task/" + std::to_string(task_id) + "/edit";
-	auto* full_link = titleBar()->addNew<Wt::WAnchor>(
+	const std::string edit_url  = "/board/" + std::to_string(team_id) +
+	                              "/task/" + std::to_string(task_id) + "/edit";
+	auto*             full_link = titleBar()->addNew<Wt::WAnchor>(
 	  Wt::WLink{Wt::LinkType::InternalPath, edit_url}, "Open full editor \xe2\x86\x97");
 	full_link->setStyleClass("kb-popup-full-link");
 	full_link->clicked().connect([this] { reject(); });
@@ -44,10 +44,6 @@ task_popup_widget::task_popup_widget(kanban_db& db, org_db& odb, long long task_
 	m_close_cb->setStyleClass("kb-cb-hidden");
 	const std::string cb_id = m_close_cb->id();
 	m_close_cb->changed().connect([this] { try_close(); });
-
-	auto* close_btn = footer()->addNew<Wt::WPushButton>("Close");
-	close_btn->setStyleClass("editor-btn editor-btn-cancel");
-	close_btn->clicked().connect([this] { try_close(); });
 
 	// Constrain dialog height and make contents scroll.
 	setMaximumSize(Wt::WLength::Auto, Wt::WLength(90, Wt::LengthUnit::ViewportHeight));
