@@ -449,3 +449,42 @@ test('date field: selecting a date marks field dirty and enables Save', async ({
   // After a valid date selection the field should be dirty → Save enabled.
   await expect(saveBtn).toBeEnabled({ timeout: 5000 });
 });
+
+test('date field: calendar navigation does not close the picker', async ({ page }) => {
+  // Regression: clicking nav arrows or the month <select> inside .Wt-datepicker
+  // used to blur the WDateEdit input, triggering exit_edit_mode → WDateEdit::setHidden
+  // → popup_->setHidden, which hid the calendar the user was still using.
+  await openPopupForDateTests(page);
+  const field   = startDateField(page);
+  const display = field.locator('.kb-popup-display');
+
+  await display.click();
+  await openCalendar(page, field);
+
+  const calendar = page.locator('.Wt-cal').first();
+  await expect(calendar).toBeVisible({ timeout: 5000 });
+
+  // Click the "next month" nav button — should NOT close the picker.
+  const monthSelect = calendar.locator('select').first();
+  const monthBefore = await monthSelect.inputValue();
+  const nextBtn = calendar.locator('.Wt-cal-navbutton').last();
+  await nextBtn.click();
+
+  // Calendar should still be visible after navigating.
+  await expect(calendar).toBeVisible({ timeout: 3000 });
+
+  // Wait for the server to re-render the calendar with the next month before
+  // looking for day 10 — nav button triggers a server round-trip and the DOM
+  // updates asynchronously.  Without this wait, Playwright finds a "10" td that
+  // belongs to the old month, clicks it, and the coordinate maps to a wrong date.
+  await expect(monthSelect).not.toHaveValue(monthBefore, { timeout: 5000 });
+
+  // Now select day 10 in the new month — should work and update the display.
+  const day10 = calendar.locator('td').filter({ hasText: /^10$/ }).first();
+  await expect(day10).toBeVisible();
+  await day10.click();
+
+  await expect(display).toBeVisible({ timeout: 5000 });
+  const text = await display.textContent();
+  expect(text).toMatch(/10/);
+});

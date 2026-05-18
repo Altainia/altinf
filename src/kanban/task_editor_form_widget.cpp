@@ -485,6 +485,24 @@ task_editor_form_widget::task_editor_form_widget(
 				}
 			});
 
+			// Prevent focus from leaving the WDateEdit when the user clicks
+			// calendar navigation arrows or day cells (non-focusable elements
+			// inside .Wt-datepicker).  Without this, mousedown on those elements
+			// causes blur → blurred() → exit_edit_mode → WDateEdit::setHidden →
+			// popup_->setHidden, closing the calendar the user is still using.
+			// <select> elements (month picker) are excluded so their native
+			// dropdown still opens; that edge case is an accepted limitation.
+			doJavaScript(
+			  "if(!window._kbDpBound){"
+			  "  window._kbDpBound=true;"
+			  "  document.addEventListener('mousedown',function(e){"
+			  "    if(!e.target.closest)return;"
+			  "    if(!e.target.closest('.Wt-datepicker'))return;"
+			  "    if(e.target.tagName==='SELECT'||e.target.closest('select'))return;"
+			  "    e.preventDefault();"
+			  "  },true);"
+			  "}");
+
 			// ── Clear button ───────────────────────────────────────────────────
 			auto* clear_btn = wrap->addNew<Wt::WPushButton>("\xc3\x97");
 			clear_btn->setStyleClass("kb-date-clear");
