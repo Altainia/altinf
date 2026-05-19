@@ -24,6 +24,7 @@ team_settings_page::team_settings_page(kanban_db&          db,
 	}
 
 	const std::string board_url = "/board/" + std::to_string(team_id);
+	const long long   org_id    = team->org_id;
 
 	addNew<Wt::WText>("<h1>Team Settings \xe2\x80\x94 " + team->name + "</h1>",
 	                  Wt::TextFormat::UnsafeXHTML);
@@ -45,12 +46,13 @@ team_settings_page::team_settings_page(kanban_db&          db,
 	auto* save_btn = name_row->addNew<Wt::WPushButton>("Save");
 	save_btn->setStyleClass("editor-btn");
 	save_btn->clicked().connect(
-	  [&db, team_id, name_input] {
+	  [&db, team_id, org_id, name_input] {
 		  const std::string n = name_input->text().toUTF8();
 		  if(!n.empty())
 		  {
 			  db.rename_team(team_id, n);
 			  live_hub::instance().broadcast("team:" + std::to_string(team_id));
+			  live_hub::instance().broadcast("org:" + std::to_string(org_id));
 		  }
 	  });
 
