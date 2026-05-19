@@ -624,7 +624,7 @@ test('added member appears in the Assigned to dropdown', async ({ page }) => {
   // Open the task editor and check the assignee options.
   await page.locator('.kb-new-btn').click();
   const assigneeSelect = page.locator('.kb-editor-field-wrap')
-    .filter({ hasText: 'Assigned to' }).locator('select');
+    .filter({ hasText: 'Assignees' }).locator('select');
   await expect(assigneeSelect.locator('option', { hasText: 'admin' })).toBeAttached();
 });
 

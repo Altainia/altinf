@@ -103,7 +103,14 @@ test('comments: editing own comment updates body and shows "Edited by" label', a
   const page = await ctx.newPage();
   await loginAs(page, 'admin', 'testpass');
   await goToBoard(page);
-  await openTaskEditor(page, 'CommentTask1');
+  await createTask(page, 'CommentTask2');
+  await openTaskEditor(page, 'CommentTask2');
+
+  // Add comment to the task
+  await postComment(page, 'Hello **world**');
+  
+  // Comment appears in the list
+  await expect(page.locator('.kb-comment-item')).toBeVisible();
 
   // Click Edit on the first comment (no confirmation dialog for own comment)
   await page.locator('.kb-comment-item').first().locator('button', { hasText: 'Edit' }).click();
@@ -129,8 +136,8 @@ test('comments: deleting own comment shows placeholder', async ({ browser }) => 
   const page = await ctx.newPage();
   await loginAs(page, 'admin', 'testpass');
   await goToBoard(page);
-  await createTask(page, 'CommentTask2');
-  await openTaskEditor(page, 'CommentTask2');
+  await createTask(page, 'CommentTask3');
+  await openTaskEditor(page, 'CommentTask3');
   await postComment(page, 'Delete me');
 
   await page.locator('.kb-comment-item').first().locator('button', { hasText: 'Delete' }).click();
