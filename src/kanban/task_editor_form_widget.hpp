@@ -70,6 +70,7 @@ private:
 
     Wt::WContainerWidget* m_assignee_list{nullptr};
     Wt::WComboBox*        m_add_member_combo{nullptr};
+    std::vector<std::string> m_pending_assignees;
 
     Wt::WDateEdit*        m_start_date_edit{nullptr};
     Wt::WText*            m_start_date_display{nullptr};
