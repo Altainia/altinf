@@ -334,6 +334,12 @@ void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
 	hdr->addNew<Wt::WText>(team.name, Wt::TextFormat::Plain)
 	  ->setStyleClass("kb-team-name-label");
 
+	hdr->addNew<Wt::WAnchor>(
+	     Wt::WLink{Wt::LinkType::InternalPath,
+	               "/board/" + std::to_string(team.id) + "/settings"},
+	     "Settings")
+	  ->setStyleClass("editor-btn editor-btn-cancel kb-team-settings-link");
+
 	auto* del_team = hdr->addNew<Wt::WPushButton>("Archive");
 	del_team->setStyleClass("link-action-btn link-delete-btn");
 	del_team->clicked().connect(

@@ -163,13 +163,13 @@ test('task editor shows title and description fields', async ({ page }) => {
   await expect(page.locator('textarea[placeholder="Description (optional)"]')).toBeVisible();
 });
 
-test('task editor shows Status and Assigned to dropdowns', async ({ page }) => {
+test('task editor shows Status dropdown and Assignees section', async ({ page }) => {
   await loginAndGoToBoard(page);
   await page.locator('.kb-new-btn').click();
   const statusSelect = page.locator('.kb-editor-field-wrap').filter({ hasText: 'Status' }).locator('select');
-  const assigneeSelect = page.locator('.kb-editor-field-wrap').filter({ hasText: 'Assigned to' }).locator('select');
+  const assigneeSection = page.locator('.kb-editor-field-wrap').filter({ hasText: 'Assignees' });
   await expect(statusSelect).toBeVisible();
-  await expect(assigneeSelect).toBeVisible();
+  await expect(assigneeSection).toBeVisible();
 });
 
 test('task editor shows Start date and End date fields', async ({ page }) => {

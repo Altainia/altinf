@@ -289,9 +289,9 @@ test('org manage: create team appears on second lead\'s page', async ({ browser 
 
   await adminPage.locator('input[placeholder="Team name"]').fill('NewLiveTeam');
   await adminPage.getByRole('button', { name: 'Create' }).click();
-  await expect(adminPage.locator('.kb-team-block input[value="NewLiveTeam"]')).toBeVisible();
+  await expect(adminPage.locator('.kb-team-block .kb-team-name-label', { hasText: 'NewLiveTeam' })).toBeVisible();
 
-  await expect(bobPage.locator('.kb-team-block input[value="NewLiveTeam"]')).toBeVisible();
+  await expect(bobPage.locator('.kb-team-block .kb-team-name-label', { hasText: 'NewLiveTeam' })).toBeVisible();
 
   await adminCtx.close();
   await bobCtx.close();
@@ -308,12 +308,16 @@ test('org manage: rename team updates second lead\'s page', async ({ browser }) 
   await goToManage(adminPage);
   await goToManage(bobPage);
 
-  const teamBlock = adminPage.locator('.kb-team-block:has(input[value="NewLiveTeam"])');
-  await teamBlock.locator('input.editor-field').fill('RenamedLiveTeam');
-  await teamBlock.getByRole('button', { name: 'Rename' }).click();
+  // Rename via team settings page.
+  await adminPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("NewLiveTeam"))')
+    .locator('.kb-team-settings-link').click();
+  await expect(adminPage.locator('.team-settings-page')).toBeVisible();
+  await adminPage.locator('input.editor-field').fill('RenamedLiveTeam');
+  await adminPage.getByRole('button', { name: 'Save' }).click();
+  await goToManage(adminPage);
 
-  await expect(bobPage.locator('.kb-team-block:has(input[value="RenamedLiveTeam"])')).toBeVisible();
-  await expect(bobPage.locator('.kb-team-block:has(input[value="NewLiveTeam"])')).not.toBeVisible();
+  await expect(bobPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("RenamedLiveTeam"))')).toBeVisible();
+  await expect(bobPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("NewLiveTeam"))')).not.toBeVisible();
 
   await adminCtx.close();
   await bobCtx.close();
@@ -330,10 +334,10 @@ test('org manage: archive team disappears from second lead\'s page', async ({ br
   await goToManage(adminPage);
   await goToManage(bobPage);
 
-  await adminPage.locator('.kb-team-block:has(input[value="RenamedLiveTeam"])')
+  await adminPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("RenamedLiveTeam"))')
     .getByRole('button', { name: 'Archive' }).click();
 
-  await expect(bobPage.locator('.kb-team-block:has(input[value="RenamedLiveTeam"])')).not.toBeVisible();
+  await expect(bobPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("RenamedLiveTeam"))')).not.toBeVisible();
 
   await adminCtx.close();
   await bobCtx.close();
@@ -351,12 +355,12 @@ test('org manage: add member to team updates second lead\'s page', async ({ brow
   await goToManage(adminPage);
   await goToManage(bobPage);
 
-  const teamBlock = adminPage.locator('.kb-team-block:has(input[value="ManageTeam"])');
+  const teamBlock = adminPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("ManageTeam"))');
   await teamBlock.locator('.gv-range-select').selectOption('bob');
   await teamBlock.getByRole('button', { name: 'Add to team' }).click();
 
   await expect(
-    bobPage.locator('.kb-team-block:has(input[value="ManageTeam"])').locator('.kb-member-row', { hasText: 'bob' })
+    bobPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("ManageTeam"))').locator('.kb-member-row', { hasText: 'bob' })
   ).toBeVisible();
 
   await adminCtx.close();
@@ -375,12 +379,12 @@ test('org manage: remove member from team updates second lead\'s page', async ({
   await goToManage(adminPage);
   await goToManage(bobPage);
 
-  await adminPage.locator('.kb-team-block:has(input[value="ManageTeam"])')
+  await adminPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("ManageTeam"))')
     .locator('.kb-member-row', { hasText: 'bob' })
     .getByRole('button', { name: 'Remove' }).click();
 
   await expect(
-    bobPage.locator('.kb-team-block:has(input[value="ManageTeam"])').locator('.kb-member-row', { hasText: 'bob' })
+    bobPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("ManageTeam"))').locator('.kb-member-row', { hasText: 'bob' })
   ).not.toBeVisible();
 
   await adminCtx.close();
@@ -399,16 +403,16 @@ test('org manage: promote team lead updates second lead\'s page', async ({ brows
   await goToManage(adminPage);
   await goToManage(bobPage);
 
-  const teamBlock = adminPage.locator('.kb-team-block:has(input[value="ManageTeam"])');
+  const teamBlock = adminPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("ManageTeam"))');
   await teamBlock.locator('.gv-range-select').selectOption('bob');
   await teamBlock.getByRole('button', { name: 'Add to team' }).click();
-  await expect(adminPage.locator('.kb-team-block:has(input[value="ManageTeam"])').locator('.kb-member-row', { hasText: 'bob' })).toBeVisible();
+  await expect(adminPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("ManageTeam"))').locator('.kb-member-row', { hasText: 'bob' })).toBeVisible();
 
   await teamBlock.locator('.kb-member-row', { hasText: 'bob' })
     .getByRole('button', { name: 'Make lead' }).click();
 
   await expect(
-    bobPage.locator('.kb-team-block:has(input[value="ManageTeam"])').locator('.kb-member-row', { hasText: 'bob' })
+    bobPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("ManageTeam"))').locator('.kb-member-row', { hasText: 'bob' })
   ).toContainText('(lead)');
 
   await adminCtx.close();
@@ -426,12 +430,12 @@ test('org manage: demote team lead updates second lead\'s page', async ({ browse
   await goToManage(adminPage);
   await goToManage(bobPage);
 
-  await adminPage.locator('.kb-team-block:has(input[value="ManageTeam"])')
+  await adminPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("ManageTeam"))')
     .locator('.kb-member-row', { hasText: 'bob' })
     .getByRole('button', { name: 'Remove lead' }).click();
 
   await expect(
-    bobPage.locator('.kb-team-block:has(input[value="ManageTeam"])').locator('.kb-member-row', { hasText: 'bob' })
+    bobPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("ManageTeam"))').locator('.kb-member-row', { hasText: 'bob' })
   ).not.toContainText('(lead)');
 
   await adminCtx.close();
@@ -468,7 +472,7 @@ test('org manage: pressing Enter in team name input creates team', async ({ brow
 
   await page.locator('input[placeholder="Team name"]').fill('EnterKeyTeam');
   await page.locator('input[placeholder="Team name"]').press('Enter');
-  await expect(page.locator('.kb-team-block input[value="EnterKeyTeam"]')).toBeVisible();
+  await expect(page.locator('.kb-team-block .kb-team-name-label', { hasText: 'EnterKeyTeam' })).toBeVisible();
 
   await ctx.close();
 });

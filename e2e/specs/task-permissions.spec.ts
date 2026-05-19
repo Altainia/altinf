@@ -67,7 +67,7 @@ test.beforeAll(async ({ browser }) => {
   // Create PermTeam.
   await page.locator('input[placeholder="Team name"]').fill(TEAM);
   await page.getByRole('button', { name: 'Create' }).click();
-  await expect(page.locator('.kb-team-block:has(input[value="' + TEAM + '"])')).toBeVisible();
+  await expect(page.locator('.kb-team-block:has(.kb-team-name-label:text-is("' + TEAM + '"))')).toBeVisible();
 
   // Both users accept their org invites.
   await acceptInvite(browser, 'perm_member',  'permpass');
@@ -81,7 +81,7 @@ test.beforeAll(async ({ browser }) => {
   await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
 
-  const teamBlock = page.locator('.kb-team-block:has(input[value="' + TEAM + '"])');
+  const teamBlock = page.locator('.kb-team-block:has(.kb-team-name-label:text-is("' + TEAM + '"))');
   await teamBlock.locator('.gv-range-select').selectOption('perm_member');
   await teamBlock.getByRole('button', { name: 'Add to team' }).click();
   await expect(teamBlock.locator('.kb-member-row', { hasText: 'perm_member' })).toBeVisible();

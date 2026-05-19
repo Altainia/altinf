@@ -61,11 +61,11 @@ test.beforeAll(async ({ browser }) => {
   await expect(page.locator('.kb-team-page')).toBeVisible();
 
   // Create team — skip if already present.
-  const teamExists = await page.locator('.kb-team-block:has(input[value="' + TEAM + '"])').isVisible();
+  const teamExists = await page.locator('.kb-team-block:has(.kb-team-name-label:text-is("' + TEAM + '"))').isVisible();
   if (!teamExists) {
     await page.locator('input[placeholder="Team name"]').fill(TEAM);
     await page.getByRole('button', { name: 'Create' }).click();
-    await expect(page.locator('.kb-team-block:has(input[value="' + TEAM + '"])')).toBeVisible();
+    await expect(page.locator('.kb-team-block:has(.kb-team-name-label:text-is("' + TEAM + '"))')).toBeVisible();
   }
 
   await page.close();
@@ -218,14 +218,14 @@ test('archive team: tasks from archived team appear on archive page', async ({ b
   // Check current state of teams (retry-safe: team may already be archived).
   await goToManage(page);
 
-  const teamIsActive = await page.locator('.kb-team-block:has(input[value="TeamToArchive"])').isVisible();
+  const teamIsActive = await page.locator('.kb-team-block:has(.kb-team-name-label:text-is("TeamToArchive"))').isVisible();
   const teamIsAlreadyArchived = await page.locator('.kb-archived-teams .kb-member-name', { hasText: 'TeamToArchive' }).isVisible();
 
   if (!teamIsActive && !teamIsAlreadyArchived) {
     // Team does not exist at all — create it, add a task, then archive it.
     await page.locator('input[placeholder="Team name"]').fill('TeamToArchive');
     await page.getByRole('button', { name: 'Create' }).click();
-    await expect(page.locator('.kb-team-block:has(input[value="TeamToArchive"])')).toBeVisible();
+    await expect(page.locator('.kb-team-block:has(.kb-team-name-label:text-is("TeamToArchive"))')).toBeVisible();
   }
 
   if (!teamIsAlreadyArchived) {
@@ -239,11 +239,11 @@ test('archive team: tasks from archived team appear on archive page', async ({ b
     // Navigate to the manage page and archive the team.
     await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
     await expect(page.locator('.kb-team-page')).toBeVisible();
-    await page.locator('.kb-team-block:has(input[value="TeamToArchive"])')
+    await page.locator('.kb-team-block:has(.kb-team-name-label:text-is("TeamToArchive"))')
       .getByRole('button', { name: 'Archive' }).click();
 
     // The active team block must disappear.
-    await expect(page.locator('.kb-team-block:has(input[value="TeamToArchive"])')).not.toBeVisible();
+    await expect(page.locator('.kb-team-block:has(.kb-team-name-label:text-is("TeamToArchive"))')).not.toBeVisible();
   }
 
   // The archived teams section must now list TeamToArchive.

@@ -82,11 +82,11 @@ test.beforeAll(async ({ browser }) => {
   await page.locator('.org-list-link', { hasText: new RegExp(`^${ORG}$`) }).first().click();
   await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
-  const teamExists = await page.locator('.kb-team-block:has(input[value="LandingTeam"])').isVisible();
+  const teamExists = await page.locator('.kb-team-block:has(.kb-team-name-label:text-is("LandingTeam"))').isVisible();
   if (!teamExists) {
     await page.locator('input[placeholder="Team name"]').fill('LandingTeam');
     await page.getByRole('button', { name: 'Create' }).click();
-    await expect(page.locator('.kb-team-block:has(input[value="LandingTeam"])')).toBeVisible();
+    await expect(page.locator('.kb-team-block:has(.kb-team-name-label:text-is("LandingTeam"))')).toBeVisible();
   }
 
   await page.close();
@@ -105,7 +105,7 @@ test('org landing: team created by lead appears on member\'s landing page', asyn
 
   await adminPage.locator('input[placeholder="Team name"]').fill('NewLandingTeam');
   await adminPage.getByRole('button', { name: 'Create' }).click();
-  await expect(adminPage.locator('.kb-team-block:has(input[value="NewLandingTeam"])')).toBeVisible();
+  await expect(adminPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("NewLandingTeam"))')).toBeVisible();
 
   // Frank's landing page gains the team in "Other teams" (he's not a member yet).
   await expect(frankPage.locator('.org-team-row--other', { hasText: 'NewLandingTeam' })).toBeVisible();
@@ -125,10 +125,13 @@ test('org landing: team renamed by lead updates member\'s landing page', async (
   await goToManage(adminPage);
   await goToLanding(frankPage);
 
-  // Rename LandingTeam to RenamedLandingTeam.
-  const teamBlock = adminPage.locator('.kb-team-block:has(input[value="LandingTeam"])');
-  await teamBlock.locator('input.editor-field').fill('RenamedLandingTeam');
-  await teamBlock.getByRole('button', { name: 'Rename' }).click();
+  // Rename LandingTeam to RenamedLandingTeam via team settings page.
+  await adminPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("LandingTeam"))')
+    .locator('.kb-team-settings-link').click();
+  await expect(adminPage.locator('.team-settings-page')).toBeVisible();
+  await adminPage.locator('input.editor-field').fill('RenamedLandingTeam');
+  await adminPage.getByRole('button', { name: 'Save' }).click();
+  await goToManage(adminPage);
 
   await expect(frankPage.locator('.org-team-row', { hasText: 'RenamedLandingTeam' })).toBeVisible();
   await expect(frankPage.locator('.org-team-row').filter({ hasText: /^LandingTeam$/ })).not.toBeVisible();
@@ -148,7 +151,7 @@ test('org landing: team archived by lead disappears from member\'s landing page'
   await goToManage(adminPage);
   await goToLanding(frankPage);
 
-  await adminPage.locator('.kb-team-block:has(input[value="NewLandingTeam"])')
+  await adminPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("NewLandingTeam"))')
     .getByRole('button', { name: 'Archive' }).click();
 
   await expect(frankPage.locator('.org-team-row', { hasText: 'NewLandingTeam' })).not.toBeVisible();
@@ -171,7 +174,7 @@ test('org landing: added to team moves row from Other to Your teams on member\'s
   // Frank is not in RenamedLandingTeam — it should be in "Other teams".
   await expect(frankPage.locator('.org-team-row--other', { hasText: 'RenamedLandingTeam' })).toBeVisible();
 
-  const teamBlock = adminPage.locator('.kb-team-block:has(input[value="RenamedLandingTeam"])');
+  const teamBlock = adminPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("RenamedLandingTeam"))');
   await teamBlock.locator('.gv-range-select').selectOption('frank');
   await teamBlock.getByRole('button', { name: 'Add to team' }).click();
 
@@ -194,7 +197,7 @@ test('org landing: removed from team moves row back to Other teams', async ({ br
   await goToManage(adminPage);
   await goToLanding(frankPage);
 
-  await adminPage.locator('.kb-team-block:has(input[value="RenamedLandingTeam"])')
+  await adminPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("RenamedLandingTeam"))')
     .locator('.kb-member-row', { hasText: 'frank' })
     .getByRole('button', { name: 'Remove' }).click();
 

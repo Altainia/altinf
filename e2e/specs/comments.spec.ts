@@ -56,11 +56,11 @@ test.beforeAll(async ({ browser }) => {
   await page.getByRole('link', { name: 'Manage organization' }).click();
   await expect(page.locator('.kb-team-page')).toBeVisible();
 
-  const teamExists = await page.locator('.kb-team-block:has(input[value="' + TEAM + '"])').isVisible();
+  const teamExists = await page.locator('.kb-team-block:has(.kb-team-name-label:text-is("' + TEAM + '"))').isVisible();
   if (!teamExists) {
     await page.locator('input[placeholder="Team name"]').fill(TEAM);
     await page.getByRole('button', { name: 'Create' }).click();
-    await expect(page.locator('.kb-team-block:has(input[value="' + TEAM + '"])')).toBeVisible();
+    await expect(page.locator('.kb-team-block:has(.kb-team-name-label:text-is("' + TEAM + '"))')).toBeVisible();
   }
 
   await page.close();
