@@ -564,24 +564,26 @@ test('Manage Team link opens team management page', async ({ page }) => {
   await expect(page.locator('.kb-team-page')).toBeVisible();
 });
 
-test('team page shows the current team name in the rename field', async ({ page }) => {
+test('team settings page shows the current team name in the rename field', async ({ page }) => {
   await loginAndGoToBoard(page);
-  await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
+  await page.locator('.kb-manage-link', { hasText: 'Settings' }).click();
+  await expect(page.locator('.team-settings-page')).toBeVisible();
   // The default name is "Team"; just assert the field is non-empty.
-  const nameInput = page.locator('.kb-team-name-row input');
+  const nameInput = page.locator('.team-settings-page input.editor-field');
   await expect(nameInput).not.toHaveValue('');
 });
 
 test('team name can be renamed and the new name appears on the board', async ({ page }) => {
   await loginAndGoToBoard(page);
-  await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
+  await page.locator('.kb-manage-link', { hasText: 'Settings' }).click();
+  await expect(page.locator('.team-settings-page')).toBeVisible();
 
-  const nameInput = page.locator('.kb-team-name-row input');
+  const nameInput = page.locator('.team-settings-page input.editor-field');
   await nameInput.fill('Engineering');
-  await page.locator('.kb-team-name-row .editor-btn').click();
+  await page.getByRole('button', { name: 'Save' }).click();
 
-  // Navigate back via the back-link and verify the board heading updated.
-  await page.locator('.kb-back-link').click();
+  // Navigate back to the board and verify the heading updated.
+  await page.locator('.editor-btn-cancel').click();
   await expect(page.locator('.kb-page-hdr h1')).toContainText('Engineering');
 });
 
