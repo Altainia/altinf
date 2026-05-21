@@ -33,8 +33,10 @@
 #include "org/pages/team_settings_page.hpp"
 #include "pages/main_page.hpp"
 #include "widgets/footer.hpp"
+#include "widgets/forbidden_widget.hpp"
 #include "widgets/live_hub.hpp"
 #include "widgets/nav_bar.hpp"
+#include "widgets/not_found_widget.hpp"
 
 // Parse a decimal integer from path[offset] up to the next '/' or end.
 static std::optional<long long> parse_id(const std::string& path, size_t offset)
@@ -186,12 +188,12 @@ team_cap::flags altinf_app::resolve_team_caps(long long team_id, long long org_i
 
 void altinf_app::show_forbidden()
 {
-	m_content->addNew<Wt::WText>("Forbidden.", Wt::TextFormat::Plain);
+	m_content->addNew<forbidden_widget>();
 }
 
 void altinf_app::show_not_found(const std::string& msg)
 {
-	m_content->addNew<Wt::WText>(msg, Wt::TextFormat::Plain);
+	m_content->addNew<not_found_widget>(msg);
 }
 
 void altinf_app::handle_path(const std::string& path)

@@ -88,3 +88,9 @@ target_include_directories(test_user_db PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_user_db PRIVATE Catch2::Catch2WithMain Wt::Wt wtdbo wtdbosqlite3
   OpenSSL::SSL OpenSSL::Crypto)
 catch_discover_tests(test_user_db)
+
+# test_paths — header-only, no extra libs
+add_executable(test_paths test_paths.cpp)
+target_include_directories(test_paths PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_paths PRIVATE Catch2::Catch2WithMain)
+catch_discover_tests(test_paths)
