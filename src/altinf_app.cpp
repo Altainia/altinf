@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <stdexcept>
 
+#include "auth/pages/login_page.hpp"
 #include "auth/permission.hpp"
 #include "blog/blog_loader.hpp"
 #include "blog/pages/blog_page.hpp"
@@ -23,7 +24,6 @@
 #include "pages/kanban_team_page.hpp"
 #include "pages/link_editor_page.hpp"
 #include "pages/links_page.hpp"
-#include "pages/login_page.hpp"
 #include "pages/main_page.hpp"
 #include "pages/notifications_page.hpp"
 #include "pages/org_admin_page.hpp"
