@@ -10,6 +10,8 @@
 #include <filesystem>
 #include <stdexcept>
 
+#include "admin/account/pages/account_editor_page.hpp"
+#include "admin/account/pages/account_manager_page.hpp"
 #include "auth/pages/login_page.hpp"
 #include "auth/permission.hpp"
 #include "blog/blog_loader.hpp"
@@ -18,8 +20,6 @@
 #include "blog/pages/post_editor_page.hpp"
 #include "link/pages/link_editor_page.hpp"
 #include "link/pages/links_page.hpp"
-#include "pages/account_editor_page.hpp"
-#include "pages/account_manager_page.hpp"
 #include "pages/kanban_archive_page.hpp"
 #include "pages/kanban_board_page.hpp"
 #include "pages/kanban_task_editor_page.hpp"
