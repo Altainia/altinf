@@ -1,7 +1,7 @@
 #pragma once
 
 #include "auth/session_data.hpp"
-#include "links/link.hpp"
+#include "link/link.hpp"
 
 #include <Wt/WContainerWidget.h>
 

@@ -2,7 +2,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "links/link_db.hpp"
+#include "link/link_db.hpp"
 
 static link_entry make_link(const std::string& url,
                             const std::string& title,

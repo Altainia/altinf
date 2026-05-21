@@ -6,8 +6,8 @@
 #include "kanban/kanban.hpp"
 #include "kanban/kanban_db.hpp"
 #include "kanban/team_cap.hpp"
-#include "links/link.hpp"
-#include "links/link_db.hpp"
+#include "link/link.hpp"
+#include "link/link_db.hpp"
 #include "org/org_db.hpp"
 
 #include <Wt/WApplication.h>

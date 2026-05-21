@@ -34,7 +34,7 @@ catch_discover_tests(test_blog_loader)
 
 # test_link_db
 add_executable(test_link_db test_link_db.cpp
-  ${CMAKE_SOURCE_DIR}/src/links/link_db.cpp)
+  ${CMAKE_SOURCE_DIR}/src/link/link_db.cpp)
 target_include_directories(test_link_db PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_link_db PRIVATE Catch2::Catch2WithMain Wt::Wt wtdbo wtdbosqlite3)
 catch_discover_tests(test_link_db)
