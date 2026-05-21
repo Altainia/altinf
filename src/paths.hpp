@@ -50,6 +50,7 @@ namespace paths
     }
 
     // Consume a numeric ID segment. Returns nullopt if absent or non-numeric.
+    // On failure, sv is still advanced past the consumed segment.
     inline std::optional<long long> take_id(std::string_view& sv)
     {
         const auto seg = take_segment(sv);

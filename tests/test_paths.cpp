@@ -51,6 +51,24 @@ TEST_CASE("take_id - empty returns nullopt")
 	CHECK_FALSE(paths::take_id(sv).has_value());
 }
 
+TEST_CASE("take_id - non-numeric advances sv past segment")
+{
+	std::string_view sv = "abc/remaining";
+	CHECK_FALSE(paths::take_id(sv).has_value());
+	CHECK(sv == "remaining");
+}
+
+TEST_CASE("take_id - negative ID is parsed (from_chars accepts leading minus for long long)")
+{
+	// std::from_chars for long long does parse a leading '-', so -1 is returned as a value.
+	// Callers that require positive IDs must validate the result themselves.
+	std::string_view sv = "-1/rest";
+	const auto       id = paths::take_id(sv);
+	REQUIRE(id.has_value());
+	CHECK(*id == -1);
+	CHECK(sv == "rest");
+}
+
 TEST_CASE("named path builders")
 {
 	CHECK(paths::blog_list() == "/blog/list");
