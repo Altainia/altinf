@@ -1,7 +1,7 @@
 #pragma once
 
 #include "auth/session_data.hpp"
-#include "kanban/kanban_db.hpp"
+#include "org/kanban_db.hpp"
 #include "org/org_db.hpp"
 
 #include <Wt/WContainerWidget.h>

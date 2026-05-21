@@ -1,6 +1,6 @@
 #pragma once
 
-#include "kanban/kanban_db.hpp"
+#include "org/kanban_db.hpp"
 #include "org/org_db.hpp"
 
 #include <string>

@@ -1,8 +1,8 @@
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 
-#include "kanban/kanban_db.hpp"
-#include "kanban/kanban_notifications.hpp"
+#include "org/kanban_db.hpp"
+#include "org/kanban_notifications.hpp"
 #include "org/org.hpp"
 #include "org/org_db.hpp"
 

@@ -3,7 +3,7 @@
 #include <Wt/WApplication.h>
 #include <Wt/WText.h>
 
-#include "kanban/task_editor_form_widget.hpp"
+#include "org/widgets/task_editor_form_widget.hpp"
 
 kanban_task_editor_page::kanban_task_editor_page(
   kanban_db&               db,

@@ -7,9 +7,9 @@
 #include <vector>
 
 #include "auth/session_data.hpp"
-#include "kanban/kanban.hpp"
-#include "kanban/kanban_db.hpp"
-#include "kanban/team_cap.hpp"
+#include "org/kanban.hpp"
+#include "org/kanban_db.hpp"
+#include "org/team_cap.hpp"
 #include "org/org_db.hpp"
 
 class kanban_task_editor_page: public Wt::WContainerWidget

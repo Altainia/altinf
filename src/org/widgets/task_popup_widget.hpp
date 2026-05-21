@@ -1,8 +1,8 @@
 #pragma once
 
-#include "kanban_db.hpp"
-#include "kanban.hpp"
-#include "team_cap.hpp"
+#include "org/kanban_db.hpp"
+#include "org/kanban.hpp"
+#include "org/team_cap.hpp"
 #include "auth/session_data.hpp"
 #include "org/org_db.hpp"
 

@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include "kanban/kanban_board_widget.hpp"
+#include "org/widgets/kanban_board_widget.hpp"
 #include "widgets/live_hub.hpp"
 
 org_board_page::org_board_page(org_db&             odb,

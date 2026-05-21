@@ -15,7 +15,7 @@
 #include <cstdlib>
 #include <map>
 
-#include "kanban/kanban_notifications.hpp"
+#include "org/kanban_notifications.hpp"
 #include "org/org.hpp"
 #include "widgets/live_hub.hpp"
 

@@ -10,7 +10,7 @@
 
 #include "auth/session_data.hpp"
 #include "auth/user_db.hpp"
-#include "kanban/kanban_db.hpp"
+#include "org/kanban_db.hpp"
 #include "org/org_db.hpp"
 
 // Org management page — org leads reach this at /org/{id}/manage.

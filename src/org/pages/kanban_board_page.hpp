@@ -1,11 +1,11 @@
 #pragma once
 
 #include "auth/session_data.hpp"
-#include "kanban/kanban.hpp"
-#include "kanban/kanban_db.hpp"
-#include "kanban/kanban_board_widget.hpp"
-#include "kanban/gantt_view_widget.hpp"
-#include "kanban/team_cap.hpp"
+#include "org/kanban.hpp"
+#include "org/kanban_db.hpp"
+#include "org/widgets/kanban_board_widget.hpp"
+#include "org/widgets/gantt_view_widget.hpp"
+#include "org/team_cap.hpp"
 #include "org/org_db.hpp"
 
 #include <Wt/WContainerWidget.h>

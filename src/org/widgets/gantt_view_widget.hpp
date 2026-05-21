@@ -1,6 +1,6 @@
 #pragma once
 
-#include "kanban.hpp"
+#include "org/kanban.hpp"
 
 #include <Wt/WContainerWidget.h>
 #include <Wt/WLineEdit.h>

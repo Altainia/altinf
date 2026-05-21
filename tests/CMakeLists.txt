@@ -41,7 +41,7 @@ catch_discover_tests(test_link_db)
 
 # test_kanban_db
 add_executable(test_kanban_db test_kanban_db.cpp
-  ${CMAKE_SOURCE_DIR}/src/kanban/kanban_db.cpp)
+  ${CMAKE_SOURCE_DIR}/src/org/kanban_db.cpp)
 target_include_directories(test_kanban_db PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_kanban_db PRIVATE Catch2::Catch2WithMain Wt::Wt wtdbo wtdbosqlite3)
 catch_discover_tests(test_kanban_db)
@@ -73,8 +73,8 @@ catch_discover_tests(test_live_hub)
 
 # test_kanban_notifications
 add_executable(test_kanban_notifications test_kanban_notifications.cpp
-  ${CMAKE_SOURCE_DIR}/src/kanban/kanban_db.cpp
-  ${CMAKE_SOURCE_DIR}/src/kanban/kanban_notifications.cpp
+  ${CMAKE_SOURCE_DIR}/src/org/kanban_db.cpp
+  ${CMAKE_SOURCE_DIR}/src/org/kanban_notifications.cpp
   ${CMAKE_SOURCE_DIR}/src/org/org_db.cpp
   ${CMAKE_SOURCE_DIR}/src/widgets/live_hub.cpp)
 target_include_directories(test_kanban_notifications PRIVATE ${CMAKE_SOURCE_DIR}/src)

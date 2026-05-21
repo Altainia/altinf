@@ -7,8 +7,8 @@
 
 #include <map>
 
-#include "kanban/gantt_view_widget.hpp"
-#include "kanban/task_popup_widget.hpp"
+#include "org/widgets/gantt_view_widget.hpp"
+#include "org/widgets/task_popup_widget.hpp"
 #include "widgets/live_hub.hpp"
 
 kanban_board_page::kanban_board_page(kanban_db&          db,

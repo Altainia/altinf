@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "kanban/team_cap.hpp"
+#include "org/team_cap.hpp"
 
 TEST_CASE("team_cap - empty flags grants nothing")
 {

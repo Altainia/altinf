@@ -1,6 +1,6 @@
 #pragma once
 
-#include "kanban.hpp"
+#include "org/kanban.hpp"
 
 #include <Wt/Dbo/Session.h>
 

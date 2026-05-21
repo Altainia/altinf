@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 
-#include "kanban/kanban_db.hpp"
+#include "org/kanban_db.hpp"
 
 static kanban_task_entry make_task(long long          team_id,
                                    const std::string& title,
