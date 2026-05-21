@@ -9,14 +9,14 @@
 #include <memory>
 #include <string>
 
-class account_manager_page: public Wt::WContainerWidget
+class account_list_page: public Wt::WContainerWidget
 {
 public:
-    account_manager_page(user_db&                                db,
+    account_list_page(user_db&                                db,
                          const session_data&                     session,
                          std::function<void(const std::string&)> on_delete);
 
-    ~account_manager_page() override;
+    ~account_list_page() override;
 
 private:
     user_db&                                m_db;

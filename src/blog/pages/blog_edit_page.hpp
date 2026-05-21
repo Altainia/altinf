@@ -12,12 +12,12 @@
 #include <functional>
 #include <string>
 
-class post_editor_page: public Wt::WContainerWidget
+class blog_edit_page: public Wt::WContainerWidget
 {
 public:
 	// existing == nullptr  ->  new post
 	// existing != nullptr  ->  edit post (slug fixed to avoid breaking URLs)
-	post_editor_page(const std::filesystem::path&          posts_dir,
+	blog_edit_page(const std::filesystem::path&          posts_dir,
 	                 const blog_post*                      existing,
 	                 std::function<void(std::string slug)> on_save);
 

@@ -1,11 +1,11 @@
-#include "kanban_task_editor_page.hpp"
+#include "task_edit_page.hpp"
 
 #include <Wt/WApplication.h>
 #include <Wt/WText.h>
 
 #include "org/widgets/task_editor_form_widget.hpp"
 
-kanban_task_editor_page::kanban_task_editor_page(
+task_edit_page::task_edit_page(
   kanban_db&               db,
   org_db&                  odb,
   long long                team_id,

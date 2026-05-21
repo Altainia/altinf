@@ -12,12 +12,12 @@
 #include <optional>
 #include <string>
 
-class account_editor_page: public Wt::WContainerWidget
+class account_edit_page: public Wt::WContainerWidget
 {
 public:
 	// existing == nullptr  ->  new user
 	// existing != nullptr  ->  edit user
-	account_editor_page(user_db*              db,
+	account_edit_page(user_db*              db,
 	                    const user_entry*     existing,
 	                    std::function<void()> on_save);
 

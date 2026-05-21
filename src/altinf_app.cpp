@@ -10,26 +10,26 @@
 #include <filesystem>
 #include <stdexcept>
 
-#include "admin/account/pages/account_editor_page.hpp"
-#include "admin/account/pages/account_manager_page.hpp"
+#include "admin/account/pages/account_edit_page.hpp"
+#include "admin/account/pages/account_list_page.hpp"
 #include "auth/pages/login_page.hpp"
 #include "auth/permission.hpp"
 #include "blog/blog_loader.hpp"
-#include "blog/pages/blog_page.hpp"
-#include "blog/pages/blog_post_page.hpp"
-#include "blog/pages/post_editor_page.hpp"
-#include "link/pages/link_editor_page.hpp"
-#include "link/pages/links_page.hpp"
-#include "org/pages/kanban_archive_page.hpp"
-#include "org/pages/kanban_board_page.hpp"
-#include "org/pages/kanban_task_editor_page.hpp"
-#include "org/pages/kanban_team_page.hpp"
+#include "blog/pages/blog_edit_page.hpp"
+#include "blog/pages/blog_list_page.hpp"
+#include "blog/pages/blog_view_page.hpp"
+#include "link/pages/link_edit_page.hpp"
+#include "link/pages/link_list_page.hpp"
 #include "org/pages/notifications_page.hpp"
 #include "org/pages/org_admin_page.hpp"
 #include "org/pages/org_board_page.hpp"
 #include "org/pages/org_landing_page.hpp"
 #include "org/pages/org_type_manager_page.hpp"
 #include "org/pages/settings_page.hpp"
+#include "org/pages/task_edit_page.hpp"
+#include "org/pages/team_archive_page.hpp"
+#include "org/pages/team_edit_page.hpp"
+#include "org/pages/team_kanban_page.hpp"
 #include "org/pages/team_settings_page.hpp"
 #include "pages/main_page.hpp"
 #include "widgets/footer.hpp"
@@ -213,7 +213,7 @@ void altinf_app::handle_path(const std::string& path)
 	// ── Blog ──────────────────────────────────────────────────────────────────
 	else if(path == "/blog")
 	{
-		m_content->addNew<blog_page>(m_posts);
+		m_content->addNew<blog_list_page>(m_posts);
 	}
 	else if(path.starts_with("/blog/"))
 	{
@@ -222,7 +222,7 @@ void altinf_app::handle_path(const std::string& path)
       m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) { return p.slug == slug; });
 		if(it != m_posts.end())
 		{
-			m_content->addNew<blog_post_page>(*it, m_session);
+			m_content->addNew<blog_view_page>(*it, m_session);
 		}
 		else
 		{
@@ -237,7 +237,7 @@ void altinf_app::handle_path(const std::string& path)
 			show_forbidden();
 			return;
 		}
-		m_content->addNew<post_editor_page>(m_posts_dir, nullptr, [this](const std::string& slug) {
+		m_content->addNew<blog_edit_page>(m_posts_dir, nullptr, [this](const std::string& slug) {
 			reload_posts();
 			setInternalPath("/blog/" + slug, true);
 		});
@@ -257,7 +257,7 @@ void altinf_app::handle_path(const std::string& path)
 			show_not_found("Post not found.");
 			return;
 		}
-		m_content->addNew<post_editor_page>(
+		m_content->addNew<blog_edit_page>(
 		  m_posts_dir, &(*it), [this](const std::string& s) {
 			  reload_posts();
 			  setInternalPath("/blog/" + s, true);
@@ -266,7 +266,7 @@ void altinf_app::handle_path(const std::string& path)
 	// ── Links ─────────────────────────────────────────────────────────────────
 	else if(path == "/links")
 	{
-		m_content->addNew<links_page>(m_links, m_session, [this](long long id) {
+		m_content->addNew<link_list_page>(m_links, m_session, [this](long long id) {
 			m_link_db->remove(id);
 			reload_links();
 			handle_path("/links");
@@ -279,7 +279,7 @@ void altinf_app::handle_path(const std::string& path)
 			show_forbidden();
 			return;
 		}
-		m_content->addNew<link_editor_page>(m_link_db.get(), nullptr, [this] {
+		m_content->addNew<link_edit_page>(m_link_db.get(), nullptr, [this] {
 			reload_links();
 			handle_path("/links");
 		});
@@ -304,7 +304,7 @@ void altinf_app::handle_path(const std::string& path)
 			return;
 		}
 		m_edit_link = opt;
-		m_content->addNew<link_editor_page>(m_link_db.get(), &(*m_edit_link), [this] {
+		m_content->addNew<link_edit_page>(m_link_db.get(), &(*m_edit_link), [this] {
 			reload_links();
 			handle_path("/links");
 		});
@@ -345,7 +345,7 @@ void altinf_app::handle_path(const std::string& path)
 				show_forbidden();
 				return;
 			}
-			m_content->addNew<kanban_board_page>(
+			m_content->addNew<team_kanban_page>(
 			  *m_kanban_db, *m_org_db, m_session, team_id, caps, settings, false);
 		}
 		else if(suffix == "/gantt")
@@ -355,7 +355,7 @@ void altinf_app::handle_path(const std::string& path)
 				show_forbidden();
 				return;
 			}
-			m_content->addNew<kanban_board_page>(
+			m_content->addNew<team_kanban_page>(
 			  *m_kanban_db, *m_org_db, m_session, team_id, caps, settings, true);
 		}
 		else if(suffix == "/task/new")
@@ -365,7 +365,7 @@ void altinf_app::handle_path(const std::string& path)
 				show_forbidden();
 				return;
 			}
-			m_content->addNew<kanban_task_editor_page>(
+			m_content->addNew<task_edit_page>(
 			  *m_kanban_db, *m_org_db, team_id, m_session, caps, settings, nullptr, [this, team_id] {
 				  setInternalPath("/board/" + std::to_string(team_id), true);
 			  });
@@ -395,7 +395,7 @@ void altinf_app::handle_path(const std::string& path)
 				return;
 			}
 			m_edit_task = opt;
-			m_content->addNew<kanban_task_editor_page>(
+			m_content->addNew<task_edit_page>(
 			  *m_kanban_db, *m_org_db, team_id, m_session, caps, settings, &(*m_edit_task), [this, team_id] {
 				  setInternalPath("/board/" + std::to_string(team_id), true);
 			  });
@@ -407,7 +407,7 @@ void altinf_app::handle_path(const std::string& path)
 				show_forbidden();
 				return;
 			}
-			m_content->addNew<kanban_archive_page>(
+			m_content->addNew<team_archive_page>(
 			  *m_kanban_db, m_session, team_id);
 		}
 		else if(suffix == "/manage")
@@ -417,7 +417,7 @@ void altinf_app::handle_path(const std::string& path)
 				show_forbidden();
 				return;
 			}
-			m_content->addNew<kanban_team_page>(
+			m_content->addNew<team_edit_page>(
 			  *m_org_db, *m_kanban_db, *m_user_db, team->org_id, m_session, "/board/" + std::to_string(team_id));
 		}
 		else if(suffix == "/settings")
@@ -485,7 +485,7 @@ void altinf_app::handle_path(const std::string& path)
 				show_forbidden();
 				return;
 			}
-			m_content->addNew<kanban_team_page>(
+			m_content->addNew<team_edit_page>(
 			  *m_org_db, *m_kanban_db, *m_user_db, org_id, m_session);
 		}
 		else if(suffix == "/types")
@@ -554,7 +554,7 @@ void altinf_app::handle_path(const std::string& path)
 			show_forbidden();
 			return;
 		}
-		m_content->addNew<account_manager_page>(
+		m_content->addNew<account_list_page>(
 		  *m_user_db, m_session, [this](const std::string& username) {
 			  if(username == m_session.username)
 			  {
@@ -593,7 +593,7 @@ void altinf_app::handle_path(const std::string& path)
 			show_forbidden();
 			return;
 		}
-		m_content->addNew<account_editor_page>(m_user_db.get(), nullptr, [this] {
+		m_content->addNew<account_edit_page>(m_user_db.get(), nullptr, [this] {
 			setInternalPath("/admin/accounts", true);
 		});
 	}
@@ -620,7 +620,7 @@ void altinf_app::handle_path(const std::string& path)
 			return;
 		}
 		m_edit_user = *it;
-		m_content->addNew<account_editor_page>(
+		m_content->addNew<account_edit_page>(
 		  m_user_db.get(), &(*m_edit_user), [this] { setInternalPath("/admin/accounts", true); });
 	}
 	// ── Auth ──────────────────────────────────────────────────────────────────

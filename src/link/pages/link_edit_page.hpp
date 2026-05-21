@@ -12,12 +12,12 @@
 #include <optional>
 #include <string>
 
-class link_editor_page: public Wt::WContainerWidget
+class link_edit_page: public Wt::WContainerWidget
 {
 public:
 	// existing == nullptr  ->  new link
 	// existing != nullptr  ->  edit link
-	link_editor_page(link_db*              db,
+	link_edit_page(link_db*              db,
 	                 const link_entry*     existing,
 	                 std::function<void()> on_save);
 

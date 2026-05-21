@@ -1,4 +1,4 @@
-#include "kanban_board_page.hpp"
+#include "team_kanban_page.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WApplication.h>
@@ -11,13 +11,13 @@
 #include "org/widgets/task_popup_widget.hpp"
 #include "widgets/live_hub.hpp"
 
-kanban_board_page::kanban_board_page(kanban_db&          db,
-                                     org_db&             odb,
-                                     const session_data& session,
-                                     long long           team_id,
-                                     team_cap::flags     caps,
-                                     team_settings_entry settings,
-                                     bool                show_gantt):
+team_kanban_page::team_kanban_page(kanban_db&          db,
+                                   org_db&             odb,
+                                   const session_data& session,
+                                   long long           team_id,
+                                   team_cap::flags     caps,
+                                   team_settings_entry settings,
+                                   bool                show_gantt):
   m_db{db},
   m_odb{odb},
   m_session{session},
@@ -166,7 +166,7 @@ kanban_board_page::kanban_board_page(kanban_db&          db,
 	  });
 }
 
-kanban_board_page::~kanban_board_page()
+team_kanban_page::~team_kanban_page()
 {
 	*m_alive = false;
 	if(!m_session_id.empty())
@@ -181,7 +181,7 @@ kanban_board_page::~kanban_board_page()
 	}
 }
 
-void kanban_board_page::refresh()
+void team_kanban_page::refresh()
 {
 	m_type_colors.clear();
 	for(const auto& ty: m_db.types_for_org(m_org_id))

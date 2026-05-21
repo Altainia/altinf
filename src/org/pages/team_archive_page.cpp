@@ -1,13 +1,13 @@
-#include "kanban_archive_page.hpp"
+#include "team_archive_page.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WApplication.h>
 #include <Wt/WLink.h>
 #include <Wt/WText.h>
 
-kanban_archive_page::kanban_archive_page(kanban_db&          db,
-                                         const session_data& session,
-                                         long long           team_id)
+team_archive_page::team_archive_page(kanban_db&          db,
+                                     const session_data& session,
+                                     long long           team_id)
 {
 	(void)session;
 

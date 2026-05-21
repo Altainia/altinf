@@ -1,4 +1,4 @@
-#include "post_editor_page.hpp"
+#include "blog_edit_page.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WDate.h>
@@ -15,9 +15,9 @@
 
 #include "blog/post_writer.hpp"
 
-post_editor_page::post_editor_page(const std::filesystem::path&          posts_dir,
-                                   const blog_post*                      existing,
-                                   std::function<void(std::string slug)> on_save):
+blog_edit_page::blog_edit_page(const std::filesystem::path&          posts_dir,
+                               const blog_post*                      existing,
+                               std::function<void(std::string slug)> on_save):
   m_posts_dir{posts_dir},
   m_existing{existing},
   m_on_save{std::move(on_save)}
@@ -77,7 +77,7 @@ post_editor_page::post_editor_page(const std::filesystem::path&          posts_d
 
 	auto* save_btn = btn_row->addNew<Wt::WPushButton>("Save");
 	save_btn->setStyleClass("editor-btn");
-	save_btn->clicked().connect(this, &post_editor_page::save);
+	save_btn->clicked().connect(this, &blog_edit_page::save);
 
 	const auto cancel_path =
 	  m_existing ? std::string{"/blog/"} + m_existing->slug : std::string{"/blog"};
@@ -104,7 +104,7 @@ post_editor_page::post_editor_page(const std::filesystem::path&          posts_d
 	}
 }
 
-void post_editor_page::save()
+void blog_edit_page::save()
 {
 	const auto title = m_title->text().toUTF8();
 	const auto tags  = m_tags->text().toUTF8();
@@ -147,7 +147,7 @@ void post_editor_page::save()
 	m_on_save(slug);
 }
 
-std::string post_editor_page::read_body(const blog_post& post)
+std::string blog_edit_page::read_body(const blog_post& post)
 {
 	std::ifstream file{post.filepath};
 	std::string   line;

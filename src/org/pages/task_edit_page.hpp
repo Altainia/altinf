@@ -12,10 +12,10 @@
 #include "org/team_cap.hpp"
 #include "org/org_db.hpp"
 
-class kanban_task_editor_page: public Wt::WContainerWidget
+class task_edit_page: public Wt::WContainerWidget
 {
 public:
-	kanban_task_editor_page(kanban_db&               db,
+	task_edit_page(kanban_db&               db,
 	                        org_db&                  odb,
 	                        long long                team_id,
 	                        const session_data&      session,

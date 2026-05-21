@@ -8,10 +8,10 @@
 #include <functional>
 #include <vector>
 
-class links_page: public Wt::WContainerWidget
+class link_list_page: public Wt::WContainerWidget
 {
 public:
-	links_page(const std::vector<link_entry>& links,
+	link_list_page(const std::vector<link_entry>& links,
 	           const session_data&            session,
 	           std::function<void(long long)> on_delete);
 

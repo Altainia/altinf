@@ -14,10 +14,10 @@
 #include <memory>
 #include <string>
 
-class kanban_board_page: public Wt::WContainerWidget
+class team_kanban_page: public Wt::WContainerWidget
 {
 public:
-    kanban_board_page(kanban_db&          db,
+    team_kanban_page(kanban_db&          db,
                       org_db&             odb,
                       const session_data& session,
                       long long           team_id,
@@ -25,7 +25,7 @@ public:
                       team_settings_entry settings,
                       bool                show_gantt);
 
-    ~kanban_board_page() override;
+    ~team_kanban_page() override;
 
 private:
     kanban_db&                       m_db;

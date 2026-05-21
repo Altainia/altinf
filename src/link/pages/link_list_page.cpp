@@ -1,4 +1,4 @@
-#include "links_page.hpp"
+#include "link_list_page.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WApplication.h>
@@ -12,9 +12,9 @@
 
 #include "auth/permission.hpp"
 
-links_page::links_page(const std::vector<link_entry>& links,
-                       const session_data&            session,
-                       std::function<void(long long)> on_delete):
+link_list_page::link_list_page(const std::vector<link_entry>& links,
+                               const session_data&            session,
+                               std::function<void(long long)> on_delete):
   m_links{links},
   m_session{session},
   m_on_delete{std::move(on_delete)}
@@ -23,7 +23,7 @@ links_page::links_page(const std::vector<link_entry>& links,
 	render();
 }
 
-void links_page::render()
+void link_list_page::render()
 {
 	const bool can_edit = m_session.permissions.has_any(permission::post_write);
 

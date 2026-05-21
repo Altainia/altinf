@@ -7,10 +7,10 @@
 #include <string>
 #include <vector>
 
-class blog_page: public Wt::WContainerWidget
+class blog_list_page: public Wt::WContainerWidget
 {
 public:
-	explicit blog_page(const std::vector<blog_post>& posts);
+	explicit blog_list_page(const std::vector<blog_post>& posts);
 
 private:
 	const std::vector<blog_post>& m_posts;

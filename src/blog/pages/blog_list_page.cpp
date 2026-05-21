@@ -1,4 +1,4 @@
-#include "blog_page.hpp"
+#include "blog_list_page.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WLink.h>
@@ -7,7 +7,7 @@
 
 #include <algorithm>
 
-blog_page::blog_page(const std::vector<blog_post>& posts):
+blog_list_page::blog_list_page(const std::vector<blog_post>& posts):
   m_posts{posts}
 {
 	setStyleClass("page blog-page");
@@ -19,7 +19,7 @@ blog_page::blog_page(const std::vector<blog_post>& posts):
 	render_list();
 }
 
-void blog_page::render_list()
+void blog_list_page::render_list()
 {
 	m_post_list->clear();
 

@@ -1,4 +1,4 @@
-#include "link_editor_page.hpp"
+#include "link_edit_page.hpp"
 
 #include <Wt/WApplication.h>
 #include <Wt/WDate.h>
@@ -8,9 +8,9 @@
 #include <stdexcept>
 #include <string>
 
-link_editor_page::link_editor_page(link_db*              db,
-                                   const link_entry*     existing,
-                                   std::function<void()> on_save):
+link_edit_page::link_edit_page(link_db*              db,
+                               const link_entry*     existing,
+                               std::function<void()> on_save):
   m_db{db},
   m_on_save{std::move(on_save)}
 {
@@ -72,7 +72,7 @@ link_editor_page::link_editor_page(link_db*              db,
 
 	auto* save_btn = btn_row->addNew<Wt::WPushButton>("Save");
 	save_btn->setStyleClass("editor-btn");
-	save_btn->clicked().connect(this, &link_editor_page::save);
+	save_btn->clicked().connect(this, &link_edit_page::save);
 
 	auto* cancel_btn = btn_row->addNew<Wt::WPushButton>("Cancel");
 	cancel_btn->setStyleClass("editor-btn editor-btn-cancel");
@@ -81,7 +81,7 @@ link_editor_page::link_editor_page(link_db*              db,
 	});
 }
 
-void link_editor_page::save()
+void link_edit_page::save()
 {
 	const auto url     = m_url->text().toUTF8();
 	const auto title   = m_title->text().toUTF8();

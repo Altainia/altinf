@@ -15,17 +15,17 @@
 
 // Org management page — org leads reach this at /org/{id}/manage.
 // back_url overrides the default "Back to organisation" link destination.
-class kanban_team_page: public Wt::WContainerWidget
+class team_edit_page: public Wt::WContainerWidget
 {
 public:
-	kanban_team_page(org_db&             odb,
+	team_edit_page(org_db&             odb,
 	                 kanban_db&          kdb,
 	                 user_db&            udb,
 	                 long long           org_id,
 	                 const session_data& session,
 	                 const std::string&  back_url = {});
 
-	~kanban_team_page() override;
+	~team_edit_page() override;
 
 private:
 	org_db&             m_odb;

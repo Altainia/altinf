@@ -7,10 +7,10 @@
 
 #include <string>
 
-class kanban_archive_page: public Wt::WContainerWidget
+class team_archive_page: public Wt::WContainerWidget
 {
 public:
-    kanban_archive_page(kanban_db&          db,
+    team_archive_page(kanban_db&          db,
                         const session_data& session,
                         long long           team_id);
 };

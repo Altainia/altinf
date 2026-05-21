@@ -1,4 +1,4 @@
-#include "kanban_team_page.hpp"
+#include "team_edit_page.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WApplication.h>
@@ -11,12 +11,12 @@
 #include "org/org.hpp"
 #include "widgets/live_hub.hpp"
 
-kanban_team_page::kanban_team_page(org_db&             odb,
-                                   kanban_db&          kdb,
-                                   user_db&            udb,
-                                   long long           org_id,
-                                   const session_data& session,
-                                   const std::string&  back_url):
+team_edit_page::team_edit_page(org_db&             odb,
+                               kanban_db&          kdb,
+                               user_db&            udb,
+                               long long           org_id,
+                               const session_data& session,
+                               const std::string&  back_url):
   m_odb{odb},
   m_kdb{kdb},
   m_udb{udb},
@@ -170,7 +170,7 @@ kanban_team_page::kanban_team_page(org_db&             odb,
 	  });
 }
 
-kanban_team_page::~kanban_team_page()
+team_edit_page::~team_edit_page()
 {
 	*m_alive = false;
 	if(!m_session_id.empty())
@@ -180,14 +180,14 @@ kanban_team_page::~kanban_team_page()
 	}
 }
 
-void kanban_team_page::refresh()
+void team_edit_page::refresh()
 {
 	refresh_members();
 	refresh_pending();
 	refresh_teams();
 }
 
-void kanban_team_page::refresh_members()
+void team_edit_page::refresh_members()
 {
 	m_members_section->clear();
 	const auto members = m_odb.org_members(m_org_id);
@@ -272,7 +272,7 @@ void kanban_team_page::refresh_members()
 	}
 }
 
-void kanban_team_page::refresh_pending()
+void team_edit_page::refresh_pending()
 {
 	m_pending_section->clear();
 	const auto pending = m_odb.org_pending(m_org_id);
@@ -305,7 +305,7 @@ void kanban_team_page::refresh_pending()
 	}
 }
 
-void kanban_team_page::refresh_teams()
+void team_edit_page::refresh_teams()
 {
 	m_teams_section->clear();
 	const auto teams = m_kdb.teams_for_org(m_org_id);
@@ -321,8 +321,8 @@ void kanban_team_page::refresh_teams()
 	}
 }
 
-void kanban_team_page::build_team_block(Wt::WContainerWidget* parent,
-                                        const team_entry&     team)
+void team_edit_page::build_team_block(Wt::WContainerWidget* parent,
+                                      const team_entry&     team)
 {
 	auto* block = parent->addNew<Wt::WContainerWidget>();
 	block->setStyleClass("kb-team-block");

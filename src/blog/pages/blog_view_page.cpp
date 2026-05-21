@@ -1,4 +1,4 @@
-#include "blog_post_page.hpp"
+#include "blog_view_page.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WLink.h>
@@ -8,7 +8,7 @@
 #include <fstream>
 #include <sstream>
 
-blog_post_page::blog_post_page(const blog_post& post, const session_data& session)
+blog_view_page::blog_view_page(const blog_post& post, const session_data& session)
 {
 	setStyleClass("page blog-post-page");
 

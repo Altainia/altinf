@@ -1,4 +1,4 @@
-#include "account_manager_page.hpp"
+#include "account_list_page.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WApplication.h>
@@ -49,7 +49,7 @@ static std::string permissions_label(permission::flags perms)
 	return out;
 }
 
-account_manager_page::account_manager_page(
+account_list_page::account_list_page(
   user_db&                                db,
   const session_data&                     session,
   std::function<void(const std::string&)> on_delete):
@@ -73,7 +73,7 @@ account_manager_page::account_manager_page(
 	  });
 }
 
-account_manager_page::~account_manager_page()
+account_list_page::~account_list_page()
 {
 	*m_alive = false;
 	if(!m_session_id.empty())
@@ -82,7 +82,7 @@ account_manager_page::~account_manager_page()
 	}
 }
 
-void account_manager_page::render()
+void account_list_page::render()
 {
 	addNew<Wt::WText>("<h1>Accounts</h1>", Wt::TextFormat::UnsafeXHTML);
 
@@ -157,7 +157,7 @@ void account_manager_page::render()
 	}
 }
 
-void account_manager_page::refresh()
+void account_list_page::refresh()
 {
 	clear();
 	render();

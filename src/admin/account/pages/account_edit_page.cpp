@@ -1,4 +1,4 @@
-#include "account_editor_page.hpp"
+#include "account_edit_page.hpp"
 
 #include <Wt/WApplication.h>
 #include <Wt/WDialog.h>
@@ -9,9 +9,9 @@
 #include "auth/permission.hpp"
 #include "widgets/live_hub.hpp"
 
-account_editor_page::account_editor_page(user_db*              db,
-                                         const user_entry*     existing,
-                                         std::function<void()> on_save):
+account_edit_page::account_edit_page(user_db*              db,
+                                     const user_entry*     existing,
+                                     std::function<void()> on_save):
   m_db{db},
   m_on_save{std::move(on_save)}
 {
@@ -80,7 +80,7 @@ account_editor_page::account_editor_page(user_db*              db,
 
 	auto* save_btn = btn_row->addNew<Wt::WPushButton>("Save");
 	save_btn->setStyleClass("editor-btn");
-	save_btn->clicked().connect(this, &account_editor_page::save);
+	save_btn->clicked().connect(this, &account_edit_page::save);
 
 	auto* cancel_btn = btn_row->addNew<Wt::WPushButton>("Cancel");
 	cancel_btn->setStyleClass("editor-btn editor-btn-cancel");
@@ -99,11 +99,11 @@ account_editor_page::account_editor_page(user_db*              db,
 
 		auto* gen_btn = tokens_section->addNew<Wt::WPushButton>("Generate New Token");
 		gen_btn->setStyleClass("editor-btn");
-		gen_btn->clicked().connect(this, &account_editor_page::generate_token);
+		gen_btn->clicked().connect(this, &account_edit_page::generate_token);
 	}
 }
 
-void account_editor_page::save()
+void account_edit_page::save()
 {
 	const auto username     = m_username->text().toUTF8();
 	const auto display_name = m_display_name->text().toUTF8();
@@ -170,7 +170,7 @@ void account_editor_page::save()
 	m_on_save();
 }
 
-void account_editor_page::build_token_list()
+void account_edit_page::build_token_list()
 {
 	m_tokens_container->clear();
 
@@ -215,7 +215,7 @@ void account_editor_page::build_token_list()
 	}
 }
 
-void account_editor_page::generate_token()
+void account_edit_page::generate_token()
 {
 	const auto raw_token = m_db->create_api_token(m_existing->username);
 	build_token_list();
