@@ -32,37 +32,12 @@
 #include "org/pages/team_kanban_page.hpp"
 #include "org/pages/team_settings_page.hpp"
 #include "pages/main_page.hpp"
+#include "paths.hpp"
 #include "widgets/footer.hpp"
 #include "widgets/forbidden_widget.hpp"
 #include "widgets/live_hub.hpp"
 #include "widgets/nav_bar.hpp"
 #include "widgets/not_found_widget.hpp"
-
-// Parse a decimal integer from path[offset] up to the next '/' or end.
-static std::optional<long long> parse_id(const std::string& path, size_t offset)
-{
-	const auto end = path.find('/', offset);
-	const auto seg = (end == std::string::npos) ? path.substr(offset) : path.substr(offset, end - offset);
-	if(seg.empty())
-	{
-		return std::nullopt;
-	}
-	try
-	{
-		return std::stoll(seg);
-	}
-	catch(...)
-	{
-		return std::nullopt;
-	}
-}
-
-// Return the portion of path that follows the first numeric segment after offset.
-static std::string suffix_after_id(const std::string& path, size_t offset)
-{
-	const auto slash = path.find('/', offset);
-	return (slash == std::string::npos) ? "" : path.substr(slash);
-}
 
 altinf_app::~altinf_app()
 {
@@ -200,57 +175,197 @@ void altinf_app::handle_path(const std::string& path)
 {
 	m_content->clear();
 	m_notifications_page = nullptr;
+	set_wide(false);
 
-	const bool wide = path.starts_with("/board/") ||
-	                  (path.starts_with("/org/") && path.find("/board") != std::string::npos);
-	m_content->setStyleClass(wide ? "site-content site-content--wide" : "site-content");
+	const std::string_view sv{path};
 
-	// ── Root ──────────────────────────────────────────────────────────────────
-	if(path == "/" || path.empty())
+	if(sv == "/" || sv.empty())
 	{
-		m_content->addNew<main_page>();
+		show_main();
+		return;
 	}
-	// ── Blog ──────────────────────────────────────────────────────────────────
-	else if(path == "/blog")
+	if(sv == paths::login_path)
+	{
+		handle_login();
+		return;
+	}
+	if(sv == paths::logout_path)
+	{
+		handle_logout();
+		return;
+	}
+	if(sv == paths::notifications_path)
+	{
+		handle_notifications();
+		return;
+	}
+	if(sv == paths::settings_path)
+	{
+		handle_settings();
+		return;
+	}
+
+	// Bare domain roots → canonical redirect
+	if(sv == "/blog")
+	{
+		setInternalPath(paths::blog_list(), true);
+		return;
+	}
+	if(sv == "/link")
+	{
+		setInternalPath(paths::link_list(), true);
+		return;
+	}
+	if(sv == "/admin/account")
+	{
+		setInternalPath(paths::account_list(), true);
+		return;
+	}
+	if(sv == "/admin/org")
+	{
+		setInternalPath(paths::admin_org_list(), true);
+		return;
+	}
+
+	if(sv.starts_with(paths::blog_prefix))
+	{
+		handle_blog(sv.substr(paths::blog_prefix.size()));
+		return;
+	}
+	if(sv.starts_with(paths::link_prefix))
+	{
+		handle_link(sv.substr(paths::link_prefix.size()));
+		return;
+	}
+	if(sv.starts_with(paths::org_prefix))
+	{
+		handle_org(sv.substr(paths::org_prefix.size()));
+		return;
+	}
+	if(sv.starts_with(paths::team_prefix))
+	{
+		handle_team(sv.substr(paths::team_prefix.size()));
+		return;
+	}
+	if(sv.starts_with(paths::task_prefix))
+	{
+		handle_task(sv.substr(paths::task_prefix.size()));
+		return;
+	}
+	if(sv.starts_with(paths::admin_prefix))
+	{
+		handle_admin(sv.substr(paths::admin_prefix.size()));
+		return;
+	}
+
+	show_not_found();
+}
+
+void altinf_app::set_wide(bool wide)
+{
+	m_content->setStyleClass(
+	  wide ? "site-content site-content--wide" : "site-content");
+}
+
+void altinf_app::show_main()
+{
+	m_content->addNew<main_page>();
+}
+
+void altinf_app::handle_login()
+{
+	m_content->addNew<login_page>(*m_user_db, m_session, [this] {
+		try
+		{
+			const auto raw_token = m_user_db->create_session_token(m_session.username);
+			m_session_token      = raw_token;
+			Wt::Http::Cookie c{"altinf_session", raw_token};
+			c.setHttpOnly(true);
+			c.setSecure(true);
+			c.setSameSite(Wt::Http::Cookie::SameSite::Strict);
+			c.setMaxAge(std::chrono::seconds{30 * 24 * 3600});
+			setCookie(c);
+		}
+		catch(const std::exception&)
+		{
+			m_session = session_data{};
+			setInternalPath(std::string{paths::login_path}, true);
+			return;
+		}
+		m_nav->update();
+		register_with_hub();
+		setInternalPath("/", true);
+	});
+}
+
+void altinf_app::handle_logout()
+{
+	live_hub::instance().unsubscribe("user:" + m_session.username, sessionId());
+	if(!m_session_token.empty())
+	{
+		m_user_db->delete_session_token(m_session_token);
+		removeCookie(Wt::Http::Cookie{"altinf_session"});
+		m_session_token.clear();
+	}
+	m_session = session_data{};
+	m_nav->update();
+	setInternalPath("/", true);
+}
+
+void altinf_app::handle_notifications()
+{
+	if(!m_session.logged_in)
+	{
+		setInternalPath(std::string{paths::login_path}, true);
+		return;
+	}
+	m_notifications_page = m_content->addNew<notifications_page>(
+	  *m_org_db, m_session, [this] { m_nav->refresh_bell(); });
+}
+
+void altinf_app::handle_settings()
+{
+	if(!m_session.logged_in)
+	{
+		setInternalPath(std::string{paths::login_path}, true);
+		return;
+	}
+	m_content->addNew<settings_page>(*m_org_db, m_session);
+}
+
+void altinf_app::handle_blog(std::string_view rem)
+{
+	const auto seg = paths::take_segment(rem);
+	if(seg == paths::list_seg)
 	{
 		m_content->addNew<blog_list_page>(m_posts);
 	}
-	else if(path.starts_with("/blog/"))
+	else if(seg == paths::view_seg)
 	{
-		const auto slug = path.substr(6);
-		const auto it   = std::find_if(
-      m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) { return p.slug == slug; });
-		if(it != m_posts.end())
+		const std::string slug{rem};
+		if(slug.empty())
 		{
-			m_content->addNew<blog_view_page>(*it, m_session);
+			show_not_found();
+			return;
 		}
-		else
+		const auto it = std::find_if(
+		  m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) { return p.slug == slug; });
+		if(it == m_posts.end())
 		{
 			show_not_found("Post not found.");
+			return;
 		}
+		m_content->addNew<blog_view_page>(*it, m_session);
 	}
-	// ── Post editor ───────────────────────────────────────────────────────────
-	else if(path == "/admin/new")
+	else if(seg == paths::edit_seg)
 	{
 		if(!m_session.permissions.has_any(permission::post_write))
 		{
 			show_forbidden();
 			return;
 		}
-		m_content->addNew<blog_edit_page>(m_posts_dir, nullptr, [this](const std::string& slug) {
-			reload_posts();
-			setInternalPath("/blog/" + slug, true);
-		});
-	}
-	else if(path.starts_with("/admin/edit/"))
-	{
-		if(!m_session.permissions.has_any(permission::post_write))
-		{
-			show_forbidden();
-			return;
-		}
-		const auto slug = path.substr(12);
-		const auto it   = std::find_if(
+		const std::string slug{rem};
+		const auto        it = std::find_if(
       m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) { return p.slug == slug; });
 		if(it == m_posts.end())
 		{
@@ -260,19 +375,40 @@ void altinf_app::handle_path(const std::string& path)
 		m_content->addNew<blog_edit_page>(
 		  m_posts_dir, &(*it), [this](const std::string& s) {
 			  reload_posts();
-			  setInternalPath("/blog/" + s, true);
+			  setInternalPath(paths::blog_view(s), true);
 		  });
 	}
-	// ── Links ─────────────────────────────────────────────────────────────────
-	else if(path == "/links")
+	else if(seg == paths::new_seg)
+	{
+		if(!m_session.permissions.has_any(permission::post_write))
+		{
+			show_forbidden();
+			return;
+		}
+		m_content->addNew<blog_edit_page>(
+		  m_posts_dir, nullptr, [this](const std::string& s) {
+			  reload_posts();
+			  setInternalPath(paths::blog_view(s), true);
+		  });
+	}
+	else
+	{
+		show_not_found();
+	}
+}
+
+void altinf_app::handle_link(std::string_view rem)
+{
+	const auto seg = paths::take_segment(rem);
+	if(seg == paths::list_seg)
 	{
 		m_content->addNew<link_list_page>(m_links, m_session, [this](long long id) {
 			m_link_db->remove(id);
 			reload_links();
-			handle_path("/links");
+			handle_path(paths::link_list());
 		});
 	}
-	else if(path == "/admin/links/new")
+	else if(seg == paths::new_seg)
 	{
 		if(!m_session.permissions.has_any(permission::post_write))
 		{
@@ -281,17 +417,17 @@ void altinf_app::handle_path(const std::string& path)
 		}
 		m_content->addNew<link_edit_page>(m_link_db.get(), nullptr, [this] {
 			reload_links();
-			handle_path("/links");
+			handle_path(paths::link_list());
 		});
 	}
-	else if(path.starts_with("/admin/links/edit/"))
+	else if(seg == paths::edit_seg)
 	{
 		if(!m_session.permissions.has_any(permission::post_write))
 		{
 			show_forbidden();
 			return;
 		}
-		const auto id_opt = parse_id(path, 18);
+		const auto id_opt = paths::take_id(rem);
 		if(!id_opt)
 		{
 			show_not_found("Invalid link ID.");
@@ -306,152 +442,34 @@ void altinf_app::handle_path(const std::string& path)
 		m_edit_link = opt;
 		m_content->addNew<link_edit_page>(m_link_db.get(), &(*m_edit_link), [this] {
 			reload_links();
-			handle_path("/links");
+			handle_path(paths::link_list());
 		});
 	}
-	// ── Team board (/board/{team_id}[/gantt|/task/new|/task/{id}/edit]) ───────
-	else if(path.starts_with("/board/"))
+	else
 	{
-		if(!m_session.logged_in)
-		{
-			setInternalPath("/login", true);
-			return;
-		}
-
-		const auto team_id_opt = parse_id(path, 7);
-		if(!team_id_opt)
-		{
-			show_not_found();
-			return;
-		}
-		const long long team_id = *team_id_opt;
-
-		const auto team = m_kanban_db->find_team(team_id);
-		if(!team)
-		{
-			show_not_found("Team not found.");
-			return;
-		}
-
-		const auto caps     = resolve_team_caps(team_id, team->org_id);
-		const auto settings = m_kanban_db->settings_for_team(team_id);
-
-		const std::string suffix = suffix_after_id(path, 7);
-
-		if(suffix.empty() || suffix == "/")
-		{
-			if(!caps.has_any(team_cap::view_board))
-			{
-				show_forbidden();
-				return;
-			}
-			m_content->addNew<team_kanban_page>(
-			  *m_kanban_db, *m_org_db, m_session, team_id, caps, settings, false);
-		}
-		else if(suffix == "/gantt")
-		{
-			if(!caps.has_any(team_cap::view_board))
-			{
-				show_forbidden();
-				return;
-			}
-			m_content->addNew<team_kanban_page>(
-			  *m_kanban_db, *m_org_db, m_session, team_id, caps, settings, true);
-		}
-		else if(suffix == "/task/new")
-		{
-			if(!caps.has_any(team_cap::create_task))
-			{
-				show_forbidden();
-				return;
-			}
-			m_content->addNew<task_edit_page>(
-			  *m_kanban_db, *m_org_db, team_id, m_session, caps, settings, nullptr, [this, team_id] {
-				  setInternalPath("/board/" + std::to_string(team_id), true);
-			  });
-		}
-		else if(suffix.starts_with("/task/") && suffix.ends_with("/edit"))
-		{
-			const auto task_id_opt = parse_id(suffix, 6);
-			if(!task_id_opt)
-			{
-				show_not_found();
-				return;
-			}
-			const auto opt = m_kanban_db->find_task(*task_id_opt);
-			if(!opt || opt->team_id != team_id)
-			{
-				show_not_found("Task not found.");
-				return;
-			}
-			if(!caps.has_any(team_cap::view_board))
-			{
-				show_forbidden();
-				return;
-			}
-			if(opt->is_archived && !caps.has_any(team_cap::view_archived))
-			{
-				show_not_found("Task not found.");
-				return;
-			}
-			m_edit_task = opt;
-			m_content->addNew<task_edit_page>(
-			  *m_kanban_db, *m_org_db, team_id, m_session, caps, settings, &(*m_edit_task), [this, team_id] {
-				  setInternalPath("/board/" + std::to_string(team_id), true);
-			  });
-		}
-		else if(suffix == "/archive")
-		{
-			if(!caps.has_any(team_cap::view_archived))
-			{
-				show_forbidden();
-				return;
-			}
-			m_content->addNew<team_archive_page>(
-			  *m_kanban_db, m_session, team_id);
-		}
-		else if(suffix == "/manage")
-		{
-			if(!caps.has_any(team_cap::manage_team))
-			{
-				show_forbidden();
-				return;
-			}
-			m_content->addNew<team_edit_page>(
-			  *m_org_db, *m_kanban_db, *m_user_db, team->org_id, m_session, "/board/" + std::to_string(team_id));
-		}
-		else if(suffix == "/settings")
-		{
-			if(!caps.has_any(team_cap::manage_team))
-			{
-				show_forbidden();
-				return;
-			}
-			m_content->addNew<team_settings_page>(*m_kanban_db, m_session, team_id);
-		}
-		else
-		{
-			show_not_found();
-		}
+		show_not_found();
 	}
-	// ── Organization routes (/org/{org_id}[/board|/manage]) ──────────────────
-	else if(path.starts_with("/org/"))
-	{
-		if(!m_session.logged_in)
-		{
-			setInternalPath("/login", true);
-			return;
-		}
+}
 
-		const auto org_id_opt = parse_id(path, 5);
+void altinf_app::handle_org(std::string_view rem)
+{
+	if(!m_session.logged_in)
+	{
+		setInternalPath(std::string{paths::login_path}, true);
+		return;
+	}
+
+	const auto seg = paths::take_segment(rem);
+	if(seg == paths::view_seg)
+	{
+		const auto org_id_opt = paths::take_id(rem);
 		if(!org_id_opt)
 		{
 			show_not_found();
 			return;
 		}
-		const long long org_id = *org_id_opt;
-
-		const bool is_org_lead = resolve_is_org_lead(org_id);
+		const long long org_id      = *org_id_opt;
+		const bool      is_org_lead = resolve_is_org_lead(org_id);
 
 		if(!is_org_lead && !m_org_db->is_org_member(org_id, m_session.username))
 		{
@@ -459,36 +477,26 @@ void altinf_app::handle_path(const std::string& path)
 			return;
 		}
 
-		const std::string suffix = suffix_after_id(path, 5);
-
-		if(suffix.empty() || suffix == "/")
+		const auto sub = paths::take_segment(rem);
+		if(sub.empty())
 		{
 			m_org_db->set_last_org(m_session.username, org_id);
 			m_content->addNew<org_landing_page>(
 			  *m_org_db, *m_kanban_db, org_id, m_session, is_org_lead);
 		}
-		else if(suffix == "/board")
+		else if(sub == "board")
 		{
 			if(!is_org_lead)
 			{
 				show_forbidden();
 				return;
 			}
+			set_wide(true);
 			m_org_db->set_last_org(m_session.username, org_id);
 			m_content->addNew<org_board_page>(
 			  *m_org_db, *m_kanban_db, org_id, m_session);
 		}
-		else if(suffix == "/manage")
-		{
-			if(!is_org_lead)
-			{
-				show_forbidden();
-				return;
-			}
-			m_content->addNew<team_edit_page>(
-			  *m_org_db, *m_kanban_db, *m_user_db, org_id, m_session);
-		}
-		else if(suffix == "/types")
+		else if(sub == "types")
 		{
 			if(!is_org_lead)
 			{
@@ -503,164 +511,311 @@ void altinf_app::handle_path(const std::string& path)
 			show_not_found();
 		}
 	}
-	// ── Org admin (create orgs) ───────────────────────────────────────────────
-	else if(path == "/admin/org")
+	else if(seg == paths::edit_seg)
 	{
-		if(!m_session.logged_in)
+		const auto org_id_opt = paths::take_id(rem);
+		if(!org_id_opt)
 		{
-			setInternalPath("/login", true);
+			show_not_found();
 			return;
 		}
+		const long long org_id      = *org_id_opt;
+		const bool      is_org_lead = resolve_is_org_lead(org_id);
+		if(!is_org_lead)
+		{
+			show_forbidden();
+			return;
+		}
+		m_content->addNew<team_edit_page>(
+		  *m_org_db, *m_kanban_db, *m_user_db, org_id, m_session, paths::org_view(org_id));
+	}
+	else
+	{
+		show_not_found();
+	}
+}
+
+void altinf_app::handle_team(std::string_view rem)
+{
+	if(!m_session.logged_in)
+	{
+		setInternalPath(std::string{paths::login_path}, true);
+		return;
+	}
+
+	const auto seg = paths::take_segment(rem);
+	if(seg == paths::view_seg)
+	{
+		const auto team_id_opt = paths::take_id(rem);
+		if(!team_id_opt)
+		{
+			show_not_found();
+			return;
+		}
+		const long long team_id = *team_id_opt;
+		const auto      team    = m_kanban_db->find_team(team_id);
+		if(!team)
+		{
+			show_not_found("Team not found.");
+			return;
+		}
+
+		const auto caps     = resolve_team_caps(team_id, team->org_id);
+		const auto settings = m_kanban_db->settings_for_team(team_id);
+		const auto sub      = paths::take_segment(rem);
+
+		if(sub.empty())
+		{
+			setInternalPath(paths::team_kanban(team_id), true);
+		}
+		else if(sub == "kanban")
+		{
+			if(!caps.has_any(team_cap::view_board))
+			{
+				show_forbidden();
+				return;
+			}
+			set_wide(true);
+			m_content->addNew<team_kanban_page>(
+			  *m_kanban_db, *m_org_db, m_session, team_id, caps, settings, false);
+		}
+		else if(sub == "gantt")
+		{
+			if(!caps.has_any(team_cap::view_board))
+			{
+				show_forbidden();
+				return;
+			}
+			set_wide(true);
+			m_content->addNew<team_kanban_page>(
+			  *m_kanban_db, *m_org_db, m_session, team_id, caps, settings, true);
+		}
+		else if(sub == "task")
+		{
+			const auto task_sub = paths::take_segment(rem);
+			if(task_sub == paths::new_seg)
+			{
+				if(!caps.has_any(team_cap::create_task))
+				{
+					show_forbidden();
+					return;
+				}
+				m_content->addNew<task_edit_page>(
+				  *m_kanban_db, *m_org_db, team_id, m_session, caps, settings, nullptr, [this, team_id] {
+					  setInternalPath(paths::team_kanban(team_id), true);
+				  });
+			}
+			else
+			{
+				show_not_found();
+			}
+		}
+		else if(sub == "archive")
+		{
+			if(!caps.has_any(team_cap::view_archived))
+			{
+				show_forbidden();
+				return;
+			}
+			m_content->addNew<team_archive_page>(*m_kanban_db, m_session, team_id);
+		}
+		else
+		{
+			show_not_found();
+		}
+	}
+	else if(seg == paths::edit_seg)
+	{
+		const auto team_id_opt = paths::take_id(rem);
+		if(!team_id_opt)
+		{
+			show_not_found();
+			return;
+		}
+		const long long team_id = *team_id_opt;
+		const auto      team    = m_kanban_db->find_team(team_id);
+		if(!team)
+		{
+			show_not_found("Team not found.");
+			return;
+		}
+
+		const auto caps = resolve_team_caps(team_id, team->org_id);
+		if(!caps.has_any(team_cap::manage_team))
+		{
+			show_forbidden();
+			return;
+		}
+
+		const auto sub = paths::take_segment(rem);
+		if(sub.empty())
+		{
+			setInternalPath(paths::team_edit_members(team_id), true);
+		}
+		else if(sub == "members")
+		{
+			m_content->addNew<team_edit_page>(
+			  *m_org_db, *m_kanban_db, *m_user_db, team->org_id, m_session, paths::team_kanban(team_id));
+		}
+		else if(sub == "settings")
+		{
+			m_content->addNew<team_settings_page>(*m_kanban_db, m_session, team_id);
+		}
+		else
+		{
+			show_not_found();
+		}
+	}
+	else
+	{
+		show_not_found();
+	}
+}
+
+void altinf_app::handle_task(std::string_view rem)
+{
+	if(!m_session.logged_in)
+	{
+		setInternalPath(std::string{paths::login_path}, true);
+		return;
+	}
+
+	const auto seg = paths::take_segment(rem);
+	if(seg == paths::edit_seg)
+	{
+		const auto task_id_opt = paths::take_id(rem);
+		if(!task_id_opt)
+		{
+			show_not_found();
+			return;
+		}
+		const auto opt = m_kanban_db->find_task(*task_id_opt);
+		if(!opt)
+		{
+			show_not_found("Task not found.");
+			return;
+		}
+
+		const long long team_id = opt->team_id;
+		const auto      team    = m_kanban_db->find_team(team_id);
+		if(!team)
+		{
+			show_not_found("Team not found.");
+			return;
+		}
+
+		const auto caps     = resolve_team_caps(team_id, team->org_id);
+		const auto settings = m_kanban_db->settings_for_team(team_id);
+
+		if(!caps.has_any(team_cap::view_board))
+		{
+			show_forbidden();
+			return;
+		}
+		if(opt->is_archived && !caps.has_any(team_cap::view_archived))
+		{
+			show_not_found("Task not found.");
+			return;
+		}
+
+		m_edit_task = opt;
+		m_content->addNew<task_edit_page>(
+		  *m_kanban_db, *m_org_db, team_id, m_session, caps, settings, &(*m_edit_task), [this, team_id] {
+			  setInternalPath(paths::team_kanban(team_id), true);
+		  });
+	}
+	else
+	{
+		show_not_found();
+	}
+}
+
+void altinf_app::handle_admin(std::string_view rem)
+{
+	if(!m_session.logged_in)
+	{
+		setInternalPath(std::string{paths::login_path}, true);
+		return;
+	}
+
+	const auto domain = paths::take_segment(rem);
+	if(domain == "account")
+	{
+		if(!m_session.permissions.has_any(permission::admin) &&
+		   !m_session.permissions.has_any(permission::manage_users))
+		{
+			show_forbidden();
+			return;
+		}
+		const auto seg = paths::take_segment(rem);
+		if(seg == paths::list_seg)
+		{
+			m_content->addNew<account_list_page>(
+			  *m_user_db, m_session, [this](const std::string& username) {
+				  if(username == m_session.username)
+				  {
+					  return;
+				  }
+				  const auto del_orgs     = m_org_db->orgs_for_user(username);
+				  const auto del_team_ids = m_kanban_db->team_ids_for_user(username);
+				  m_user_db->delete_user(username);
+				  m_org_db->remove_user_from_all_orgs(username);
+				  m_kanban_db->remove_member_from_all_teams(username);
+				  live_hub::instance().broadcast("accounts");
+				  for(const auto& org: del_orgs)
+				  {
+					  live_hub::instance().broadcast("org:" + std::to_string(org.id));
+				  }
+				  for(const auto tid: del_team_ids)
+				  {
+					  live_hub::instance().broadcast("team:" + std::to_string(tid));
+				  }
+				  handle_path(paths::account_list());
+			  });
+		}
+		else if(seg == paths::new_seg)
+		{
+			m_content->addNew<account_edit_page>(m_user_db.get(), nullptr, [this] {
+				setInternalPath(paths::account_list(), true);
+			});
+		}
+		else if(seg == paths::edit_seg)
+		{
+			const std::string edit_username{rem};
+			const auto        users = m_user_db->list_users();
+			const auto        it    = std::find_if(
+        users.begin(), users.end(), [&edit_username](const user_entry& e) { return e.username == edit_username; });
+			if(it == users.end())
+			{
+				show_not_found("User not found.");
+				return;
+			}
+			m_edit_user = *it;
+			m_content->addNew<account_edit_page>(
+			  m_user_db.get(), &(*m_edit_user), [this] { setInternalPath(paths::account_list(), true); });
+		}
+		else
+		{
+			show_not_found();
+		}
+	}
+	else if(domain == "org")
+	{
 		if(!m_session.permissions.has_any(permission::org_create) &&
 		   !m_session.permissions.has_any(permission::admin))
 		{
 			show_forbidden();
 			return;
 		}
-		m_content->addNew<org_admin_page>(*m_org_db, m_session);
-	}
-	// ── Notifications ─────────────────────────────────────────────────────────
-	else if(path == "/notifications")
-	{
-		if(!m_session.logged_in)
+		const auto seg = paths::take_segment(rem);
+		if(seg == paths::list_seg)
 		{
-			setInternalPath("/login", true);
-			return;
+			m_content->addNew<org_admin_page>(*m_org_db, m_session);
 		}
-		m_notifications_page = m_content->addNew<notifications_page>(
-		  *m_org_db, m_session, [this] { m_nav->refresh_bell(); });
-	}
-	// ── Settings ──────────────────────────────────────────────────────────────
-	else if(path == "/settings")
-	{
-		if(!m_session.logged_in)
+		else
 		{
-			setInternalPath("/login", true);
-			return;
+			show_not_found();
 		}
-		m_content->addNew<settings_page>(*m_org_db, m_session);
-	}
-	// ── Accounts ──────────────────────────────────────────────────────────────
-	else if(path == "/admin/accounts")
-	{
-		if(!m_session.logged_in)
-		{
-			setInternalPath("/login", true);
-			return;
-		}
-		if(!m_session.permissions.has_any(permission::admin) &&
-		   !m_session.permissions.has_any(permission::manage_users))
-		{
-			show_forbidden();
-			return;
-		}
-		m_content->addNew<account_list_page>(
-		  *m_user_db, m_session, [this](const std::string& username) {
-			  if(username == m_session.username)
-			  {
-				  return;
-			  }
-			  const auto del_orgs     = m_org_db->orgs_for_user(username);
-			  const auto del_team_ids = m_kanban_db->team_ids_for_user(username);
-
-			  m_user_db->delete_user(username);
-			  m_org_db->remove_user_from_all_orgs(username);
-			  m_kanban_db->remove_member_from_all_teams(username);
-
-			  live_hub::instance().broadcast("accounts");
-			  for(const auto& org: del_orgs)
-			  {
-				  live_hub::instance().broadcast("org:" + std::to_string(org.id));
-			  }
-			  for(const auto tid: del_team_ids)
-			  {
-				  live_hub::instance().broadcast("team:" + std::to_string(tid));
-			  }
-
-			  handle_path("/admin/accounts");
-		  });
-	}
-	else if(path == "/admin/accounts/new")
-	{
-		if(!m_session.logged_in)
-		{
-			setInternalPath("/login", true);
-			return;
-		}
-		if(!m_session.permissions.has_any(permission::admin) &&
-		   !m_session.permissions.has_any(permission::manage_users))
-		{
-			show_forbidden();
-			return;
-		}
-		m_content->addNew<account_edit_page>(m_user_db.get(), nullptr, [this] {
-			setInternalPath("/admin/accounts", true);
-		});
-	}
-	else if(path.starts_with("/admin/accounts/edit/"))
-	{
-		if(!m_session.logged_in)
-		{
-			setInternalPath("/login", true);
-			return;
-		}
-		if(!m_session.permissions.has_any(permission::admin) &&
-		   !m_session.permissions.has_any(permission::manage_users))
-		{
-			show_forbidden();
-			return;
-		}
-		const auto edit_username = path.substr(21);
-		const auto users         = m_user_db->list_users();
-		const auto it            = std::find_if(
-      users.begin(), users.end(), [&edit_username](const user_entry& e) { return e.username == edit_username; });
-		if(it == users.end())
-		{
-			show_not_found("User not found.");
-			return;
-		}
-		m_edit_user = *it;
-		m_content->addNew<account_edit_page>(
-		  m_user_db.get(), &(*m_edit_user), [this] { setInternalPath("/admin/accounts", true); });
-	}
-	// ── Auth ──────────────────────────────────────────────────────────────────
-	else if(path == "/login")
-	{
-		m_content->addNew<login_page>(*m_user_db, m_session, [this] {
-			try
-			{
-				const auto raw_token = m_user_db->create_session_token(m_session.username);
-				m_session_token      = raw_token;
-				Wt::Http::Cookie c{"altinf_session", raw_token};
-				c.setHttpOnly(true);
-				c.setSecure(true);
-				c.setSameSite(Wt::Http::Cookie::SameSite::Strict);
-				c.setMaxAge(std::chrono::seconds{30 * 24 * 3600});
-				setCookie(c);
-			}
-			catch(const std::exception&)
-			{
-				m_session = session_data{};
-				setInternalPath("/login", true);
-				return;
-			}
-			m_nav->update();
-			register_with_hub();
-			setInternalPath("/", true);
-		});
-	}
-	else if(path == "/logout")
-	{
-		live_hub::instance().unsubscribe("user:" + m_session.username, sessionId());
-		if(!m_session_token.empty())
-		{
-			m_user_db->delete_session_token(m_session_token);
-			removeCookie(Wt::Http::Cookie{"altinf_session"});
-			m_session_token.clear();
-		}
-		m_session = session_data{};
-		m_nav->update();
-		setInternalPath("/", true);
 	}
 	else
 	{
