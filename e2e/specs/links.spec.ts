@@ -2,17 +2,17 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from './helpers';
 
 test('links page shows heading', async ({ page }) => {
-  await page.goto('/links');
+  await page.goto('/link/list');
   await expect(page.locator('h1')).toContainText('Links');
 });
 
 test('links page shows empty message when no links exist', async ({ page }) => {
-  await page.goto('/links');
+  await page.goto('/link/list');
   await expect(page.locator('.links-empty')).toBeVisible();
 });
 
 test('logged-out user sees no Add Link button', async ({ page }) => {
-  await page.goto('/links');
+  await page.goto('/link/list');
   await expect(page.locator('.link-add-btn')).not.toBeVisible();
 });
 

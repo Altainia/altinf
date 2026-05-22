@@ -88,7 +88,7 @@ async function createTaskWithDates(page: Page, title: string, startDate: string,
 // ── access control ────────────────────────────────────────────────────────────
 
 test('unauthenticated visit to /board redirects to login', async ({ page }) => {
-  await page.goto('/board/1');
+  await page.goto('/team/view/1/kanban');
   await expect(page.locator('.login-form')).toBeVisible();
 });
 

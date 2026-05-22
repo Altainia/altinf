@@ -20,7 +20,7 @@ test('home page shows welcome text', async ({ page }) => {
 });
 
 test('nav brand links back to home', async ({ page }) => {
-  await page.goto('/blog');
+  await page.goto('/blog/list');
   await page.locator('.nav-brand').click();
   await expect(page.locator('h1')).toContainText("Hi, I'm Ben.");
 });
@@ -28,5 +28,5 @@ test('nav brand links back to home', async ({ page }) => {
 test('clicking Blog nav link produces a clean URL', async ({ page }) => {
   await page.goto('/');
   await page.locator('.nav-link', { hasText: 'Blog' }).click();
-  await expect(page).toHaveURL('/blog');
+  await expect(page).toHaveURL('/blog/list');
 });

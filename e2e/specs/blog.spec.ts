@@ -2,26 +2,26 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from './helpers';
 
 test('blog page shows heading', async ({ page }) => {
-  await page.goto('/blog');
+  await page.goto('/blog/list');
   await expect(page.locator('h1')).toContainText('Blog');
 });
 
 test('blog page lists posts from posts directory', async ({ page }) => {
-  await page.goto('/blog');
+  await page.goto('/blog/list');
   await expect(page.locator('.post-list')).toBeVisible();
   const count = await page.locator('.post-item').count();
   expect(count).toBeGreaterThanOrEqual(1);
 });
 
 test('post items have title links and dates', async ({ page }) => {
-  await page.goto('/blog');
+  await page.goto('/blog/list');
   const firstItem = page.locator('.post-item').first();
   await expect(firstItem.locator('.post-title')).toBeVisible();
   await expect(firstItem.locator('.post-date')).toBeVisible();
 });
 
 test('clicking a post title navigates to post page', async ({ page }) => {
-  await page.goto('/blog');
+  await page.goto('/blog/list');
   const firstTitle = page.locator('.post-title').first();
   const titleText = await firstTitle.textContent();
   await firstTitle.click();
@@ -30,13 +30,13 @@ test('clicking a post title navigates to post page', async ({ page }) => {
 });
 
 test('tag chips are shown when post has tags', async ({ page }) => {
-  await page.goto('/blog');
+  await page.goto('/blog/list');
   // The fixture posts have tags, so at least one chip should appear
   await expect(page.locator('.tag-chip').first()).toBeVisible();
 });
 
 test('clicking a tag chip filters the list', async ({ page }) => {
-  await page.goto('/blog');
+  await page.goto('/blog/list');
   const totalBefore = await page.locator('.post-item').count();
   await page.locator('.tag-chip').first().click();
   // Filter bar should appear
