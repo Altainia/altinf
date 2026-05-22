@@ -8,6 +8,7 @@
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
+#include "paths.hpp"
 #include "widgets/live_hub.hpp"
 
 team_settings_page::team_settings_page(kanban_db&          db,
@@ -23,14 +24,14 @@ team_settings_page::team_settings_page(kanban_db&          db,
 		return;
 	}
 
-	const std::string board_url = "/board/" + std::to_string(team_id);
-	const long long   org_id    = team->org_id;
+	const long long org_id = team->org_id;
 
 	addNew<Wt::WText>("<h1>Team Settings \xe2\x80\x94 " + team->name + "</h1>",
 	                  Wt::TextFormat::UnsafeXHTML);
 
 	addNew<Wt::WAnchor>(
-	  Wt::WLink{Wt::LinkType::InternalPath, board_url}, "\xe2\x86\x90 Back to board")
+	  Wt::WLink{Wt::LinkType::InternalPath, paths::team_kanban(team_id)},
+	  "\xe2\x86\x90 Back to board")
 	  ->setStyleClass("editor-btn editor-btn-cancel");
 
 	// ── Team name ──────────────────────────────────────────────────────────────

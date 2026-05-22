@@ -8,6 +8,7 @@
 #include <map>
 
 #include "org/widgets/kanban_board_widget.hpp"
+#include "paths.hpp"
 #include "widgets/live_hub.hpp"
 
 org_board_page::org_board_page(org_db&             odb,
@@ -33,7 +34,7 @@ org_board_page::org_board_page(org_db&             odb,
 	hdr->addNew<Wt::WText>("<h1>" + org->name + " \xe2\x80\x94 All Teams</h1>",
 	                       Wt::TextFormat::UnsafeXHTML);
 	hdr->addNew<Wt::WAnchor>(
-	     Wt::WLink{Wt::LinkType::InternalPath, "/org/" + std::to_string(org_id)},
+	     Wt::WLink{Wt::LinkType::InternalPath, paths::org_view(org_id)},
 	     "\xe2\x86\x90 Back to organization")
 	  ->setStyleClass("kb-back-link");
 
@@ -61,28 +62,24 @@ org_board_page::org_board_page(org_db&             odb,
 		team_hdr->addNew<Wt::WText>(
 		  "<h2>" + team.name + "</h2>", Wt::TextFormat::UnsafeXHTML);
 		team_hdr->addNew<Wt::WAnchor>(
-		          Wt::WLink{Wt::LinkType::InternalPath,
-		                    "/board/" + std::to_string(team.id)},
+		          Wt::WLink{Wt::LinkType::InternalPath, paths::team_kanban(team.id)},
 		          "Open full board")
 		  ->setStyleClass("kb-back-link");
 
-		const auto      tasks = kdb.tasks_for_team(team.id);
-		const long long tid   = team.id;
+		const auto tasks = kdb.tasks_for_team(team.id);
 
-		// Org leads can edit all teams; capture tid by value for the lambdas.
+		// Org leads can edit all teams.
 		auto* board = section->addNew<kanban_board_widget>(
 		  tasks,
 		  true, // org leads always have column-move rights
 		  true, // org leads always have done-move rights
 		  m_type_colors,
-		  [&kdb, tid, actor = session.username](long long task_id, const std::string& status, int sort) {
+		  [&kdb, actor = session.username](long long task_id, const std::string& status, int sort) {
 			  kdb.update_task_status(task_id, status, sort, actor);
 		  },
-		  [tid](long long task_id) {
+		  [](long long task_id) {
 			  Wt::WApplication::instance()->setInternalPath(
-			    "/board/" + std::to_string(tid) + "/task/" +
-			      std::to_string(task_id) + "/edit",
-			    true);
+			    paths::task_edit(task_id), true);
 		  });
 		(void)board;
 	}

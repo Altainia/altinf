@@ -8,6 +8,8 @@
 #include <stdexcept>
 #include <string>
 
+#include "paths.hpp"
+
 link_edit_page::link_edit_page(link_db*              db,
                                const link_entry*     existing,
                                std::function<void()> on_save):
@@ -77,7 +79,7 @@ link_edit_page::link_edit_page(link_db*              db,
 	auto* cancel_btn = btn_row->addNew<Wt::WPushButton>("Cancel");
 	cancel_btn->setStyleClass("editor-btn editor-btn-cancel");
 	cancel_btn->clicked().connect([] {
-		Wt::WApplication::instance()->setInternalPath("/links", true);
+		Wt::WApplication::instance()->setInternalPath(paths::link_list(), true);
 	});
 }
 

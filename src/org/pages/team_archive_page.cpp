@@ -5,6 +5,8 @@
 #include <Wt/WLink.h>
 #include <Wt/WText.h>
 
+#include "paths.hpp"
+
 team_archive_page::team_archive_page(kanban_db&          db,
                                      const session_data& session,
                                      long long           team_id)
@@ -20,13 +22,12 @@ team_archive_page::team_archive_page(kanban_db&          db,
 		return;
 	}
 
-	const std::string board_url = "/board/" + std::to_string(team_id);
-
 	addNew<Wt::WText>("<h1>Archived Tasks \xe2\x80\x94 " + team->name + "</h1>",
 	                  Wt::TextFormat::UnsafeXHTML);
 
 	addNew<Wt::WAnchor>(
-	  Wt::WLink{Wt::LinkType::InternalPath, board_url}, "\xe2\x86\x90 Back to board")
+	  Wt::WLink{Wt::LinkType::InternalPath, paths::team_kanban(team_id)},
+	  "\xe2\x86\x90 Back to board")
 	  ->setStyleClass("editor-btn editor-btn-cancel");
 
 	const auto tasks = db.archived_tasks_for_team(team_id);
@@ -42,14 +43,11 @@ team_archive_page::team_archive_page(kanban_db&          db,
 
 	for(const auto& task: tasks)
 	{
-		const std::string edit_url =
-		  board_url + "/task/" + std::to_string(task.id) + "/edit";
-
 		auto* row = list->addNew<Wt::WContainerWidget>();
 		row->setStyleClass("kb-archive-row");
 
 		row->addNew<Wt::WAnchor>(
-		     Wt::WLink{Wt::LinkType::InternalPath, edit_url},
+		     Wt::WLink{Wt::LinkType::InternalPath, paths::task_edit(task.id)},
 		     task.title)
 		  ->setStyleClass("kb-archive-title");
 

@@ -14,6 +14,7 @@
 #include <sstream>
 
 #include "blog/post_writer.hpp"
+#include "paths.hpp"
 
 blog_edit_page::blog_edit_page(const std::filesystem::path&          posts_dir,
                                const blog_post*                      existing,
@@ -80,7 +81,7 @@ blog_edit_page::blog_edit_page(const std::filesystem::path&          posts_dir,
 	save_btn->clicked().connect(this, &blog_edit_page::save);
 
 	const auto cancel_path =
-	  m_existing ? std::string{"/blog/"} + m_existing->slug : std::string{"/blog"};
+	  m_existing ? paths::blog_view(m_existing->slug) : paths::blog_list();
 	auto* cancel_btn = btn_row->addNew<Wt::WAnchor>(
 	  Wt::WLink{Wt::LinkType::InternalPath, cancel_path}, "Cancel");
 	cancel_btn->setStyleClass("editor-btn editor-btn-cancel");

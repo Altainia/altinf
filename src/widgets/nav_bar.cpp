@@ -5,6 +5,7 @@
 #include <Wt/WText.h>
 
 #include "auth/permission.hpp"
+#include "paths.hpp"
 #include "widgets/notification_bell.hpp"
 
 nav_bar::nav_bar(const session_data& session, org_db* odb):
@@ -25,11 +26,11 @@ nav_bar::nav_bar(const session_data& session, org_db* odb):
 	  ->setStyleClass("nav-link");
 
 	links->addNew<Wt::WAnchor>(
-	       Wt::WLink{Wt::LinkType::InternalPath, "/links"}, "Links")
+	       Wt::WLink{Wt::LinkType::InternalPath, paths::link_list()}, "Links")
 	  ->setStyleClass("nav-link");
 
 	links->addNew<Wt::WAnchor>(
-	       Wt::WLink{Wt::LinkType::InternalPath, "/blog"}, "Blog")
+	       Wt::WLink{Wt::LinkType::InternalPath, paths::blog_list()}, "Blog")
 	  ->setStyleClass("nav-link");
 
 	m_auth_area = addNew<Wt::WContainerWidget>();
@@ -45,7 +46,7 @@ void nav_bar::update()
 	if(!m_session.logged_in)
 	{
 		m_auth_area->addNew<Wt::WAnchor>(
-		             Wt::WLink{Wt::LinkType::InternalPath, "/login"}, "Login")
+		             Wt::WLink{Wt::LinkType::InternalPath, std::string{paths::login_path}}, "Login")
 		  ->setStyleClass("nav-link nav-login");
 		return;
 	}
@@ -91,7 +92,7 @@ void nav_bar::update()
 			// Primary link — always shown.
 			org_area->addNew<Wt::WAnchor>(
 			          Wt::WLink{Wt::LinkType::InternalPath,
-			                    "/org/" + std::to_string(active_id)},
+			                    paths::org_view(active_id)},
 			          active_name)
 			  ->setStyleClass("nav-link nav-org-link");
 
@@ -104,7 +105,7 @@ void nav_bar::update()
 				{
 					dropdown->addNew<Wt::WAnchor>(
 					          Wt::WLink{Wt::LinkType::InternalPath,
-					                    "/org/" + std::to_string(o.id)},
+					                    paths::org_view(o.id)},
 					          o.name)
 					  ->setStyleClass(o.id == active_id ? "nav-org-item nav-org-item--active" : "nav-org-item");
 				}
@@ -116,7 +117,7 @@ void nav_bar::update()
 	if(m_session.permissions.has_any(permission::post_write))
 	{
 		m_auth_area->addNew<Wt::WAnchor>(
-		             Wt::WLink{Wt::LinkType::InternalPath, "/admin/new"}, "New Post")
+		             Wt::WLink{Wt::LinkType::InternalPath, paths::blog_new()}, "New Post")
 		  ->setStyleClass("nav-link");
 	}
 
@@ -124,7 +125,7 @@ void nav_bar::update()
 	   m_session.permissions.has_any(permission::manage_users))
 	{
 		m_auth_area->addNew<Wt::WAnchor>(
-		             Wt::WLink{Wt::LinkType::InternalPath, "/admin/accounts"}, "Accounts")
+		             Wt::WLink{Wt::LinkType::InternalPath, paths::account_list()}, "Accounts")
 		  ->setStyleClass("nav-link");
 	}
 
@@ -132,13 +133,13 @@ void nav_bar::update()
 	   m_session.permissions.has_any(permission::admin))
 	{
 		m_auth_area->addNew<Wt::WAnchor>(
-		             Wt::WLink{Wt::LinkType::InternalPath, "/admin/org"}, "Orgs")
+		             Wt::WLink{Wt::LinkType::InternalPath, paths::admin_org_list()}, "Orgs")
 		  ->setStyleClass("nav-link");
 	}
 
 	// ── Settings ──────────────────────────────────────────────────────────────
 	m_auth_area->addNew<Wt::WAnchor>(
-	             Wt::WLink{Wt::LinkType::InternalPath, "/settings"}, "Settings")
+	             Wt::WLink{Wt::LinkType::InternalPath, std::string{paths::settings_path}}, "Settings")
 	  ->setStyleClass("nav-link");
 
 	// ── Notification bell ─────────────────────────────────────────────────────
@@ -150,7 +151,7 @@ void nav_bar::update()
 
 	// ── Logout ────────────────────────────────────────────────────────────────
 	m_auth_area->addNew<Wt::WAnchor>(
-	             Wt::WLink{Wt::LinkType::InternalPath, "/logout"}, "Logout")
+	             Wt::WLink{Wt::LinkType::InternalPath, std::string{paths::logout_path}}, "Logout")
 	  ->setStyleClass("nav-link nav-logout");
 }
 

@@ -7,6 +7,8 @@
 
 #include <algorithm>
 
+#include "paths.hpp"
+
 blog_list_page::blog_list_page(const std::vector<blog_post>& posts):
   m_posts{posts}
 {
@@ -57,7 +59,7 @@ void blog_list_page::render_list()
 		item->setStyleClass("post-item");
 
 		auto* title_link = item->addNew<Wt::WAnchor>(
-		  Wt::WLink{Wt::LinkType::InternalPath, "/blog/" + post.slug}, post.title);
+		  Wt::WLink{Wt::LinkType::InternalPath, paths::blog_view(post.slug)}, post.title);
 		title_link->setStyleClass("post-title");
 
 		std::string date_html =

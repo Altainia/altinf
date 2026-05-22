@@ -5,6 +5,8 @@
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
+#include "paths.hpp"
+
 org_admin_page::org_admin_page(org_db& odb, const session_data& session):
   m_db{odb},
   m_creator{session.username}
@@ -70,7 +72,7 @@ void org_admin_page::refresh_list()
 		auto* row = m_list->addNew<Wt::WContainerWidget>();
 		row->setStyleClass("org-list-row");
 		row->addNew<Wt::WAnchor>(
-		     Wt::WLink{Wt::LinkType::InternalPath, "/org/" + std::to_string(o.id)},
+		     Wt::WLink{Wt::LinkType::InternalPath, paths::org_view(o.id)},
 		     o.name)
 		  ->setStyleClass("org-list-link");
 	}

@@ -9,6 +9,7 @@
 
 #include "org/widgets/gantt_view_widget.hpp"
 #include "org/widgets/task_popup_widget.hpp"
+#include "paths.hpp"
 #include "widgets/live_hub.hpp"
 
 team_kanban_page::team_kanban_page(kanban_db&          db,
@@ -42,8 +43,6 @@ team_kanban_page::team_kanban_page(kanban_db&          db,
 		m_type_colors[ty.id] = ty.color;
 	}
 
-	const std::string team_url = "/board/" + std::to_string(team_id);
-
 	// ── Header ────────────────────────────────────────────────────────────────
 	auto* hdr = addNew<Wt::WContainerWidget>();
 	hdr->setStyleClass("kb-page-hdr");
@@ -55,17 +54,17 @@ team_kanban_page::team_kanban_page(kanban_db&          db,
 	tabs->setStyleClass("kb-view-tabs");
 
 	tabs->addNew<Wt::WAnchor>(
-	      Wt::WLink{Wt::LinkType::InternalPath, team_url}, "Board")
+	      Wt::WLink{Wt::LinkType::InternalPath, paths::team_kanban(team_id)}, "Board")
 	  ->setStyleClass(show_gantt ? "kb-tab" : "kb-tab kb-tab--active");
 
 	tabs->addNew<Wt::WAnchor>(
-	      Wt::WLink{Wt::LinkType::InternalPath, team_url + "/gantt"}, "Gantt")
+	      Wt::WLink{Wt::LinkType::InternalPath, paths::team_gantt(team_id)}, "Gantt")
 	  ->setStyleClass(show_gantt ? "kb-tab kb-tab--active" : "kb-tab");
 
 	if(caps.has_any(team_cap::create_task))
 	{
 		hdr->addNew<Wt::WAnchor>(
-		     Wt::WLink{Wt::LinkType::InternalPath, team_url + "/task/new"},
+		     Wt::WLink{Wt::LinkType::InternalPath, paths::team_task_new(team_id)},
 		     "+ New Task")
 		  ->setStyleClass("editor-btn kb-new-btn");
 	}
@@ -73,12 +72,12 @@ team_kanban_page::team_kanban_page(kanban_db&          db,
 	if(caps.has_any(team_cap::manage_team))
 	{
 		hdr->addNew<Wt::WAnchor>(
-		     Wt::WLink{Wt::LinkType::InternalPath, team_url + "/manage"},
+		     Wt::WLink{Wt::LinkType::InternalPath, paths::team_edit_members(team_id)},
 		     "Manage Team")
 		  ->setStyleClass("editor-btn editor-btn-cancel kb-manage-link");
 
 		hdr->addNew<Wt::WAnchor>(
-		     Wt::WLink{Wt::LinkType::InternalPath, team_url + "/settings"},
+		     Wt::WLink{Wt::LinkType::InternalPath, paths::team_edit_settings(team_id)},
 		     "Settings")
 		  ->setStyleClass("editor-btn editor-btn-cancel kb-manage-link");
 	}
@@ -86,7 +85,7 @@ team_kanban_page::team_kanban_page(kanban_db&          db,
 	if(caps.has_any(team_cap::view_archived))
 	{
 		hdr->addNew<Wt::WAnchor>(
-		     Wt::WLink{Wt::LinkType::InternalPath, team_url + "/archive"},
+		     Wt::WLink{Wt::LinkType::InternalPath, paths::team_archive(team_id)},
 		     "Archived")
 		  ->setStyleClass("editor-btn editor-btn-cancel kb-manage-link");
 	}

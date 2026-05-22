@@ -8,6 +8,7 @@
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
+#include "paths.hpp"
 #include "task_editor_form_widget.hpp"
 
 task_popup_widget::task_popup_widget(kanban_db& db, org_db& odb, long long task_id, const session_data& session, team_cap::flags caps, team_settings_entry settings, long long team_id): Wt::WDialog{}
@@ -29,10 +30,9 @@ task_popup_widget::task_popup_widget(kanban_db& db, org_db& odb, long long task_
 
 	setWindowTitle(task_opt->title);
 
-	const std::string edit_url = "/board/" + std::to_string(team_id) +
-	                             "/task/" + std::to_string(task_id) + "/edit";
-	auto* full_link = titleBar()->addNew<Wt::WAnchor>(
-	  Wt::WLink{Wt::LinkType::InternalPath, edit_url}, "Open full editor \xe2\x86\x97");
+	const std::string edit_url  = paths::task_edit(task_id);
+	auto*             full_link = titleBar()->addNew<Wt::WAnchor>(
+    Wt::WLink{Wt::LinkType::InternalPath, edit_url}, "Open full editor \xe2\x86\x97");
 	full_link->setStyleClass("kb-popup-full-link");
 	full_link->clicked().connect([this] { reject(); });
 

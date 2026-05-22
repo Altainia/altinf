@@ -4,6 +4,7 @@
 #include <Wt/WText.h>
 
 #include "org/widgets/task_editor_form_widget.hpp"
+#include "paths.hpp"
 
 task_edit_page::task_edit_page(
   kanban_db&               db,
@@ -22,13 +23,12 @@ task_edit_page::task_edit_page(
 	  is_new ? "<h1>New Task</h1>" : "<h1>Edit Task</h1>",
 	  Wt::TextFormat::UnsafeXHTML);
 
-	const long long   task_id   = existing ? existing->id : 0;
-	const std::string board_url = "/board/" + std::to_string(team_id);
+	const long long task_id = existing ? existing->id : 0;
 
 	addNew<task_editor_form_widget>(
 	  db, odb, task_id, team_id, session, caps, settings,
 	  on_save, // on_saved
-	  [board_url] {
-		  Wt::WApplication::instance()->setInternalPath(board_url, true);
+	  [team_id] {
+		  Wt::WApplication::instance()->setInternalPath(paths::team_kanban(team_id), true);
 	  });
 }

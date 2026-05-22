@@ -4,12 +4,14 @@
 #include <Wt/WLink.h>
 #include <Wt/WText.h>
 
+#include "paths.hpp"
+
 notification_bell::notification_bell(int unread_count)
 {
 	setStyleClass("nav-bell");
 
 	auto* link = addNew<Wt::WAnchor>(
-	  Wt::WLink{Wt::LinkType::InternalPath, "/notifications"});
+	  Wt::WLink{Wt::LinkType::InternalPath, std::string{paths::notifications_path}});
 	link->setStyleClass("nav-bell-link");
 	link->addNew<Wt::WText>("&#9956;", Wt::TextFormat::UnsafeXHTML); // bell glyph
 

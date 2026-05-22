@@ -9,6 +9,7 @@
 #include <Wt/WText.h>
 
 #include "org/org.hpp"
+#include "paths.hpp"
 #include "widgets/live_hub.hpp"
 
 team_edit_page::team_edit_page(org_db&             odb,
@@ -37,7 +38,7 @@ team_edit_page::team_edit_page(org_db&             odb,
 	addNew<Wt::WText>("<h1>Manage: " + org->name + "</h1>",
 	                  Wt::TextFormat::UnsafeXHTML);
 
-	m_back_url = back_url.empty() ? "/org/" + std::to_string(org_id) : back_url;
+	m_back_url = back_url.empty() ? paths::org_view(org_id) : back_url;
 	addNew<Wt::WAnchor>(
 	  Wt::WLink{Wt::LinkType::InternalPath, m_back_url},
 	  "\xe2\x86\x90 Back")
@@ -336,7 +337,7 @@ void team_edit_page::build_team_block(Wt::WContainerWidget* parent,
 
 	hdr->addNew<Wt::WAnchor>(
 	     Wt::WLink{Wt::LinkType::InternalPath,
-	               "/board/" + std::to_string(team.id) + "/settings"},
+	               paths::team_edit_settings(team.id)},
 	     "Settings")
 	  ->setStyleClass("editor-btn editor-btn-cancel kb-team-settings-link");
 

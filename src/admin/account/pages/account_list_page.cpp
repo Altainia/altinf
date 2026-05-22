@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "auth/permission.hpp"
+#include "paths.hpp"
 #include "widgets/live_hub.hpp"
 
 static std::string permissions_label(permission::flags perms)
@@ -89,7 +90,7 @@ void account_list_page::render()
 	auto* new_btn = addNew<Wt::WPushButton>("New User");
 	new_btn->setStyleClass("editor-btn account-new-btn");
 	new_btn->clicked().connect([] {
-		Wt::WApplication::instance()->setInternalPath("/admin/accounts/new", true);
+		Wt::WApplication::instance()->setInternalPath(paths::account_new(), true);
 	});
 
 	const auto users = m_db.list_users();
@@ -122,7 +123,7 @@ void account_list_page::render()
 		actions->setStyleClass("account-actions");
 
 		auto* edit_anchor = actions->addNew<Wt::WAnchor>(
-		  Wt::WLink{Wt::LinkType::InternalPath, "/admin/accounts/edit/" + u.username}, "Edit");
+		  Wt::WLink{Wt::LinkType::InternalPath, paths::account_edit(u.username)}, "Edit");
 		edit_anchor->setStyleClass("link-action-link");
 
 		if(is_me)

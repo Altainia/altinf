@@ -9,6 +9,7 @@
 
 #include <cstdio>
 
+#include "paths.hpp"
 #include "widgets/live_hub.hpp"
 
 const std::vector<std::string> org_type_manager_page::k_palette = {
@@ -64,9 +65,8 @@ org_type_manager_page::org_type_manager_page(kanban_db&          db,
 	addNew<Wt::WText>("<h1>Task Types \xe2\x80\x94 " + org_name + "</h1>",
 	                  Wt::TextFormat::UnsafeXHTML);
 
-	const std::string back_url = "/org/" + std::to_string(org_id);
 	addNew<Wt::WAnchor>(
-	  Wt::WLink{Wt::LinkType::InternalPath, back_url},
+	  Wt::WLink{Wt::LinkType::InternalPath, paths::org_view(org_id)},
 	  "\xe2\x86\x90 Back to organization")
 	  ->setStyleClass("kb-back-link");
 

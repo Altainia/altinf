@@ -7,6 +7,7 @@
 #include <Wt/WText.h>
 
 #include "auth/permission.hpp"
+#include "paths.hpp"
 #include "widgets/live_hub.hpp"
 
 account_edit_page::account_edit_page(user_db*              db,
@@ -85,7 +86,7 @@ account_edit_page::account_edit_page(user_db*              db,
 	auto* cancel_btn = btn_row->addNew<Wt::WPushButton>("Cancel");
 	cancel_btn->setStyleClass("editor-btn editor-btn-cancel");
 	cancel_btn->clicked().connect([] {
-		Wt::WApplication::instance()->setInternalPath("/admin/accounts", true);
+		Wt::WApplication::instance()->setInternalPath(paths::account_list(), true);
 	});
 
 	if(m_existing)

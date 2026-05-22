@@ -6,6 +6,7 @@
 #include <Wt/WText.h>
 
 #include "org/org.hpp"
+#include "paths.hpp"
 #include "widgets/live_hub.hpp"
 
 notifications_page::notifications_page(org_db&               odb,
@@ -159,9 +160,7 @@ void notifications_page::refresh()
 			                        Wt::TextFormat::Plain)
 			  ->setStyleClass("notif-msg");
 			body->addNew<Wt::WAnchor>(
-			      Wt::WLink{Wt::LinkType::InternalPath,
-			                "/board/" + std::to_string(team_id) + "/task/" +
-			                  std::to_string(task_id) + "/edit"},
+			      Wt::WLink{Wt::LinkType::InternalPath, paths::task_edit(task_id)},
 			      task_title)
 			  ->setStyleClass("notif-link");
 			body->addNew<Wt::WText>(
@@ -232,8 +231,7 @@ void notifications_page::refresh()
 			                        Wt::TextFormat::Plain)
 			  ->setStyleClass("notif-msg");
 			body->addNew<Wt::WAnchor>(
-			      Wt::WLink{Wt::LinkType::InternalPath,
-			                "/board/" + std::to_string(team_id)},
+			      Wt::WLink{Wt::LinkType::InternalPath, paths::team_kanban(team_id)},
 			      team_name)
 			  ->setStyleClass("notif-link");
 			body->addNew<Wt::WText>(
@@ -307,8 +305,7 @@ void notifications_page::refresh()
 			  ->setStyleClass("notif-msg");
 			body->addNew<Wt::WAnchor>(
 			      Wt::WLink{Wt::LinkType::InternalPath,
-			                "/board/" + std::to_string(team_id) + "/task/" +
-			                  std::to_string(task_id) + "/edit"},
+			                paths::task_edit(task_id)},
 			      task_title)
 			  ->setStyleClass("notif-link");
 			body->addNew<Wt::WText>(
@@ -334,8 +331,7 @@ void notifications_page::refresh()
 			  ->setStyleClass("notif-msg");
 			body->addNew<Wt::WAnchor>(
 			      Wt::WLink{Wt::LinkType::InternalPath,
-			                "/board/" + std::to_string(team_id) + "/task/" +
-			                  std::to_string(task_id) + "/edit"},
+			                paths::task_edit(task_id)},
 			      task_title)
 			  ->setStyleClass("notif-link");
 			body->addNew<Wt::WText>(
@@ -361,8 +357,7 @@ void notifications_page::refresh()
 			  ->setStyleClass("notif-msg");
 			body->addNew<Wt::WAnchor>(
 			      Wt::WLink{Wt::LinkType::InternalPath,
-			                "/board/" + std::to_string(team_id) + "/task/" +
-			                  std::to_string(task_id) + "/edit"},
+			                paths::task_edit(task_id)},
 			      task_title)
 			  ->setStyleClass("notif-link");
 			body->addNew<Wt::WText>(
@@ -391,8 +386,7 @@ void notifications_page::refresh()
 			  ->setStyleClass("notif-msg");
 			body->addNew<Wt::WAnchor>(
 			      Wt::WLink{Wt::LinkType::InternalPath,
-			                "/board/" + std::to_string(team_id) + "/task/" +
-			                  std::to_string(task_id) + "/edit"},
+			                paths::task_edit(task_id)},
 			      task_title)
 			  ->setStyleClass("notif-link");
 			body->addNew<Wt::WText>(

@@ -8,6 +8,8 @@
 #include <fstream>
 #include <sstream>
 
+#include "paths.hpp"
+
 blog_view_page::blog_view_page(const blog_post& post, const session_data& session)
 {
 	setStyleClass("page blog-post-page");
@@ -35,7 +37,7 @@ blog_view_page::blog_view_page(const blog_post& post, const session_data& sessio
 		for(const auto& tag: post.tags)
 		{
 			auto* chip = tag_row->addNew<Wt::WAnchor>(
-			  Wt::WLink{Wt::LinkType::InternalPath, "/blog"}, tag);
+			  Wt::WLink{Wt::LinkType::InternalPath, paths::blog_list()}, tag);
 			chip->setStyleClass("tag-chip");
 		}
 	}
@@ -43,7 +45,7 @@ blog_view_page::blog_view_page(const blog_post& post, const session_data& sessio
 	if(session.permissions.has_any(permission::post_write))
 	{
 		auto* edit_link = header->addNew<Wt::WAnchor>(
-		  Wt::WLink{Wt::LinkType::InternalPath, "/admin/edit/" + post.slug}, "Edit");
+		  Wt::WLink{Wt::LinkType::InternalPath, paths::blog_edit(post.slug)}, "Edit");
 		edit_link->setStyleClass("post-edit-link");
 	}
 

@@ -5,6 +5,7 @@
 #include <Wt/WLink.h>
 #include <Wt/WText.h>
 
+#include "paths.hpp"
 #include "widgets/live_hub.hpp"
 
 org_landing_page::org_landing_page(org_db&             odb,
@@ -61,20 +62,17 @@ void org_landing_page::render()
 		actions->setStyleClass("org-lead-actions");
 
 		actions->addNew<Wt::WAnchor>(
-		         Wt::WLink{Wt::LinkType::InternalPath,
-		                   "/org/" + std::to_string(m_org_id) + "/manage"},
+		         Wt::WLink{Wt::LinkType::InternalPath, paths::org_edit(m_org_id)},
 		         "Manage organization")
 		  ->setStyleClass("editor-btn");
 
 		actions->addNew<Wt::WAnchor>(
-		         Wt::WLink{Wt::LinkType::InternalPath,
-		                   "/org/" + std::to_string(m_org_id) + "/board"},
+		         Wt::WLink{Wt::LinkType::InternalPath, paths::org_board(m_org_id)},
 		         "View all teams\xe2\x80\x99 board")
 		  ->setStyleClass("editor-btn editor-btn-cancel");
 
 		actions->addNew<Wt::WAnchor>(
-		         Wt::WLink{Wt::LinkType::InternalPath,
-		                   "/org/" + std::to_string(m_org_id) + "/types"},
+		         Wt::WLink{Wt::LinkType::InternalPath, paths::org_types(m_org_id)},
 		         "Manage types")
 		  ->setStyleClass("editor-btn editor-btn-cancel");
 	}
@@ -95,8 +93,7 @@ void org_landing_page::render()
 		auto* row = addNew<Wt::WContainerWidget>();
 		row->setStyleClass("org-team-row");
 		row->addNew<Wt::WAnchor>(
-		     Wt::WLink{Wt::LinkType::InternalPath,
-		               "/board/" + std::to_string(t.id)},
+		     Wt::WLink{Wt::LinkType::InternalPath, paths::team_kanban(t.id)},
 		     t.name)
 		  ->setStyleClass("org-team-link");
 	}

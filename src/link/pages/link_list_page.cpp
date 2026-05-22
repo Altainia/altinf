@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "auth/permission.hpp"
+#include "paths.hpp"
 
 link_list_page::link_list_page(const std::vector<link_entry>& links,
                                const session_data&            session,
@@ -34,7 +35,7 @@ void link_list_page::render()
 		auto* add_btn = addNew<Wt::WPushButton>("Add Link");
 		add_btn->setStyleClass("editor-btn link-add-btn");
 		add_btn->clicked().connect([] {
-			Wt::WApplication::instance()->setInternalPath("/admin/links/new", true);
+			Wt::WApplication::instance()->setInternalPath(paths::link_new(), true);
 		});
 	}
 
@@ -90,8 +91,7 @@ void link_list_page::render()
 				ctrl->setStyleClass("link-ctrl");
 
 				auto* edit_anchor = ctrl->addNew<Wt::WAnchor>(
-				  Wt::WLink{Wt::LinkType::InternalPath,
-				            "/admin/links/edit/" + std::to_string(link_id)},
+				  Wt::WLink{Wt::LinkType::InternalPath, paths::link_edit(link_id)},
 				  "Edit");
 				edit_anchor->setStyleClass("link-action-link");
 
