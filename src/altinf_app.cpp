@@ -696,6 +696,7 @@ void altinf_app::handle_task(std::string_view rem)
 			return;
 		}
 
+		// team_id is derived from the task; no team cross-check needed (unlike the old board URL).
 		const long long team_id = opt->team_id;
 		const auto      team    = m_kanban_db->find_team(team_id);
 		if(!team)
