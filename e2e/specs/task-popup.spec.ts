@@ -291,7 +291,7 @@ test('description renders markdown in display mode', async ({ page }) => {
 
 test('gantt label area click opens popup', async ({ page }) => {
   await loginAs(page, 'admin', 'testpass');
-  await page.goto(teamUrl + '/gantt');
+  await page.goto(teamUrl.replace('/kanban', '/gantt'));
   await expect(page.locator('.gv-wrap')).toBeVisible();
   const hit = page.locator('.gantt-label-hit').first();
   // Only test if at least one task has dates and appears in the gantt
