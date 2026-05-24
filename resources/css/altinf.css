@@ -96,9 +96,14 @@ a:hover {
   background-color: var(--color-bg);
 }
 .Wt-calendar select {
-  background-color: var(--color-bg);
-  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
+  color: var(--color-text);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  background: var(--color-bg);
 }
 .Wt-calendar th {
   padding-left: 0.3rem;
@@ -106,7 +111,7 @@ a:hover {
   font-family: var(--font-mono);
 }
 .Wt-calendar td {
-  border-radius: 4px;
+  border-radius: var(--radius);
   font-family: var(--font-mono);
 }
 .Wt-calendar td:hover {
@@ -1790,13 +1795,15 @@ a:hover {
   margin-bottom: 0.5rem;
 }
 .org-landing-page h2 {
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  padding-bottom: 0.3rem;
+  text-transform: uppercase;
   font-size: 0.78rem;
   font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--color-muted);
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: 0.3rem;
   margin-top: 1.75rem;
   margin-bottom: 0.75rem;
 }

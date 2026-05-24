@@ -1,3 +1,5 @@
+@use 'forms';
+
 // ── Org admin page ────────────────────────────────────────────────────────────
 
 .org-admin-page {
@@ -35,13 +37,10 @@
 .org-landing-page {
   h1 { font-size: 2rem; margin-bottom: 0.5rem; }
   h2 {
+    @include forms.section-heading;
     font-size:      0.78rem;
     font-weight:    700;
-    text-transform: uppercase;
     letter-spacing: 0.07em;
-    color:          var(--color-muted);
-    border-bottom:  1px solid var(--color-border);
-    padding-bottom: 0.3rem;
     margin-top:     1.75rem;
     margin-bottom:  0.75rem;
   }
