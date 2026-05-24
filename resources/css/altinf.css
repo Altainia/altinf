@@ -321,34 +321,42 @@ a:hover {
 }
 
 .login-field {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
   background: var(--color-bg);
-  color: var(--color-text);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  font-size: 0.95rem;
+  color: var(--color-text);
   font-family: var(--font-sans);
+  font-size: 0.95rem;
+  padding: 0.5rem 0.75rem;
+  width: 100%;
 }
 .login-field:focus {
-  outline: none;
   border-color: var(--color-accent);
+  outline: none;
 }
 
 .login-btn {
-  padding: 0.5rem 1rem;
-  background: var(--color-accent);
-  color: var(--color-bg);
-  border: none;
   border-radius: var(--radius);
-  font-size: 0.95rem;
-  font-family: var(--font-sans);
   cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.15s, color 0.15s;
+}
+.login-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.login-btn {
+  background: var(--color-accent);
+  border: none;
+  color: var(--color-bg);
+  font-size: 0.95rem;
   font-weight: 600;
-  transition: background 0.15s;
+  padding: 0.5rem 1rem;
 }
 .login-btn:hover {
   background: var(--color-accent-h);
+  color: var(--color-bg);
+  text-decoration: none;
 }
 
 .login-error {

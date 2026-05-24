@@ -1,3 +1,6 @@
+@use 'buttons';
+@use 'forms';
+
 .login-page {
   display:         flex;
   justify-content: center;
@@ -18,33 +21,9 @@
   h2 { font-size: 1.25rem; margin-bottom: 0.25rem; }
 }
 
-.login-field {
-  width:         100%;
-  padding:       0.5rem 0.75rem;
-  background:    var(--color-bg);
-  color:         var(--color-text);
-  border:        1px solid var(--color-border);
-  border-radius: var(--radius);
-  font-size:     0.95rem;
-  font-family:   var(--font-sans);
+.login-field { @include forms.form-input; }
 
-  &:focus { outline: none; border-color: var(--color-accent); }
-}
-
-.login-btn {
-  padding:       0.5rem 1rem;
-  background:    var(--color-accent);
-  color:         var(--color-bg);
-  border:        none;
-  border-radius: var(--radius);
-  font-size:     0.95rem;
-  font-family:   var(--font-sans);
-  cursor:        pointer;
-  font-weight:   600;
-  transition:    background 0.15s;
-
-  &:hover { background: var(--color-accent-h); }
-}
+.login-btn { @include buttons.btn-primary; }
 
 .login-error {
   font-size:  0.85rem;
