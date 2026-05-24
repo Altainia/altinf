@@ -189,6 +189,9 @@
 .gv-btn {
   @include buttons.btn-ghost;
   @include buttons.btn-sm;
+  color: var(--color-text);
+  // Gantt nav buttons are disabled in JS — guard hover so disabled state stays flat
+  &:disabled:hover { background: transparent; }
 }
 
 .gv-btn--today {
@@ -265,6 +268,7 @@
   @include buttons.btn-ghost;
   @include buttons.btn-xs;
   flex-shrink: 0;
+  padding:     0.4rem 0.7rem;
   white-space: nowrap;
 
   &:hover { border-color: var(--color-accent); }
@@ -494,6 +498,7 @@
   button {
     @include buttons.btn-ghost;
     @include buttons.btn-xs;
+    font-size: 0.72rem;
 
     &:hover { border-color: var(--color-accent); }
   }

@@ -61,6 +61,7 @@
   select {
     @include forms.form-select;
     background: var(--color-bg);
+    border:     none;
   }
 
   th {
