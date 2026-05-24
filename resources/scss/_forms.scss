@@ -1,0 +1,54 @@
+// ── Input fields ──────────────────────────────────────────────────────────────
+
+@mixin form-input {
+  background:    var(--color-bg);
+  border:        1px solid var(--color-border);
+  border-radius: var(--radius);
+  color:         var(--color-text);
+  font-family:   var(--font-sans);
+  font-size:     0.95rem;
+  padding:       0.5rem 0.75rem;
+  width:         100%;
+
+  &:focus { border-color: var(--color-accent); outline: none; }
+}
+
+// ── Select dropdowns ──────────────────────────────────────────────────────────
+
+@mixin form-select {
+  background:    var(--color-surface);
+  border:        1px solid var(--color-border);
+  border-radius: var(--radius);
+  color:         var(--color-text);
+  cursor:        pointer;
+  font-family:   var(--font-sans);
+  font-size:     0.85rem;
+}
+
+// ── Textareas ─────────────────────────────────────────────────────────────────
+
+@mixin form-textarea {
+  background:    var(--color-bg);
+  border:        1px solid var(--color-border);
+  border-radius: var(--radius);
+  color:         var(--color-text);
+  font-family:   var(--font-mono);
+  font-size:     0.88rem;
+  resize:        vertical;
+  width:         100%;
+
+  &:focus { border-color: var(--color-accent); outline: none; }
+}
+
+// ── Section sub-headings ──────────────────────────────────────────────────────
+// Uppercase h2 pattern: used in kanban editor, team forms, comment sections,
+// links page, and org landing page.
+
+@mixin section-heading {
+  border-bottom:  1px solid var(--color-border);
+  color:          var(--color-muted);
+  font-size:      0.8rem;
+  letter-spacing: 0.06em;
+  padding-bottom: 0.3rem;
+  text-transform: uppercase;
+}
