@@ -728,28 +728,67 @@ a:hover {
 }
 
 .link-action-btn {
-  padding: 0.2rem 0.65rem;
-  font-size: 0.78rem;
-  font-family: var(--font-sans);
-  background: transparent;
-  color: var(--color-muted);
-  border: 1px solid var(--color-border);
   border-radius: var(--radius);
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  font-family: var(--font-sans);
+  transition: background 0.15s, color 0.15s;
+}
+.link-action-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.link-action-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
 }
 .link-action-btn:hover {
-  color: var(--color-text);
   background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.link-action-btn {
+  font-size: 0.78rem;
+  font-weight: 400;
+  padding: 0.2rem 0.65rem;
 }
 
 .link-delete-btn {
-  color: var(--color-error);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.15s, color 0.15s;
+}
+.link-delete-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.link-delete-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
+}
+.link-delete-btn:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.link-delete-btn {
   border-color: rgba(224, 108, 108, 0.2);
+  color: var(--color-error);
 }
 .link-delete-btn:hover {
   background: rgba(224, 108, 108, 0.1333333333);
   color: var(--color-error);
+}
+.link-delete-btn {
+  font-size: 0.78rem;
+  font-weight: 400;
+  padding: 0.2rem 0.65rem;
 }
 
 .link-confirm {
