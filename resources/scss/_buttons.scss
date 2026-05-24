@@ -1,0 +1,68 @@
+// ── Base ──────────────────────────────────────────────────────────────────────
+
+@mixin btn-base {
+  border-radius: var(--radius);
+  cursor:        pointer;
+  font-family:   var(--font-sans);
+  transition:    background 0.15s, color 0.15s;
+
+  &:disabled { opacity: 0.35; cursor: default; }
+}
+
+// ── Role variants ─────────────────────────────────────────────────────────────
+
+@mixin btn-primary {
+  @include btn-base;
+  background:  var(--color-accent);
+  border:      none;
+  color:       var(--color-bg);
+  font-size:   0.95rem;
+  font-weight: 600;
+  padding:     0.5rem 1rem;
+
+  &:hover { background: var(--color-accent-h); color: var(--color-bg); text-decoration: none; }
+}
+
+@mixin btn-ghost {
+  @include btn-base;
+  background: transparent;
+  border:     1px solid var(--color-border);
+  color:      var(--color-muted);
+  font-size:  0.95rem;
+  padding:    0.5rem 1rem;
+
+  &:hover { background: var(--color-surface); color: var(--color-text); text-decoration: none; }
+}
+
+@mixin btn-danger {
+  @include btn-base;
+  background:  #7a2424;
+  border:      1px solid #a33;
+  color:       var(--color-text);
+  font-size:   0.95rem;
+  font-weight: 600;
+  padding:     0.5rem 1rem;
+
+  &:hover { background: #922; }
+}
+
+@mixin btn-ghost-danger {
+  @include btn-ghost;
+  border-color: #e06c6c33;
+  color:        var(--color-error);
+
+  &:hover { background: #e06c6c22; color: var(--color-error); }
+}
+
+// ── Size variants (compose with any role) ─────────────────────────────────────
+
+@mixin btn-sm {
+  font-size: 0.85rem;
+  padding:   0.35rem 0.85rem;
+}
+
+@mixin btn-xs {
+  font-size:   0.78rem;
+  font-weight: 400;
+  padding:     0.2rem 0.65rem;
+}
