@@ -804,15 +804,30 @@ a:hover {
 }
 
 .kb-tab {
-  padding: 0.3rem 0.8rem;
-  border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.15s, color 0.15s;
+}
+.kb-tab:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.kb-tab {
+  background: transparent;
+  border: 1px solid var(--color-border);
   color: var(--color-muted);
-  text-decoration: none;
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
 }
 .kb-tab:hover {
+  background: var(--color-surface);
   color: var(--color-text);
+  text-decoration: none;
+}
+.kb-tab {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.85rem;
   text-decoration: none;
 }
 .kb-tab--active {
@@ -966,32 +981,58 @@ a:hover {
 }
 
 .gv-btn {
-  padding: 0.35rem 0.85rem;
-  background: transparent;
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  font-size: 0.85rem;
-  font-family: var(--font-sans);
   cursor: pointer;
+  font-family: var(--font-sans);
   transition: background 0.15s, color 0.15s;
-}
-.gv-btn:hover:not(:disabled) {
-  background: var(--color-surface);
 }
 .gv-btn:disabled {
   opacity: 0.35;
   cursor: default;
 }
+.gv-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
+}
+.gv-btn:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.gv-btn {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.85rem;
+}
 
 .gv-btn--today {
-  background: var(--color-accent);
-  color: var(--color-bg);
-  border-color: var(--color-accent);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.15s, color 0.15s;
 }
-.gv-btn--today:hover:not(:disabled) {
+.gv-btn--today:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.gv-btn--today {
+  background: var(--color-accent);
+  border: none;
+  color: var(--color-bg);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+}
+.gv-btn--today:hover {
   background: var(--color-accent-h);
   color: var(--color-bg);
+  text-decoration: none;
+}
+.gv-btn--today {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.85rem;
 }
 
 .gv-range-group {
@@ -1007,13 +1048,13 @@ a:hover {
 
 .gv-range-select {
   background: var(--color-surface);
-  color: var(--color-text);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  padding: 0.25rem 0.5rem;
-  font-size: 0.85rem;
-  font-family: var(--font-sans);
+  color: var(--color-text);
   cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
 }
 
 .kb-editor-page {
@@ -1031,12 +1072,12 @@ a:hover {
   max-width: 680px;
 }
 .kb-editor-form h2 {
-  font-size: 0.8rem;
-  color: var(--color-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
   padding-bottom: 0.3rem;
+  text-transform: uppercase;
   margin-top: 0.5rem;
 }
 
@@ -1076,18 +1117,35 @@ a:hover {
 }
 
 .kb-date-clear {
-  flex-shrink: 0;
-  padding: 0.4rem 0.7rem;
-  font-size: 0.78rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.15s, color 0.15s;
+}
+.kb-date-clear:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.kb-date-clear {
   background: transparent;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
   color: var(--color-muted);
-  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
+}
+.kb-date-clear:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.kb-date-clear {
+  font-size: 0.78rem;
+  font-weight: 400;
+  padding: 0.2rem 0.65rem;
+  flex-shrink: 0;
   white-space: nowrap;
 }
 .kb-date-clear:hover {
-  color: var(--color-text);
   border-color: var(--color-accent);
 }
 
@@ -1102,8 +1160,22 @@ a:hover {
 }
 
 .editor-btn-danger {
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.15s, color 0.15s;
+}
+.editor-btn-danger:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.editor-btn-danger {
   background: #7a2424;
-  border-color: #a33;
+  border: 1px solid #a33;
+  color: var(--color-text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
 }
 .editor-btn-danger:hover {
   background: #922;
@@ -1154,12 +1226,12 @@ a:hover {
   max-width: 560px;
 }
 .kb-team-form h2 {
-  font-size: 0.8rem;
-  color: var(--color-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
   padding-bottom: 0.3rem;
+  text-transform: uppercase;
   margin-top: 0.5rem;
 }
 
@@ -1282,12 +1354,12 @@ a:hover {
   margin-top: 1rem;
 }
 .kb-comment-section h2 {
-  font-size: 0.8rem;
-  color: var(--color-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
   padding-bottom: 0.3rem;
+  text-transform: uppercase;
   margin-top: 0.5rem;
 }
 
@@ -1344,16 +1416,33 @@ a:hover {
   margin-top: 0.5rem;
 }
 .kb-comment-actions button {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.15s, color 0.15s;
+}
+.kb-comment-actions button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.kb-comment-actions button {
   background: transparent;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
   color: var(--color-muted);
-  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
 }
 .kb-comment-actions button:hover {
+  background: var(--color-surface);
   color: var(--color-text);
+  text-decoration: none;
+}
+.kb-comment-actions button {
+  font-size: 0.78rem;
+  font-weight: 400;
+  padding: 0.2rem 0.65rem;
+}
+.kb-comment-actions button:hover {
   border-color: var(--color-accent);
 }
 .kb-comment-actions .kb-comment-del-btn:hover {

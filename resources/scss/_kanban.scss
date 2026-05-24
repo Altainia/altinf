@@ -1,3 +1,6 @@
+@use 'buttons';
+@use 'forms';
+
 // JS callback input — off-screen so Wt still registers the change event listener
 .kb-cb-hidden {
   position:       absolute;
@@ -37,19 +40,14 @@
 }
 
 .kb-tab {
-  padding:       0.3rem 0.8rem;
-  border:        1px solid var(--color-border);
-  border-radius: var(--radius);
-  font-size:     0.85rem;
-  color:         var(--color-muted);
+  @include buttons.btn-ghost;
+  @include buttons.btn-sm;
   text-decoration: none;
 
-  &:hover { color: var(--color-text); text-decoration: none; }
-
   &--active {
-    background:    var(--color-surface);
-    color:         var(--color-text);
-    border-color:  var(--color-accent);
+    background:   var(--color-surface);
+    color:        var(--color-text);
+    border-color: var(--color-accent);
   }
 }
 
@@ -189,35 +187,13 @@
 }
 
 .gv-btn {
-  padding:       0.35rem 0.85rem;
-  background:    transparent;
-  color:         var(--color-text);
-  border:        1px solid var(--color-border);
-  border-radius: var(--radius);
-  font-size:     0.85rem;
-  font-family:   var(--font-sans);
-  cursor:        pointer;
-  transition:    background 0.15s, color 0.15s;
-
-  &:hover:not(:disabled) {
-    background: var(--color-surface);
-  }
-
-  &:disabled {
-    opacity: 0.35;
-    cursor:  default;
-  }
+  @include buttons.btn-ghost;
+  @include buttons.btn-sm;
 }
 
 .gv-btn--today {
-  background:   var(--color-accent);
-  color:        var(--color-bg);
-  border-color: var(--color-accent);
-
-  &:hover:not(:disabled) {
-    background: var(--color-accent-h);
-    color:      var(--color-bg);
-  }
+  @include buttons.btn-primary;
+  @include buttons.btn-sm;
 }
 
 .gv-range-group {
@@ -232,14 +208,8 @@
 }
 
 .gv-range-select {
-  background:    var(--color-surface);
-  color:         var(--color-text);
-  border:        1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding:       0.25rem 0.5rem;
-  font-size:     0.85rem;
-  font-family:   var(--font-sans);
-  cursor:        pointer;
+  @include forms.form-select;
+  padding: 0.25rem 0.5rem;
 }
 
 // ── Task editor ───────────────────────────────────────────────────────────────
@@ -256,13 +226,8 @@
   max-width:      680px;
 
   h2 {
-    font-size:      0.8rem;
-    color:          var(--color-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    border-bottom:  1px solid var(--color-border);
-    padding-bottom: 0.3rem;
-    margin-top:     0.5rem;
+    @include forms.section-heading;
+    margin-top: 0.5rem;
   }
 }
 
@@ -297,20 +262,12 @@
 }
 
 .kb-date-clear {
-  flex-shrink:   0;
-  padding:       0.4rem 0.7rem;
-  font-size:     0.78rem;
-  background:    transparent;
-  border:        1px solid var(--color-border);
-  border-radius: var(--radius);
-  color:         var(--color-muted);
-  cursor:        pointer;
-  white-space:   nowrap;
+  @include buttons.btn-ghost;
+  @include buttons.btn-xs;
+  flex-shrink: 0;
+  white-space: nowrap;
 
-  &:hover {
-    color:        var(--color-text);
-    border-color: var(--color-accent);
-  }
+  &:hover { border-color: var(--color-accent); }
 }
 
 .kb-color-picker input[type="color"] {
@@ -323,12 +280,7 @@
   padding:       0;
 }
 
-.editor-btn-danger {
-  background:   #7a2424;
-  border-color: #a33;
-
-  &:hover { background: #922; }
-}
+.editor-btn-danger { @include buttons.btn-danger; }
 
 // ── Org manage — team blocks ──────────────────────────────────────────────────
 
@@ -377,13 +329,8 @@
   max-width:      560px;
 
   h2 {
-    font-size:      0.8rem;
-    color:          var(--color-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    border-bottom:  1px solid var(--color-border);
-    padding-bottom: 0.3rem;
-    margin-top:     0.5rem;
+    @include forms.section-heading;
+    margin-top: 0.5rem;
   }
 }
 
@@ -492,13 +439,8 @@
   margin-top:     1rem;
 
   h2 {
-    font-size:      0.8rem;
-    color:          var(--color-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    border-bottom:  1px solid var(--color-border);
-    padding-bottom: 0.3rem;
-    margin-top:     0.5rem;
+    @include forms.section-heading;
+    margin-top: 0.5rem;
   }
 }
 
@@ -545,20 +487,15 @@
 }
 
 .kb-comment-actions {
-  display:     flex;
-  gap:         0.5rem;
-  margin-top:  0.5rem;
+  display:    flex;
+  gap:        0.5rem;
+  margin-top: 0.5rem;
 
   button {
-    font-size:     0.72rem;
-    padding:       0.2rem 0.5rem;
-    background:    transparent;
-    border:        1px solid var(--color-border);
-    border-radius: var(--radius);
-    color:         var(--color-muted);
-    cursor:        pointer;
+    @include buttons.btn-ghost;
+    @include buttons.btn-xs;
 
-    &:hover { color: var(--color-text); border-color: var(--color-accent); }
+    &:hover { border-color: var(--color-accent); }
   }
 
   .kb-comment-del-btn:hover {
