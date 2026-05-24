@@ -500,18 +500,18 @@ a:hover {
 }
 
 .editor-field {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
   background: var(--color-bg);
-  color: var(--color-text);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  font-size: 0.95rem;
+  color: var(--color-text);
   font-family: var(--font-sans);
+  font-size: 0.95rem;
+  padding: 0.5rem 0.75rem;
+  width: 100%;
 }
 .editor-field:focus {
-  outline: none;
   border-color: var(--color-accent);
+  outline: none;
 }
 
 .editor-tab-bar {
@@ -521,22 +521,34 @@ a:hover {
 }
 
 .editor-tab {
-  padding: 0.35rem 0.9rem;
-  background: transparent;
-  color: var(--color-muted);
-  border: 1px solid var(--color-border);
-  border-bottom: none;
-  border-radius: var(--radius) var(--radius) 0 0;
-  font-size: 0.85rem;
-  font-family: var(--font-sans);
+  border-radius: var(--radius);
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  font-family: var(--font-sans);
+  transition: background 0.15s, color 0.15s;
+}
+.editor-tab:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.editor-tab {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
+}
+.editor-tab:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.editor-tab {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.85rem;
+  border-bottom: none;
 }
 .editor-tab + .editor-tab {
   margin-left: 2px;
-}
-.editor-tab:hover {
-  color: var(--color-text);
 }
 
 .editor-tab-active {
@@ -546,20 +558,25 @@ a:hover {
 }
 
 .editor-textarea {
-  width: 100%;
-  min-height: 420px;
-  padding: 0.75rem;
   background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
   color: var(--color-text);
-  border: 1px solid var(--color-accent);
-  border-radius: 0 var(--radius) var(--radius) var(--radius);
   font-family: var(--font-mono);
   font-size: 0.88rem;
-  line-height: 1.6;
   resize: vertical;
+  width: 100%;
 }
 .editor-textarea:focus {
+  border-color: var(--color-accent);
   outline: none;
+}
+.editor-textarea {
+  min-height: 420px;
+  padding: 0.75rem;
+  line-height: 1.6;
+  border: 1px solid var(--color-accent);
+  border-radius: 0 var(--radius) var(--radius) var(--radius);
 }
 
 .editor-preview {
@@ -577,16 +594,22 @@ a:hover {
 }
 
 .editor-btn {
-  padding: 0.5rem 1.25rem;
-  background: var(--color-accent);
-  color: var(--color-bg);
-  border: none;
   border-radius: var(--radius);
-  font-size: 0.95rem;
-  font-family: var(--font-sans);
-  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  font-family: var(--font-sans);
+  transition: background 0.15s, color 0.15s;
+}
+.editor-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.editor-btn {
+  background: var(--color-accent);
+  border: none;
+  color: var(--color-bg);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
 }
 .editor-btn:hover {
   background: var(--color-accent-h);
@@ -595,13 +618,25 @@ a:hover {
 }
 
 .editor-btn-cancel {
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.15s, color 0.15s;
+}
+.editor-btn-cancel:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.editor-btn-cancel {
   background: transparent;
-  color: var(--color-muted);
   border: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
 }
 .editor-btn-cancel:hover {
-  color: var(--color-text);
   background: var(--color-surface);
+  color: var(--color-text);
   text-decoration: none;
 }
 

@@ -1,3 +1,6 @@
+@use 'buttons';
+@use 'forms';
+
 .blog-page {
   h1 {
     font-size:      2rem;
@@ -88,9 +91,9 @@
   ul, ol     { padding-left: 1.5rem; margin-bottom: 1rem; }
 
   blockquote {
-    border-left:  3px solid var(--color-accent);
-    padding-left: 1rem;
-    color:        var(--color-muted);
+    border-left:   3px solid var(--color-accent);
+    padding-left:  1rem;
+    color:         var(--color-muted);
     margin-bottom: 1rem;
   }
 }
@@ -109,35 +112,16 @@
   h2 { font-size: 1.25rem; }
 }
 
-.editor-field {
-  width:         100%;
-  padding:       0.5rem 0.75rem;
-  background:    var(--color-bg);
-  color:         var(--color-text);
-  border:        1px solid var(--color-border);
-  border-radius: var(--radius);
-  font-size:     0.95rem;
-  font-family:   var(--font-sans);
-
-  &:focus { outline: none; border-color: var(--color-accent); }
-}
+.editor-field { @include forms.form-input; }
 
 .editor-tab-bar { display: flex; gap: 0; margin-bottom: -1px; }
 
 .editor-tab {
-  padding:       0.35rem 0.9rem;
-  background:    transparent;
-  color:         var(--color-muted);
-  border:        1px solid var(--color-border);
+  @include buttons.btn-ghost;
+  @include buttons.btn-sm;
   border-bottom: none;
-  border-radius: var(--radius) var(--radius) 0 0;
-  font-size:     0.85rem;
-  font-family:   var(--font-sans);
-  cursor:        pointer;
-  transition:    color 0.15s, background 0.15s;
 
   & + & { margin-left: 2px; }
-  &:hover { color: var(--color-text); }
 }
 
 .editor-tab-active {
@@ -147,19 +131,12 @@
 }
 
 .editor-textarea {
-  width:         100%;
+  @include forms.form-textarea;
   min-height:    420px;
   padding:       0.75rem;
-  background:    var(--color-bg);
-  color:         var(--color-text);
+  line-height:   1.6;
   border:        1px solid var(--color-accent);
   border-radius: 0 var(--radius) var(--radius) var(--radius);
-  font-family:   var(--font-mono);
-  font-size:     0.88rem;
-  line-height:   1.6;
-  resize:        vertical;
-
-  &:focus { outline: none; }
 }
 
 .editor-preview {
@@ -172,28 +149,8 @@
 
 .editor-btn-row { display: flex; gap: 0.75rem; margin-top: 2rem; }
 
-.editor-btn {
-  padding:       0.5rem 1.25rem;
-  background:    var(--color-accent);
-  color:         var(--color-bg);
-  border:        none;
-  border-radius: var(--radius);
-  font-size:     0.95rem;
-  font-family:   var(--font-sans);
-  font-weight:   600;
-  cursor:        pointer;
-  transition:    background 0.15s;
-
-  &:hover { background: var(--color-accent-h); color: var(--color-bg); text-decoration: none; }
-}
-
-.editor-btn-cancel {
-  background: transparent;
-  color:      var(--color-muted);
-  border:     1px solid var(--color-border);
-
-  &:hover { color: var(--color-text); background: var(--color-surface); text-decoration: none; }
-}
+.editor-btn        { @include buttons.btn-primary; }
+.editor-btn-cancel { @include buttons.btn-ghost; }
 
 .editor-status { font-size: 0.85rem; color: var(--color-error); min-height: 1.2em; }
 
