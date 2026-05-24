@@ -13,8 +13,8 @@ $bg-colors: (
 $text-intents: (
   'text':     #d4d4d4,
   'muted':    #6b6b6b,
-  'accent':   #d279d2,
-  'accent-h': #db94db,
+  'accent':   #a673a6,
+  'accent-h': #b58cb5,
   'error':    #e06c6c,
 );
 
@@ -58,5 +58,5 @@ $text-large:  ();
   --font-mono: 'Fira Code', 'Cascadia Code', monospace;
 
   --max-width: 720px;
-  --radius:    4px;
+  --radius:    0;
 }

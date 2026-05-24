@@ -4,18 +4,18 @@
   --color-border: #2e2e2e;
   --color-text: #d4d4d4;
   --color-muted: rgb(129.5302200317, 129.5302200317, 129.5302200317);
-  --color-accent: #d279d2;
-  --color-accent-h: #db94db;
+  --color-accent: #a673a6;
+  --color-accent-h: #b58cb5;
   --color-error: #e06c6c;
   --color-text-large: #d4d4d4;
   --color-muted-large: #6b6b6b;
-  --color-accent-large: #d279d2;
-  --color-accent-h-large: #db94db;
+  --color-accent-large: #a673a6;
+  --color-accent-h-large: #b58cb5;
   --color-error-large: #e06c6c;
   --font-sans: 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'Fira Code', 'Cascadia Code', monospace;
   --max-width: 720px;
-  --radius: 4px;
+  --radius: 0;
 }
 
 *, *::before, *::after {
