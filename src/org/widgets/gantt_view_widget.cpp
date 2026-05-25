@@ -42,9 +42,8 @@ static std::string date_str_gv(const Wt::WDate& d)
 }
 
 gantt_view_widget::gantt_view_widget(std::vector<kanban_task_entry>          tasks,
-                                     const std::map<long long, std::string>& type_colors,
-                                     std::function<void(long long)>          on_edit):
-  m_type_colors{type_colors}, m_on_edit{std::move(on_edit)}
+                                     const std::map<long long, std::string>& type_colors):
+  m_type_colors{type_colors}
 {
 	Wt::WApplication::instance()->require("js/gantt.js?v=" BUILD_VERSION);
 	setStyleClass("gv-wrap");
@@ -54,7 +53,7 @@ gantt_view_widget::gantt_view_widget(std::vector<kanban_task_entry>          tas
 	m_cb_id = cb->id();
 	cb->changed().connect([this, cb] {
 		const std::string p = cb->text().toUTF8();
-		if(p.rfind("EDIT:", 0) == 0 && m_on_edit)
+		if(p.rfind("EDIT:", 0) == 0)
 		{
 			long long tid = 0;
 			try
@@ -66,7 +65,7 @@ gantt_view_widget::gantt_view_widget(std::vector<kanban_task_entry>          tas
 				cb->setText(Wt::WString{});
 				return;
 			} // malformed payload
-			m_on_edit(tid);
+			edit_requested.emit(tid);
 		}
 		cb->setText(Wt::WString{});
 	});

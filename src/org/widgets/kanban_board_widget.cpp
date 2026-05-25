@@ -41,12 +41,10 @@ static std::string date_str(const Wt::WDate& d)
 }
 
 kanban_board_widget::kanban_board_widget(
-  std::vector<kanban_task_entry>                          tasks,
-  bool                                                    can_move_columns,
-  bool                                                    can_move_done,
-  const std::map<long long, std::string>&                 type_colors,
-  std::function<void(long long, const std::string&, int)> on_move,
-  std::function<void(long long)>                          on_edit):
+  std::vector<kanban_task_entry>          tasks,
+  bool                                    can_move_columns,
+  bool                                    can_move_done,
+  const std::map<long long, std::string>& type_colors):
   m_type_colors{type_colors}
 {
 	Wt::WApplication::instance()->require("js/kanban.js?v=" BUILD_VERSION);
@@ -62,29 +60,28 @@ kanban_board_widget::kanban_board_widget(
 	cb->setStyleClass("kb-cb-hidden");
 	m_cb_id = cb->id();
 
-	cb->changed().connect(
-	  [cb, on_move = std::move(on_move), on_edit = std::move(on_edit)]() mutable {
-		  const std::string payload = cb->text().toUTF8();
-		  if(payload.starts_with("MOVE:"))
-		  {
-			  // MOVE:<task_id>:<new_status>:<sort_order>
-			  const auto s1 = payload.find(':', 5);
-			  const auto s2 = s1 != std::string::npos ? payload.find(':', s1 + 1) : std::string::npos;
-			  if(s1 == std::string::npos || s2 == std::string::npos)
-			  {
-				  return;
-			  }
-			  const long long   tid    = std::stoll(payload.substr(5, s1 - 5));
-			  const std::string status = payload.substr(s1 + 1, s2 - s1 - 1);
-			  const int         sort   = std::stoi(payload.substr(s2 + 1));
-			  on_move(tid, status, sort);
-		  }
-		  else if(payload.starts_with("EDIT:"))
-		  {
-			  const long long tid = std::stoll(payload.substr(5));
-			  on_edit(tid);
-		  }
-	  });
+	cb->changed().connect([this, cb]() {
+		const std::string payload = cb->text().toUTF8();
+		if(payload.starts_with("MOVE:"))
+		{
+			// MOVE:<task_id>:<new_status>:<sort_order>
+			const auto s1 = payload.find(':', 5);
+			const auto s2 = s1 != std::string::npos ? payload.find(':', s1 + 1) : std::string::npos;
+			if(s1 == std::string::npos || s2 == std::string::npos)
+			{
+				return;
+			}
+			const long long   tid    = std::stoll(payload.substr(5, s1 - 5));
+			const std::string status = payload.substr(s1 + 1, s2 - s1 - 1);
+			const int         sort   = std::stoi(payload.substr(s2 + 1));
+			moved.emit(tid, status, sort);
+		}
+		else if(payload.starts_with("EDIT:"))
+		{
+			const long long tid = std::stoll(payload.substr(5));
+			edit_requested.emit(tid);
+		}
+	});
 
 	init_js(serialize_tasks(tasks), can_move_columns, can_move_done);
 }

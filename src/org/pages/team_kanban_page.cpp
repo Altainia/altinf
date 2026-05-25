@@ -101,21 +101,17 @@ team_kanban_page::team_kanban_page(kanban_db&          db,
 
 	if(show_gantt)
 	{
-		m_gantt_widget = addNew<gantt_view_widget>(
-		  tasks,
-		  m_type_colors,
-		  [this](long long tid) {
-			  new task_popup_widget(
-			    m_db, m_odb, tid, m_session, m_caps, m_settings, m_team_id);
-		  });
+		m_gantt_widget = addNew<gantt_view_widget>(tasks, m_type_colors);
+		m_gantt_widget->edit_requested.connect([this](long long tid) {
+			new task_popup_widget(
+			  m_db, m_odb, tid, m_session, m_caps, m_settings, m_team_id);
+		});
 	}
 	else
 	{
 		m_board_widget = addNew<kanban_board_widget>(
-		  tasks,
-		  can_move_columns,
-		  can_move_done,
-		  m_type_colors,
+		  tasks, can_move_columns, can_move_done, m_type_colors);
+		m_board_widget->moved.connect(
 		  [this, can_move_columns, can_move_done](long long tid, const std::string& status, int sort) {
 			  const auto task = m_db.find_task(tid);
 			  if(!task)
@@ -134,11 +130,11 @@ team_kanban_page::team_kanban_page(kanban_db&          db,
 			  }
 			  m_db.update_task_status(tid, status, sort, m_username);
 			  live_hub::instance().broadcast("team:" + std::to_string(m_team_id));
-		  },
-		  [this](long long tid) {
-			  new task_popup_widget(
-			    m_db, m_odb, tid, m_session, m_caps, m_settings, m_team_id);
 		  });
+		m_board_widget->edit_requested.connect([this](long long tid) {
+			new task_popup_widget(
+			  m_db, m_odb, tid, m_session, m_caps, m_settings, m_team_id);
+		});
 	}
 
 	// Subscribe to live updates for this team.

@@ -73,15 +73,15 @@ org_board_page::org_board_page(org_db&             odb,
 		  tasks,
 		  true, // org leads always have column-move rights
 		  true, // org leads always have done-move rights
-		  m_type_colors,
+		  m_type_colors);
+		board->moved.connect(
 		  [&kdb, actor = session.username](long long task_id, const std::string& status, int sort) {
 			  kdb.update_task_status(task_id, status, sort, actor);
-		  },
-		  [](long long task_id) {
-			  Wt::WApplication::instance()->setInternalPath(
-			    paths::task_edit(task_id), true);
 		  });
-		(void)board;
+		board->edit_requested.connect([](long long task_id) {
+			Wt::WApplication::instance()->setInternalPath(
+			  paths::task_edit(task_id), true);
+		});
 	}
 
 	// Subscribe to live updates when task types change for this org.
