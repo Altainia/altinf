@@ -5,6 +5,7 @@
 #include <Wt/WDateEdit.h>
 #include <Wt/WLineEdit.h>
 #include <Wt/WPushButton.h>
+#include <Wt/WSignal.h>
 #include <Wt/WText.h>
 #include <Wt/WTextArea.h>
 

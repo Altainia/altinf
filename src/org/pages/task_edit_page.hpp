@@ -1,9 +1,9 @@
 #pragma once
 
 #include <Wt/WContainerWidget.h>
+#include <Wt/WSignal.h>
 
 #include <string>
-#include <vector>
 
 #include "auth/session_data.hpp"
 #include "org/kanban.hpp"
