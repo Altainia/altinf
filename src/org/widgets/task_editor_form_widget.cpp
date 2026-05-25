@@ -65,23 +65,19 @@ const std::vector<std::string> task_editor_form_widget::k_status_labels =
 // ── Constructor ───────────────────────────────────────────────────────────────
 
 task_editor_form_widget::task_editor_form_widget(
-  kanban_db&            db,
-  org_db&               odb,
-  long long             task_id,
-  long long             team_id,
-  const session_data&   session,
-  team_cap::flags       caps,
-  team_settings_entry   settings,
-  std::function<void()> on_saved,
-  std::function<void()> on_cancel): m_db{db},
-                                    m_odb{odb},
-                                    m_task_id{task_id},
-                                    m_team_id{team_id},
-                                    m_username{session.username},
-                                    m_caps{caps},
-                                    m_settings{settings},
-                                    m_on_saved{std::move(on_saved)},
-                                    m_on_cancel{std::move(on_cancel)}
+  kanban_db&          db,
+  org_db&             odb,
+  long long           task_id,
+  long long           team_id,
+  const session_data& session,
+  team_cap::flags     caps,
+  team_settings_entry settings): m_db{db},
+                                 m_odb{odb},
+                                 m_task_id{task_id},
+                                 m_team_id{team_id},
+                                 m_username{session.username},
+                                 m_caps{caps},
+                                 m_settings{settings}
 {
 	const bool is_new = (task_id == 0);
 
@@ -116,7 +112,7 @@ task_editor_form_widget::task_editor_form_widget(
 		  "This task was updated by another user.", Wt::TextFormat::Plain);
 		auto* reload_btn = m_stale_banner->addNew<Wt::WPushButton>("Reload");
 		reload_btn->setStyleClass("editor-btn");
-		reload_btn->clicked().connect([this] { if(m_on_cancel){ m_on_cancel();} });
+		reload_btn->clicked().connect([this] { canceled.emit(); });
 		m_stale_banner->hide();
 	}
 
@@ -788,7 +784,7 @@ task_editor_form_widget::task_editor_form_widget(
 				m_db.unarchive_task(m_original.id, m_username);
 				live_hub::instance().broadcast("team:" + std::to_string(m_team_id));
 				live_hub::instance().broadcast("task:" + std::to_string(m_original.id));
-				m_on_saved();
+				saved.emit();
 			});
 		}
 		else
@@ -812,17 +808,15 @@ task_editor_form_widget::task_editor_form_widget(
 				m_db.archive_task(tid, m_username);
 				live_hub::instance().broadcast("team:" + std::to_string(m_team_id));
 				live_hub::instance().broadcast("task:" + std::to_string(tid));
-				m_on_saved();
+				saved.emit();
 			});
 		}
 	}
 
-	if(m_on_cancel)
 	{
 		auto* cancel = btn_row->addNew<Wt::WPushButton>("Cancel");
 		cancel->setStyleClass("editor-btn editor-btn-cancel");
-		cancel->clicked().connect([this] { if(m_on_cancel){ m_on_cancel();
-} });
+		cancel->clicked().connect([this] { canceled.emit(); });
 	}
 
 	// ── Live-hub subscriptions (existing tasks) ───────────────────────────────
@@ -1057,7 +1051,7 @@ void task_editor_form_widget::save()
 	}
 
 	live_hub::instance().broadcast("team:" + std::to_string(m_team_id));
-	m_on_saved();
+	saved.emit();
 }
 
 void task_editor_form_widget::rebuild_history()

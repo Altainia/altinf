@@ -597,10 +597,13 @@ void altinf_app::handle_team(std::string_view rem)
 					show_forbidden();
 					return;
 				}
-				m_content->addNew<task_edit_page>(
-				  *m_kanban_db, *m_org_db, team_id, m_session, caps, settings, nullptr, [this, team_id] {
-					  setInternalPath(paths::team_kanban(team_id), true);
-				  });
+				{
+					auto* page = m_content->addNew<task_edit_page>(
+					  *m_kanban_db, *m_org_db, team_id, m_session, caps, settings, nullptr);
+					page->saved.connect([this, team_id] {
+						setInternalPath(paths::team_kanban(team_id), true);
+					});
+				}
 			}
 			else
 			{
@@ -717,10 +720,13 @@ void altinf_app::handle_task(std::string_view rem)
 		}
 
 		m_edit_task = opt;
-		m_content->addNew<task_edit_page>(
-		  *m_kanban_db, *m_org_db, team_id, m_session, caps, settings, &(*m_edit_task), [this, team_id] {
-			  setInternalPath(paths::team_kanban(team_id), true);
-		  });
+		{
+			auto* page = m_content->addNew<task_edit_page>(
+			  *m_kanban_db, *m_org_db, team_id, m_session, caps, settings, &(*m_edit_task));
+			page->saved.connect([this, team_id] {
+				setInternalPath(paths::team_kanban(team_id), true);
+			});
+		}
 	}
 	else
 	{

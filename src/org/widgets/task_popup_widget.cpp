@@ -37,7 +37,9 @@ task_popup_widget::task_popup_widget(kanban_db& db, org_db& odb, long long task_
 	full_link->clicked().connect([this] { reject(); });
 
 	m_form = contents()->addNew<task_editor_form_widget>(
-	  db, odb, task_id, team_id, session, caps, settings, [this] { accept(); }, [this] { try_close(); });
+	  db, odb, task_id, team_id, session, caps, settings);
+	m_form->saved.connect([this] { accept(); });
+	m_form->canceled.connect([this] { try_close(); });
 
 	// Hidden input: JS → C++ close callback
 	m_close_cb = contents()->addNew<Wt::WLineEdit>();

@@ -8,7 +8,6 @@
 #include <Wt/WText.h>
 #include <Wt/WTextArea.h>
 
-#include <functional>
 #include <map>
 #include <memory>
 #include <set>
@@ -25,20 +24,21 @@ class task_editor_form_widget: public Wt::WContainerWidget
 {
 public:
 	// task_id == 0 → new-task creation mode.
-	task_editor_form_widget(kanban_db&            db,
-	                        org_db&               odb,
-	                        long long             task_id,
-	                        long long             team_id,
-	                        const session_data&   session,
-	                        team_cap::flags       caps,
-	                        team_settings_entry   settings,
-	                        std::function<void()> on_saved,
-	                        std::function<void()> on_cancel);
+	task_editor_form_widget(kanban_db&          db,
+	                        org_db&             odb,
+	                        long long           task_id,
+	                        long long           team_id,
+	                        const session_data& session,
+	                        team_cap::flags     caps,
+	                        team_settings_entry settings);
 
 	~task_editor_form_widget() override;
 
 	bool is_dirty() const;
 	bool is_stale() const;
+
+	Wt::Signal<> saved;
+	Wt::Signal<> canceled;
 
 private:
 	kanban_db&            m_db;
@@ -51,8 +51,6 @@ private:
 	team_settings_entry   m_settings;
 	std::string           m_session_id;
 	std::shared_ptr<bool> m_alive{std::make_shared<bool>(true)};
-	std::function<void()> m_on_saved;
-	std::function<void()> m_on_cancel;
 
 	kanban_task_entry m_original;
 

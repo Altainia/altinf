@@ -2,7 +2,6 @@
 
 #include <Wt/WContainerWidget.h>
 
-#include <functional>
 #include <string>
 #include <vector>
 
@@ -21,6 +20,7 @@ public:
 	               const session_data&      session,
 	               team_cap::flags          caps,
 	               team_settings_entry      settings,
-	               const kanban_task_entry* existing,
-	               std::function<void()>    on_save);
+	               const kanban_task_entry* existing);
+
+	Wt::Signal<> saved;
 };
