@@ -19,25 +19,25 @@ class team_edit_page: public Wt::WContainerWidget
 {
 public:
 	team_edit_page(org_db&             odb,
-	                 kanban_db&          kdb,
-	                 user_db&            udb,
-	                 long long           org_id,
-	                 const session_data& session,
-	                 const std::string&  back_url = {});
+	               kanban_db&          kdb,
+	               user_db&            udb,
+	               long long           org_id,
+	               const session_data& session,
+	               const std::string&  back_url = {});
 
 	~team_edit_page() override;
 
 private:
-	org_db&             m_odb;
-	kanban_db&          m_kdb;
-	user_db&            m_udb;
-	long long           m_org_id;
-	std::string         m_org_name;
-	const session_data& m_session;
+	org_db&               m_odb;
+	kanban_db&            m_kdb;
+	user_db&              m_udb;
+	long long             m_org_id;
+	std::string           m_org_name;
+	const session_data&   m_session;
 	std::string           m_session_id;
 	std::shared_ptr<bool> m_alive{std::make_shared<bool>(true)};
 
-	std::string           m_back_url;
+	std::string m_back_url;
 
 	Wt::WContainerWidget* m_members_section{nullptr};
 	Wt::WContainerWidget* m_pending_section{nullptr};

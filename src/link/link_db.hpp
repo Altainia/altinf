@@ -1,12 +1,12 @@
 #pragma once
 
-#include "link.hpp"
-
 #include <Wt/Dbo/Session.h>
 
 #include <optional>
 #include <string>
 #include <vector>
+
+#include "link.hpp"
 
 class link_db
 {

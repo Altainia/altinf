@@ -15,6 +15,7 @@
 #include "../auth/session_data.hpp"
 #include "../auth/user_db.hpp"
 #include "../blog/post_writer.hpp"
+#include "post_api_json.hpp"
 
 post_api_resource::post_api_resource(std::string db_path, std::filesystem::path posts_dir):
   m_db_path{std::move(db_path)},
@@ -27,42 +28,11 @@ post_api_resource::~post_api_resource()
 	beingDeleted();
 }
 
-static std::string json_escape(const std::string& s)
-{
-	std::string out;
-	out.reserve(s.size());
-	for(const char c: s)
-	{
-		switch(c)
-		{
-		case '"':
-			out += "\\\"";
-			break;
-		case '\\':
-			out += "\\\\";
-			break;
-		case '\n':
-			out += "\\n";
-			break;
-		case '\r':
-			out += "\\r";
-			break;
-		case '\t':
-			out += "\\t";
-			break;
-		default:
-			out += c;
-			break;
-		}
-	}
-	return out;
-}
-
 static void json_error(Wt::Http::Response& response, int status, const std::string& message)
 {
 	response.setStatus(status);
 	response.setMimeType("application/json");
-	response.out() << "{\"status\":\"error\",\"message\":\"" << json_escape(message) << "\"}";
+	response.out() << api::json_error_body(message);
 }
 
 void post_api_resource::handleRequest(const Wt::Http::Request& request,
@@ -133,5 +103,5 @@ void post_api_resource::handleRequest(const Wt::Http::Request& request,
 
 	response.setStatus(201);
 	response.setMimeType("application/json");
-	response.out() << "{\"status\":\"ok\",\"slug\":\"" << slug << "\"}";
+	response.out() << api::json_ok_body(slug);
 }

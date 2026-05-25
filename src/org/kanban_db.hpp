@@ -1,12 +1,12 @@
 #pragma once
 
-#include "org/kanban.hpp"
-
 #include <Wt/Dbo/Session.h>
 
 #include <optional>
 #include <string>
 #include <vector>
+
+#include "org/kanban.hpp"
 
 class kanban_db
 {
@@ -30,7 +30,7 @@ public:
 	void                           remove_member_from_org_teams(long long          org_id,
 	                                                            const std::string& username);
 	void                           remove_member_from_all_teams(const std::string& username);
-	void                           set_team_lead(long long team_id,
+	void                           set_team_lead(long long          team_id,
 	                                             const std::string& username,
 	                                             bool               is_lead);
 	bool                           is_team_lead(long long team_id, const std::string& username);
@@ -40,16 +40,16 @@ public:
 	std::vector<long long>         team_ids_for_user(const std::string& username);
 
 	// Tasks
-	long long                        add_task(const kanban_task_entry& e,
-	                                          const std::string& actor);
-	void                             update_task(const kanban_task_entry& e,
-	                                             const std::string& actor);
-	void                             update_task_status(long long          id,
-	                                                    const std::string& status,
-	                                                    int                sort_order,
-	                                                    const std::string& actor);
+	long long add_task(const kanban_task_entry& e,
+	                   const std::string&       actor);
+	void      update_task(const kanban_task_entry& e,
+	                      const std::string&       actor);
+	void      update_task_status(long long          id,
+	                             const std::string& status,
+	                             int                sort_order,
+	                             const std::string& actor);
 	// Returns false if the task is in "done", is archived, or username is already assigned.
-	bool                             add_assignee(long long task_id, const std::string& username, const std::string& actor);
+	bool add_assignee(long long task_id, const std::string& username, const std::string& actor);
 	// Returns false if username is not currently an assignee or task is archived.
 	bool                             remove_assignee(long long task_id, const std::string& username, const std::string& actor);
 	std::vector<std::string>         assignees_for_task(long long task_id);
@@ -61,20 +61,20 @@ public:
 	std::vector<task_event_entry>    history_for_task(long long task_id);
 
 	// Comments
-	long long                            add_comment(long long task_id,
-	                                                 const std::string& author,
-	                                                 const std::string& body);
-	void                                 edit_comment(long long comment_id,
-	                                                  const std::string& editor,
-	                                                  const std::string& new_body);
-	void                                 delete_comment(long long comment_id,
-	                                                    const std::string& actor);
-	std::vector<task_comment_entry>      comments_for_task(long long task_id);
+	long long                       add_comment(long long          task_id,
+	                                            const std::string& author,
+	                                            const std::string& body);
+	void                            edit_comment(long long          comment_id,
+	                                             const std::string& editor,
+	                                             const std::string& new_body);
+	void                            delete_comment(long long          comment_id,
+	                                               const std::string& actor);
+	std::vector<task_comment_entry> comments_for_task(long long task_id);
 
 	// Team settings
 	team_settings_entry                    settings_for_team(long long team_id);
 	void                                   set_team_settings(const team_settings_entry& s,
-	                                                         const std::string& actor);
+	                                                         const std::string&         actor);
 	std::vector<team_settings_event_entry> settings_events_for_team(long long team_id);
 
 	// Task types
@@ -95,15 +95,15 @@ private:
 	static kanban_task_entry to_entry(const Wt::Dbo::ptr<kanban_task_record>& p);
 	static task_type_entry   to_entry(const Wt::Dbo::ptr<task_type_record>& p);
 
-	void record_event(long long task_id,
-	                  const std::string& actor,
-	                  const std::string& event_type,
+	void record_event(long long                                   task_id,
+	                  const std::string&                          actor,
+	                  const std::string&                          event_type,
 	                  const std::vector<task_field_change_entry>& changes);
 	void record_comment_event(long long          comment_id,
-	                           const std::string& actor,
-	                           const std::string& event_type,
-	                           const std::string& body_snapshot);
+	                          const std::string& actor,
+	                          const std::string& event_type,
+	                          const std::string& body_snapshot);
 	void maybe_clear_assignees_for_done(long long          task_id,
-	                                     const std::string& new_status,
-	                                     const std::string& actor);
+	                                    const std::string& new_status,
+	                                    const std::string& actor);
 };

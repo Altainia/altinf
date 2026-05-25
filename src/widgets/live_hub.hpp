@@ -13,36 +13,36 @@
 class live_hub
 {
 public:
-    using post_fn_t =
-      std::function<void(const std::string& session_id, std::function<void()> fn)>;
+	using post_fn_t =
+	  std::function<void(const std::string& session_id, std::function<void()> fn)>;
 
-    static live_hub& instance();
+	static live_hub& instance();
 
-    // Replace dispatch function and clear all subscriptions. For test setup only.
-    void reset(post_fn_t post_fn = {});
+	// Replace dispatch function and clear all subscriptions. For test setup only.
+	void reset(post_fn_t post_fn = {});
 
-    // Subscribe a session callback to a channel.
-    void subscribe(const std::string&    channel,
-                   const std::string&    session_id,
-                   std::function<void()> fn);
+	// Subscribe a session callback to a channel.
+	void subscribe(const std::string&    channel,
+	               const std::string&    session_id,
+	               std::function<void()> fn);
 
-    // Remove a session's subscription from a channel.
-    void unsubscribe(const std::string& channel,
-                     const std::string& session_id);
+	// Remove a session's subscription from a channel.
+	void unsubscribe(const std::string& channel,
+	                 const std::string& session_id);
 
-    // Post fn into every session subscribed to channel. Thread-safe.
-    void broadcast(const std::string& channel);
+	// Post fn into every session subscribed to channel. Thread-safe.
+	void broadcast(const std::string& channel);
 
 private:
-    live_hub() = default;
+	live_hub() = default;
 
-    struct entry
-    {
-        std::string           session_id;
-        std::function<void()> update_fn;
-    };
+	struct entry
+	{
+		std::string           session_id;
+		std::function<void()> update_fn;
+	};
 
-    std::mutex                                m_mutex;
-    std::map<std::string, std::vector<entry>> m_sessions; // channel → entries
-    post_fn_t                                 m_post_fn;  // null = use WServer::post
+	std::mutex                                m_mutex;
+	std::map<std::string, std::vector<entry>> m_sessions; // channel → entries
+	post_fn_t                                 m_post_fn;  // null = use WServer::post
 };

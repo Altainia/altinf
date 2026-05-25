@@ -1,11 +1,11 @@
 #pragma once
 
-#include "blog/blog_post.hpp"
-
 #include <Wt/WContainerWidget.h>
 
 #include <string>
 #include <vector>
+
+#include "blog/blog_post.hpp"
 
 class blog_list_page: public Wt::WContainerWidget
 {

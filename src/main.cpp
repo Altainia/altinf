@@ -1,7 +1,3 @@
-#include "altinf_app.hpp"
-#include "api/post_api_resource.hpp"
-#include "auth/user_db.hpp"
-
 #include <Wt/WApplication.h>
 #include <Wt/WServer.h>
 
@@ -9,6 +5,10 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+
+#include "altinf_app.hpp"
+#include "api/post_api_resource.hpp"
+#include "auth/user_db.hpp"
 
 int main(int argc, char** argv)
 {

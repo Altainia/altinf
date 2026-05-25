@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <fstream>
 #include <optional>
+#include <ranges>
 #include <sstream>
 
 #include "blog/post_writer.hpp"
@@ -90,15 +91,11 @@ blog_edit_page::blog_edit_page(const std::filesystem::path&          posts_dir,
 	{
 		m_title->setText(m_existing->title);
 
-		std::string tags_str;
-		for(std::size_t i = 0; i < m_existing->tags.size(); ++i)
-		{
-			if(i > 0)
-			{
-				tags_str += ", ";
-			}
-			tags_str += m_existing->tags[i];
-		}
+		const auto tags_str =
+		  m_existing->tags |
+		  std::views::join_with(std::string(", ")) |
+		  std::ranges::to<std::string>();
+
 		m_tags->setText(tags_str);
 
 		m_body->setText(read_body(*m_existing));

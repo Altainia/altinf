@@ -1,10 +1,10 @@
 #pragma once
 
-#include "org/kanban_db.hpp"
-#include "org/org_db.hpp"
-
 #include <string>
 #include <vector>
+
+#include "org/kanban_db.hpp"
+#include "org/org_db.hpp"
 
 // Call after a successful add_assignee().
 // Fires task_assigned to added_user (if actor != added_user) and

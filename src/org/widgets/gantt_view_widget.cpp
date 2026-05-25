@@ -2,6 +2,8 @@
 
 #include <Wt/WApplication.h>
 
+#include <alt/functional.hpp>
+#include <ranges>
 #include <sstream>
 
 static std::string escape_json_gv(const std::string& s)
@@ -89,12 +91,8 @@ std::string gantt_view_widget::serialize_tasks(const std::vector<kanban_task_ent
 	std::ostringstream ss;
 	ss << '[';
 	bool first = true;
-	for(const auto& t: tasks)
+	for(const auto& t: tasks | std::views::filter([](const auto& t) { return alt::none_of(alt::equals{t.status}, "todo", "done"); }))
 	{
-		if(t.status == "todo" || t.status == "done")
-		{
-			continue;
-		}
 		if(!first)
 		{
 			ss << ',';

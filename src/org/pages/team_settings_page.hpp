@@ -1,9 +1,9 @@
 #pragma once
 
+#include <Wt/WContainerWidget.h>
+
 #include "auth/session_data.hpp"
 #include "org/kanban_db.hpp"
-
-#include <Wt/WContainerWidget.h>
 
 class team_settings_page: public Wt::WContainerWidget
 {

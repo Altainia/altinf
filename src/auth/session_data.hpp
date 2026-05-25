@@ -1,12 +1,12 @@
 #pragma once
 
-#include "permission.hpp"
-
 #include <string>
+
+#include "permission.hpp"
 
 struct session_data
 {
-	bool              logged_in   = false;
+	bool              logged_in = false;
 	std::string       username;
 	std::string       display_name;
 	permission::flags permissions;

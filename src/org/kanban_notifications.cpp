@@ -1,5 +1,8 @@
 #include "kanban_notifications.hpp"
 
+#include <alt/functional.hpp>
+#include <ranges>
+
 #include "org/org.hpp"
 #include "widgets/live_hub.hpp"
 
@@ -24,12 +27,8 @@ void notify_assignee_added(kanban_db&         db,
 	}
 
 	const auto all_assignees = db.assignees_for_task(task_id);
-	for(const auto& u: all_assignees)
+	for(const auto& u: all_assignees | std::views::filter(alt::not_equals{added_user}))
 	{
-		if(u == added_user)
-		{
-			continue;
-		}
 		const auto pref = odb.get_user_org_pref(u, org_id);
 		if(pref.notify_coassignee_changed)
 		{
@@ -68,12 +67,8 @@ void notify_assignee_removed(kanban_db&                      db,
 	if(remaining_assignees.empty())
 	{
 		const auto members = db.members_for_team(team_id);
-		for(const auto& u: members)
+		for(const auto& u: members | std::views::filter(alt::not_equals{removed_user}))
 		{
-			if(u == removed_user)
-			{
-				continue;
-			}
 			const auto pref = odb.get_user_org_pref(u, org_id);
 
 			if(actor == removed_user && pref.notify_task_abandoned)

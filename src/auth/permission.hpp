@@ -5,7 +5,9 @@
 
 namespace permission
 {
-	enum class bit : uint64_t {};
+	enum class bit : uint64_t
+	{
+	};
 	using flags = alt::flags<bit>;
 
 	inline constexpr flags none         = {};

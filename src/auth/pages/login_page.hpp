@@ -1,14 +1,14 @@
 #pragma once
 
-#include "auth/session_data.hpp"
-#include "auth/user_db.hpp"
-
 #include <Wt/WContainerWidget.h>
 #include <Wt/WLineEdit.h>
 #include <Wt/WPasswordEdit.h>
 #include <Wt/WText.h>
 
 #include <functional>
+
+#include "auth/session_data.hpp"
+#include "auth/user_db.hpp"
 
 class login_page: public Wt::WContainerWidget
 {

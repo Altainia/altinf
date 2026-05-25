@@ -1,15 +1,5 @@
 #pragma once
 
-#include "auth/session_data.hpp"
-#include "auth/user_db.hpp"
-#include "blog/blog_post.hpp"
-#include "org/kanban.hpp"
-#include "org/kanban_db.hpp"
-#include "org/team_cap.hpp"
-#include "link/link.hpp"
-#include "link/link_db.hpp"
-#include "org/org_db.hpp"
-
 #include <Wt/WApplication.h>
 #include <Wt/WContainerWidget.h>
 
@@ -18,6 +8,16 @@
 #include <optional>
 #include <string_view>
 #include <vector>
+
+#include "auth/session_data.hpp"
+#include "auth/user_db.hpp"
+#include "blog/blog_post.hpp"
+#include "link/link.hpp"
+#include "link/link_db.hpp"
+#include "org/kanban.hpp"
+#include "org/kanban_db.hpp"
+#include "org/org_db.hpp"
+#include "org/team_cap.hpp"
 
 class nav_bar;
 class notifications_page;

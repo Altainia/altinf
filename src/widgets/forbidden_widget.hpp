@@ -5,5 +5,5 @@
 class forbidden_widget: public Wt::WContainerWidget
 {
 public:
-    forbidden_widget();
+	forbidden_widget();
 };

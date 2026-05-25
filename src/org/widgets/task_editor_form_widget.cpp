@@ -12,6 +12,7 @@
 #include <cmark.h>
 
 #include <algorithm>
+#include <alt/functional.hpp>
 #include <cstdlib>
 #include <map>
 
@@ -115,8 +116,7 @@ task_editor_form_widget::task_editor_form_widget(
 		  "This task was updated by another user.", Wt::TextFormat::Plain);
 		auto* reload_btn = m_stale_banner->addNew<Wt::WPushButton>("Reload");
 		reload_btn->setStyleClass("editor-btn");
-		reload_btn->clicked().connect([this] { if(m_on_cancel){ m_on_cancel();
-} });
+		reload_btn->clicked().connect([this] { if(m_on_cancel){ m_on_cancel();} });
 		m_stale_banner->hide();
 	}
 
@@ -132,8 +132,7 @@ task_editor_form_widget::task_editor_form_widget(
 		form            = details;
 		m_history_panel = new Wt::WContainerWidget();
 		tabs->addTab(std::unique_ptr<Wt::WContainerWidget>(m_history_panel), "History");
-		tabs->currentChanged().connect([this](int idx) { if(idx==1){ rebuild_history();
-} });
+		tabs->currentChanged().connect([this](int idx) { if(idx==1){ rebuild_history();} });
 	}
 	else
 	{
@@ -683,7 +682,7 @@ task_editor_form_widget::task_editor_form_widget(
 	const auto types = m_db.types_for_org(m_org_id);
 	if(!is_new)
 	{
-		const bool valid = std::any_of(types.begin(), types.end(), [&](const task_type_entry& ty) { return ty.id == m_original.type_id; });
+		const bool valid = std::ranges::any_of(types, alt::equals{m_original.type_id}, &task_type_entry::id);
 		if(valid)
 		{
 			m_type_id = m_original.type_id;

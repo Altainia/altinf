@@ -1,7 +1,5 @@
 #pragma once
 
-#include "permission.hpp"
-
 #include <Wt/Dbo/Dbo.h>
 #include <Wt/Dbo/SqlConnection.h>
 #include <Wt/Dbo/SqlStatement.h>
@@ -9,11 +7,13 @@
 
 #include <string>
 
+#include "permission.hpp"
+
 struct user
 {
-	std::string     username;
-	std::string     display_name;
-	std::string     password_hash;
+	std::string       username;
+	std::string       display_name;
+	std::string       password_hash;
 	permission::flags permissions;
 
 	template<class Action>
@@ -26,31 +26,32 @@ struct user
 	}
 };
 
-namespace Wt::Dbo {
-
-template<>
-struct sql_value_traits<permission::flags, void>
+namespace Wt::Dbo
 {
-	static std::string type(SqlConnection* conn, int size)
-	{
-		return sql_value_traits<long long>::type(conn, size);
-	}
 
-	static void bind(const permission::flags& v, SqlStatement* stmt, int col, int size)
+	template<>
+	struct sql_value_traits<permission::flags, void>
 	{
-		stmt->bind(col, static_cast<long long>(v.value()));
-	}
-
-	static bool read(permission::flags& v, SqlStatement* stmt, int col, int size)
-	{
-		long long raw = 0;
-		const bool ok = stmt->getResult(col, &raw);
-		if(ok)
+		static std::string type(SqlConnection* conn, int size)
 		{
-			v = permission::flags::from_value(static_cast<permission::flags::value_type>(raw));
+			return sql_value_traits<long long>::type(conn, size);
 		}
-		return ok;
-	}
-};
+
+		static void bind(const permission::flags& v, SqlStatement* stmt, int col, int size)
+		{
+			stmt->bind(col, static_cast<long long>(v.value()));
+		}
+
+		static bool read(permission::flags& v, SqlStatement* stmt, int col, int size)
+		{
+			long long  raw = 0;
+			const bool ok  = stmt->getResult(col, &raw);
+			if(ok)
+			{
+				v = permission::flags::from_value(static_cast<permission::flags::value_type>(raw));
+			}
+			return ok;
+		}
+	};
 
 } // namespace Wt::Dbo

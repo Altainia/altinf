@@ -1,7 +1,5 @@
 #pragma once
 
-#include "blog/blog_post.hpp"
-
 #include <Wt/WContainerWidget.h>
 #include <Wt/WLineEdit.h>
 #include <Wt/WStackedWidget.h>
@@ -12,14 +10,16 @@
 #include <functional>
 #include <string>
 
+#include "blog/blog_post.hpp"
+
 class blog_edit_page: public Wt::WContainerWidget
 {
 public:
 	// existing == nullptr  ->  new post
 	// existing != nullptr  ->  edit post (slug fixed to avoid breaking URLs)
 	blog_edit_page(const std::filesystem::path&          posts_dir,
-	                 const blog_post*                      existing,
-	                 std::function<void(std::string slug)> on_save);
+	               const blog_post*                      existing,
+	               std::function<void(std::string slug)> on_save);
 
 private:
 	std::filesystem::path            m_posts_dir;

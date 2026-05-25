@@ -48,6 +48,7 @@ ConstructorInitializerIndentWidth: 2
 ContinuationIndentWidth: 2
 Cpp11BracedListStyle: true
 InsertBraces: true
+InsertNewlineAtEOF: false
 FixNamespaceComments: false
 IncludeBlocks: Regroup
 IncludeCategories:
@@ -65,7 +66,10 @@ IndentPPDirectives: AfterHash
 #IndentRequires: true
 IndentWidth: 2
 IndentWrappedFunctionNames: true
-KeepEmptyLinesAtTheStartOfBlocks: false
+KeepEmptyLines:
+  AtEndOfFile: false
+  AtStartOfBlock: false
+  AtStartOfFile: false
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: All
 PointerAlignment: Left

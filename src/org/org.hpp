@@ -14,7 +14,7 @@ struct org_record
 	template<class Action>
 	void persist(Action& a)
 	{
-		Wt::Dbo::field(a, name,        "name");
+		Wt::Dbo::field(a, name, "name");
 		Wt::Dbo::field(a, is_archived, "is_archived");
 	}
 };
@@ -29,28 +29,28 @@ struct org_member_record
 	template<class Action>
 	void persist(Action& a)
 	{
-		Wt::Dbo::field(a, org_id,   "org_id");
+		Wt::Dbo::field(a, org_id, "org_id");
 		Wt::Dbo::field(a, username, "username");
-		Wt::Dbo::field(a, is_lead,  "is_lead");
-		Wt::Dbo::field(a, status,   "status");
+		Wt::Dbo::field(a, is_lead, "is_lead");
+		Wt::Dbo::field(a, status, "status");
 	}
 };
 
 struct notification_record
 {
 	std::string username;
-	std::string type;       // "org_invite" | "task_assigned"
-	std::string payload;    // JSON string
+	std::string type;    // "org_invite" | "task_assigned"
+	std::string payload; // JSON string
 	int         is_read{0};
 	std::string created_at; // ISO-8601 text e.g. "2026-04-28 14:05:00"
 
 	template<class Action>
 	void persist(Action& a)
 	{
-		Wt::Dbo::field(a, username,   "username");
-		Wt::Dbo::field(a, type,       "type");
-		Wt::Dbo::field(a, payload,    "payload");
-		Wt::Dbo::field(a, is_read,    "is_read");
+		Wt::Dbo::field(a, username, "username");
+		Wt::Dbo::field(a, type, "type");
+		Wt::Dbo::field(a, payload, "payload");
+		Wt::Dbo::field(a, is_read, "is_read");
 		Wt::Dbo::field(a, created_at, "created_at");
 	}
 };
@@ -63,7 +63,7 @@ struct user_pref_record
 	template<class Action>
 	void persist(Action& a)
 	{
-		Wt::Dbo::field(a, username,    "username");
+		Wt::Dbo::field(a, username, "username");
 		Wt::Dbo::field(a, last_org_id, "last_org_id");
 	}
 };
@@ -80,12 +80,12 @@ struct user_org_pref_record
 	template<class Action>
 	void persist(Action& a)
 	{
-		Wt::Dbo::field(a, username,                  "username");
-		Wt::Dbo::field(a, org_id,                    "org_id");
-		Wt::Dbo::field(a, notify_task_available,     "notify_task_available");
-		Wt::Dbo::field(a, notify_task_unassigned,    "notify_task_unassigned");
+		Wt::Dbo::field(a, username, "username");
+		Wt::Dbo::field(a, org_id, "org_id");
+		Wt::Dbo::field(a, notify_task_available, "notify_task_available");
+		Wt::Dbo::field(a, notify_task_unassigned, "notify_task_unassigned");
 		Wt::Dbo::field(a, notify_coassignee_changed, "notify_coassignee_changed");
-		Wt::Dbo::field(a, notify_task_abandoned,     "notify_task_abandoned");
+		Wt::Dbo::field(a, notify_task_abandoned, "notify_task_abandoned");
 	}
 };
 
@@ -169,9 +169,9 @@ inline std::string make_team_lead_payload(long long team_id, const std::string& 
 }
 
 inline std::string make_task_assigned_payload(long long          task_id,
-                                               const std::string& task_title,
-                                               long long          team_id,
-                                               const std::string& team_name)
+                                              const std::string& task_title,
+                                              long long          team_id,
+                                              const std::string& team_name)
 {
 	return "{\"task_id\":" + std::to_string(task_id) +
 	       ",\"task_title\":\"" + task_title + "\"" +
@@ -234,11 +234,22 @@ inline long long json_long(const std::string& json, const std::string& key)
 {
 	const auto kpos = json.find("\"" + key + "\":");
 	if(kpos == std::string::npos)
+	{
 		return 0;
+	}
 	const auto vpos = json.find_first_of("-0123456789", kpos + key.size() + 3);
 	if(vpos == std::string::npos)
+	{
 		return 0;
-	try { return std::stoll(json.substr(vpos)); } catch(...) { return 0; }
+	}
+	try
+	{
+		return std::stoll(json.substr(vpos));
+	}
+	catch(...)
+	{
+		return 0;
+	}
 }
 
 inline std::string json_str(const std::string& json, const std::string& key)
@@ -246,10 +257,14 @@ inline std::string json_str(const std::string& json, const std::string& key)
 	const std::string needle = "\"" + key + "\":\"";
 	const auto        kpos   = json.find(needle);
 	if(kpos == std::string::npos)
+	{
 		return {};
+	}
 	const auto vpos = kpos + needle.size();
 	const auto epos = json.find('"', vpos);
 	if(epos == std::string::npos)
+	{
 		return {};
+	}
 	return json.substr(vpos, epos - vpos);
 }

@@ -8,6 +8,9 @@
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
+#include <algorithm>
+#include <ranges>
+
 #include "org/org.hpp"
 #include "paths.hpp"
 #include "widgets/live_hub.hpp"
@@ -244,15 +247,13 @@ void team_edit_page::refresh_members()
 			  }
 			  else
 			  {
-				  const auto             org_teams = m_kdb.teams_for_org(m_org_id);
-				  std::vector<long long> member_team_ids;
-				  for(const auto& t: org_teams)
-				  {
-					  if(m_kdb.is_member(t.id, uid))
-					  {
-						  member_team_ids.push_back(t.id);
-					  }
-				  }
+				  const auto org_teams = m_kdb.teams_for_org(m_org_id);
+
+				  const auto member_team_ids =
+				    org_teams |
+				    std::views::transform(&team_entry::id) |
+				    std::views::filter([this, &uid](const auto id) { return m_kdb.is_member(id, uid); }) |
+				    std::ranges::to<std::vector>();
 
 				  m_odb.push_notification(
 				    uid, "org_removed", make_org_event_payload(m_org_id, m_org_name));
@@ -395,24 +396,15 @@ void team_edit_page::build_team_block(Wt::WContainerWidget* parent,
 	}
 
 	// Add-member-to-team form — only org members not already on this team.
-	const auto               org_members = m_odb.org_members(m_org_id);
-	std::vector<std::string> available;
-	for(const auto& om: org_members)
-	{
-		bool already_on = false;
-		for(const auto& tm: members)
-		{
-			if(tm.username == om.username)
-			{
-				already_on = true;
-				break;
-			}
-		}
-		if(!already_on)
-		{
-			available.push_back(om.username);
-		}
-	}
+	const auto org_members  = m_odb.org_members(m_org_id);
+	const auto member_names = members | std::views::transform(&team_member_entry::username);
+	const auto available =
+	  org_members |
+	  std::views::transform(&org_member_entry::username) |
+	  std::views::filter([member_names](const auto& username) {
+		  return !std::ranges::contains(member_names, username);
+	  }) |
+	  std::ranges::to<std::vector>();
 
 	auto* add_row = block->addNew<Wt::WContainerWidget>();
 	add_row->setStyleClass("kb-member-add-row");

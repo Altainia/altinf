@@ -1,10 +1,11 @@
 #pragma once
 
+#include <Wt/WContainerWidget.h>
+
+#include <functional>
+
 #include "auth/session_data.hpp"
 #include "org/org_db.hpp"
-
-#include <Wt/WContainerWidget.h>
-#include <functional>
 
 class notifications_page: public Wt::WContainerWidget
 {

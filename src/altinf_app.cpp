@@ -283,7 +283,7 @@ void altinf_app::handle_login()
 			c.setHttpOnly(true);
 			c.setSecure(true);
 			c.setSameSite(Wt::Http::Cookie::SameSite::Strict);
-			c.setMaxAge(std::chrono::seconds{30 * 24 * 3600});
+			c.setMaxAge(std::chrono::days{30});
 			setCookie(c);
 		}
 		catch(const std::exception&)
@@ -348,8 +348,7 @@ void altinf_app::handle_blog(std::string_view rem)
 			show_not_found();
 			return;
 		}
-		const auto it = std::find_if(
-		  m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) { return p.slug == slug; });
+		const auto it = std::ranges::find(m_posts, slug, &blog_post::slug);
 		if(it == m_posts.end())
 		{
 			show_not_found("Post not found.");
@@ -364,9 +363,7 @@ void altinf_app::handle_blog(std::string_view rem)
 			show_forbidden();
 			return;
 		}
-		const std::string slug{rem};
-		const auto        it = std::find_if(
-      m_posts.begin(), m_posts.end(), [&slug](const blog_post& p) { return p.slug == slug; });
+		const auto it = std::ranges::find(m_posts, rem, &blog_post::slug);
 		if(it == m_posts.end())
 		{
 			show_not_found("Post not found.");
@@ -742,8 +739,7 @@ void altinf_app::handle_admin(std::string_view rem)
 	const auto domain = paths::take_segment(rem);
 	if(domain == "account")
 	{
-		if(!m_session.permissions.has_any(permission::admin) &&
-		   !m_session.permissions.has_any(permission::manage_users))
+		if(!m_session.permissions.has_any(permission::admin | permission::manage_users))
 		{
 			show_forbidden();
 			return;
@@ -782,10 +778,8 @@ void altinf_app::handle_admin(std::string_view rem)
 		}
 		else if(seg == paths::edit_seg)
 		{
-			const std::string edit_username{rem};
-			const auto        users = m_user_db->list_users();
-			const auto        it    = std::find_if(
-        users.begin(), users.end(), [&edit_username](const user_entry& e) { return e.username == edit_username; });
+			const auto users = m_user_db->list_users();
+			const auto it    = std::ranges::find(users, rem, &user_entry::username);
 			if(it == users.end())
 			{
 				show_not_found("User not found.");
@@ -802,8 +796,7 @@ void altinf_app::handle_admin(std::string_view rem)
 	}
 	else if(domain == "org")
 	{
-		if(!m_session.permissions.has_any(permission::org_create) &&
-		   !m_session.permissions.has_any(permission::admin))
+		if(!m_session.permissions.has_any(permission::org_create | permission::admin))
 		{
 			show_forbidden();
 			return;

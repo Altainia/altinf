@@ -1,10 +1,10 @@
 #pragma once
 
-#include "blog_post.hpp"
-
 #include <filesystem>
 #include <string>
 #include <vector>
+
+#include "blog_post.hpp"
 
 class blog_loader
 {

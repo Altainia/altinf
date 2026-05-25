@@ -29,9 +29,7 @@ std::vector<blog_post> blog_loader::load() const
 		posts.push_back(parse_post(entry.path()));
 	}
 
-	std::sort(posts.begin(), posts.end(), [](const blog_post& a, const blog_post& b) {
-		return a.date > b.date;
-	});
+	std::ranges::sort(posts, std::greater{}, &blog_post::date);
 
 	return posts;
 }

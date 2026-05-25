@@ -2,6 +2,8 @@
 
 #include <Wt/WServer.h>
 
+#include <alt/algorithm.hpp>
+
 live_hub& live_hub::instance()
 {
 	static live_hub hub;
@@ -33,10 +35,7 @@ void live_hub::unsubscribe(const std::string& channel,
 		return;
 	}
 	auto& v = it->second;
-	v.erase(std::remove_if(v.begin(),
-	                       v.end(),
-	                       [&](const entry& e) { return e.session_id == session_id; }),
-	        v.end());
+	alt::erase(v, session_id, &entry::session_id);
 	if(v.empty())
 	{
 		m_sessions.erase(it);

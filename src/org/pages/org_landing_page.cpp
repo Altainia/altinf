@@ -5,6 +5,8 @@
 #include <Wt/WLink.h>
 #include <Wt/WText.h>
 
+#include <ranges>
+
 #include "paths.hpp"
 #include "widgets/live_hub.hpp"
 
@@ -82,13 +84,10 @@ void org_landing_page::render()
 
 	addNew<Wt::WText>("<h2>Your teams</h2>", Wt::TextFormat::UnsafeXHTML);
 
-	bool has_own = false;
-	for(const auto& t: all_teams)
+	bool       has_own        = false;
+	const auto is_team_member = [this, &username](const auto& t) { return m_kdb.is_member(t.id, username) || m_is_org_lead; };
+	for(const auto& t: all_teams | std::views::filter(is_team_member))
 	{
-		if(!m_kdb.is_member(t.id, username) && !m_is_org_lead)
-		{
-			continue;
-		}
 		has_own   = true;
 		auto* row = addNew<Wt::WContainerWidget>();
 		row->setStyleClass("org-team-row");
@@ -105,12 +104,8 @@ void org_landing_page::render()
 	}
 
 	bool has_other = false;
-	for(const auto& t: all_teams)
+	for(const auto& t: all_teams | std::views::filter(std::not_fn(is_team_member)))
 	{
-		if(m_kdb.is_member(t.id, username) || m_is_org_lead)
-		{
-			continue;
-		}
 		if(!has_other)
 		{
 			addNew<Wt::WText>("<h2>Other teams</h2>", Wt::TextFormat::UnsafeXHTML);

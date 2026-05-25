@@ -1,13 +1,13 @@
 #pragma once
 
-#include "permission.hpp"
-#include "session_data.hpp"
-#include "user.hpp"
-
 #include <Wt/Dbo/Session.h>
 
 #include <string>
 #include <vector>
+
+#include "permission.hpp"
+#include "session_data.hpp"
+#include "user.hpp"
 
 struct user_entry
 {

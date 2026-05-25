@@ -1,13 +1,13 @@
 #pragma once
 
-#include "org/kanban.hpp"
-
 #include <Wt/WContainerWidget.h>
 
 #include <functional>
 #include <map>
 #include <string>
 #include <vector>
+
+#include "org/kanban.hpp"
 
 // Renders an interactive Kanban board via client-side JavaScript.
 // Drag-and-drop column changes call on_move(task_id, new_status, new_sort_order).

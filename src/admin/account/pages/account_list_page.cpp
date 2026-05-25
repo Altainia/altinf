@@ -8,6 +8,7 @@
 #include <Wt/WTable.h>
 #include <Wt/WText.h>
 
+#include <ranges>
 #include <string>
 #include <vector>
 
@@ -38,16 +39,10 @@ static std::string permissions_label(permission::flags perms)
 	{
 		return "None";
 	}
-	std::string out;
-	for(std::size_t i = 0; i < parts.size(); ++i)
-	{
-		if(i)
-		{
-			out += ", ";
-		}
-		out += parts[i];
-	}
-	return out;
+
+	return parts |
+	       std::views::join_with(std::string(", ")) |
+	       std::ranges::to<std::string>();
 }
 
 account_list_page::account_list_page(
@@ -110,10 +105,9 @@ void account_list_page::render()
 	tbl->elementAt(0, 2)->addNew<Wt::WText>("Permissions", Wt::TextFormat::Plain);
 	tbl->elementAt(0, 3)->addNew<Wt::WText>("Actions", Wt::TextFormat::Plain);
 
-	for(int row = 0; row < static_cast<int>(users.size()); ++row)
+	for(auto [row, u]: std::views::enumerate(users))
 	{
-		const auto& u     = users[row];
-		const bool  is_me = (u.username == m_session.username);
+		const bool is_me = (u.username == m_session.username);
 
 		tbl->elementAt(row + 1, 0)->addNew<Wt::WText>(u.username, Wt::TextFormat::Plain);
 		tbl->elementAt(row + 1, 1)->addNew<Wt::WText>(u.display_name.empty() ? "—" : u.display_name, Wt::TextFormat::Plain);

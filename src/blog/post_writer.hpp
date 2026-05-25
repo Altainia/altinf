@@ -22,9 +22,9 @@ post_path resolve_new_post(const std::filesystem::path& posts_dir, const std::st
 
 // Writes YAML frontmatter + body to filepath.  Returns false on I/O failure.
 // last_modified is written only when it has a value.
-bool write_post_file(const std::filesystem::path&     filepath,
-                     const std::string&               title,
-                     Wt::WDate                        date,
-                     std::optional<Wt::WDate>         last_modified,
-                     const std::string&               tags,
-                     const std::string&               body);
+bool write_post_file(const std::filesystem::path& filepath,
+                     const std::string&           title,
+                     Wt::WDate                    date,
+                     std::optional<Wt::WDate>     last_modified,
+                     const std::string&           tags,
+                     const std::string&           body);

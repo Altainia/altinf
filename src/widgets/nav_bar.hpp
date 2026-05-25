@@ -1,9 +1,9 @@
 #pragma once
 
+#include <Wt/WContainerWidget.h>
+
 #include "auth/session_data.hpp"
 #include "org/org_db.hpp"
-
-#include <Wt/WContainerWidget.h>
 
 class notification_bell;
 

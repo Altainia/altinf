@@ -1,14 +1,14 @@
 #pragma once
 
-#include "auth/session_data.hpp"
-#include "org/kanban_db.hpp"
-#include "org/org_db.hpp"
-
 #include <Wt/WContainerWidget.h>
 
 #include <map>
 #include <memory>
 #include <string>
+
+#include "auth/session_data.hpp"
+#include "org/kanban_db.hpp"
+#include "org/org_db.hpp"
 
 class org_board_page: public Wt::WContainerWidget
 {

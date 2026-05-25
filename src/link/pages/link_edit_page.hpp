@@ -1,8 +1,5 @@
 #pragma once
 
-#include "link/link.hpp"
-#include "link/link_db.hpp"
-
 #include <Wt/WContainerWidget.h>
 #include <Wt/WLineEdit.h>
 #include <Wt/WText.h>
@@ -12,14 +9,17 @@
 #include <optional>
 #include <string>
 
+#include "link/link.hpp"
+#include "link/link_db.hpp"
+
 class link_edit_page: public Wt::WContainerWidget
 {
 public:
 	// existing == nullptr  ->  new link
 	// existing != nullptr  ->  edit link
 	link_edit_page(link_db*              db,
-	                 const link_entry*     existing,
-	                 std::function<void()> on_save);
+	               const link_entry*     existing,
+	               std::function<void()> on_save);
 
 private:
 	link_db*                  m_db;
