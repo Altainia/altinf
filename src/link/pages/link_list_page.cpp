@@ -14,11 +14,9 @@
 #include "paths.hpp"
 
 link_list_page::link_list_page(const std::vector<link_entry>& links,
-                               const session_data&            session,
-                               std::function<void(long long)> on_delete):
+                               const session_data&            session):
   m_links{links},
-  m_session{session},
-  m_on_delete{std::move(on_delete)}
+  m_session{session}
 {
 	setStyleClass("page links-page");
 	render();
@@ -121,7 +119,7 @@ void link_list_page::render()
 				});
 
 				yes_btn->clicked().connect([this, link_id] {
-					m_on_delete(link_id);
+					deleted.emit(link_id);
 				});
 			}
 		}

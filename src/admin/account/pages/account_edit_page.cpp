@@ -10,11 +10,8 @@
 #include "paths.hpp"
 #include "widgets/live_hub.hpp"
 
-account_edit_page::account_edit_page(user_db*              db,
-                                     const user_entry*     existing,
-                                     std::function<void()> on_save):
-  m_db{db},
-  m_on_save{std::move(on_save)}
+account_edit_page::account_edit_page(user_db* db, const user_entry* existing):
+  m_db{db}
 {
 	if(existing)
 	{
@@ -168,7 +165,7 @@ void account_edit_page::save()
 	}
 
 	live_hub::instance().broadcast("accounts");
-	m_on_save();
+	saved.emit();
 }
 
 void account_edit_page::build_token_list()

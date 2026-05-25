@@ -4,9 +4,9 @@
 #include <Wt/WContainerWidget.h>
 #include <Wt/WLineEdit.h>
 #include <Wt/WPasswordEdit.h>
+#include <Wt/WSignal.h>
 #include <Wt/WText.h>
 
-#include <functional>
 #include <optional>
 #include <string>
 
@@ -17,14 +17,13 @@ class account_edit_page: public Wt::WContainerWidget
 public:
 	// existing == nullptr  ->  new user
 	// existing != nullptr  ->  edit user
-	account_edit_page(user_db*              db,
-	                  const user_entry*     existing,
-	                  std::function<void()> on_save);
+	account_edit_page(user_db* db, const user_entry* existing);
+
+	Wt::Signal<> saved;
 
 private:
 	user_db*                  m_db;
 	std::optional<user_entry> m_existing;
-	std::function<void()>     m_on_save;
 	Wt::WLineEdit*            m_username{nullptr};
 	Wt::WLineEdit*            m_display_name{nullptr};
 	Wt::WPasswordEdit*        m_password{nullptr};

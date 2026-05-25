@@ -45,13 +45,9 @@ static std::string permissions_label(permission::flags perms)
 	       std::ranges::to<std::string>();
 }
 
-account_list_page::account_list_page(
-  user_db&                                db,
-  const session_data&                     session,
-  std::function<void(const std::string&)> on_delete):
+account_list_page::account_list_page(user_db& db, const session_data& session):
   m_db{db},
-  m_session{session},
-  m_on_delete{std::move(on_delete)}
+  m_session{session}
 {
 	setStyleClass("page account-manager-page");
 	render();
@@ -142,7 +138,7 @@ void account_list_page::render()
 				no->setStyleClass("editor-btn editor-btn-cancel");
 				yes->clicked().connect([this, d, del_username] {
 					d->accept();
-					m_on_delete(del_username);
+					deleted.emit(del_username);
 				});
 				no->clicked().connect([d] { d->reject(); });
 				d->finished().connect([d](Wt::DialogCode) { delete d; });

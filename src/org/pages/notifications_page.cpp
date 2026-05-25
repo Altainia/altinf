@@ -9,12 +9,9 @@
 #include "paths.hpp"
 #include "widgets/live_hub.hpp"
 
-notifications_page::notifications_page(org_db&               odb,
-                                       const session_data&   session,
-                                       std::function<void()> on_read):
+notifications_page::notifications_page(org_db& odb, const session_data& session):
   m_db{odb},
-  m_session{session},
-  m_on_read{std::move(on_read)}
+  m_session{session}
 {
 	setStyleClass("page notifications-page");
 	addNew<Wt::WText>("<h1>Notifications</h1>", Wt::TextFormat::UnsafeXHTML);
@@ -35,10 +32,7 @@ void notifications_page::add_dismiss(Wt::WContainerWidget* parent, long long nid
 	btn->clicked().connect(
 	  [this, nid] {
 		  m_db.mark_read(nid);
-		  if(m_on_read)
-		  {
-			  m_on_read();
-		  }
+		  read.emit();
 		  refresh();
 	  });
 }
@@ -93,10 +87,7 @@ void notifications_page::refresh()
 					ack->clicked().connect(
 					  [this, nid = n.id] {
 						  m_db.mark_read(nid);
-						  if(m_on_read)
-						  {
-							  m_on_read();
-						  }
+						  read.emit();
 						  refresh();
 					  });
 				}
@@ -125,10 +116,7 @@ void notifications_page::refresh()
 						  m_db.mark_read(nid);
 						  live_hub::instance().broadcast("org:" + std::to_string(org_id));
 						  live_hub::instance().broadcast("user:" + m_session.username);
-						  if(m_on_read)
-						  {
-							  m_on_read();
-						  }
+						  read.emit();
 						  refresh();
 					  });
 
@@ -139,10 +127,7 @@ void notifications_page::refresh()
 						  m_db.decline_invite(org_id, m_session.username);
 						  m_db.mark_read(nid);
 						  live_hub::instance().broadcast("org:" + std::to_string(org_id));
-						  if(m_on_read)
-						  {
-							  m_on_read();
-						  }
+						  read.emit();
 						  refresh();
 					  });
 				}

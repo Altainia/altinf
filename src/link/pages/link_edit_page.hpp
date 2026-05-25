@@ -2,10 +2,10 @@
 
 #include <Wt/WContainerWidget.h>
 #include <Wt/WLineEdit.h>
+#include <Wt/WSignal.h>
 #include <Wt/WText.h>
 #include <Wt/WTextArea.h>
 
-#include <functional>
 #include <optional>
 #include <string>
 
@@ -17,14 +17,13 @@ class link_edit_page: public Wt::WContainerWidget
 public:
 	// existing == nullptr  ->  new link
 	// existing != nullptr  ->  edit link
-	link_edit_page(link_db*              db,
-	               const link_entry*     existing,
-	               std::function<void()> on_save);
+	link_edit_page(link_db* db, const link_entry* existing);
+
+	Wt::Signal<> saved;
 
 private:
 	link_db*                  m_db;
 	std::optional<link_entry> m_existing;
-	std::function<void()>     m_on_save;
 	Wt::WLineEdit*            m_url{nullptr};
 	Wt::WLineEdit*            m_title{nullptr};
 	Wt::WTextArea*            m_description{nullptr};

@@ -17,12 +17,10 @@
 #include "blog/post_writer.hpp"
 #include "paths.hpp"
 
-blog_edit_page::blog_edit_page(const std::filesystem::path&          posts_dir,
-                               const blog_post*                      existing,
-                               std::function<void(std::string slug)> on_save):
+blog_edit_page::blog_edit_page(const std::filesystem::path& posts_dir,
+                               const blog_post*             existing):
   m_posts_dir{posts_dir},
-  m_existing{existing},
-  m_on_save{std::move(on_save)}
+  m_existing{existing}
 {
 	setStyleClass("page post-editor-page");
 
@@ -142,7 +140,7 @@ void blog_edit_page::save()
 		return;
 	}
 
-	m_on_save(slug);
+	saved.emit(slug);
 }
 
 std::string blog_edit_page::read_body(const blog_post& post)

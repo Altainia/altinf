@@ -274,7 +274,8 @@ void altinf_app::show_main()
 
 void altinf_app::handle_login()
 {
-	m_content->addNew<login_page>(*m_user_db, m_session, [this] {
+	auto* login = m_content->addNew<login_page>(*m_user_db, m_session);
+	login->logged_in.connect([this] {
 		try
 		{
 			const auto raw_token = m_user_db->create_session_token(m_session.username);
@@ -319,8 +320,8 @@ void altinf_app::handle_notifications()
 		setInternalPath(std::string{paths::login_path}, true);
 		return;
 	}
-	m_notifications_page = m_content->addNew<notifications_page>(
-	  *m_org_db, m_session, [this] { m_nav->refresh_bell(); });
+	m_notifications_page = m_content->addNew<notifications_page>(*m_org_db, m_session);
+	m_notifications_page->read.connect([this] { m_nav->refresh_bell(); });
 }
 
 void altinf_app::handle_settings()
@@ -369,11 +370,11 @@ void altinf_app::handle_blog(std::string_view rem)
 			show_not_found("Post not found.");
 			return;
 		}
-		m_content->addNew<blog_edit_page>(
-		  m_posts_dir, &(*it), [this](const std::string& s) {
-			  reload_posts();
-			  setInternalPath(paths::blog_view(s), true);
-		  });
+		auto* p = m_content->addNew<blog_edit_page>(m_posts_dir, &(*it));
+		p->saved.connect([this](const std::string& s) {
+			reload_posts();
+			setInternalPath(paths::blog_view(s), true);
+		});
 	}
 	else if(seg == paths::new_seg)
 	{
@@ -382,11 +383,11 @@ void altinf_app::handle_blog(std::string_view rem)
 			show_forbidden();
 			return;
 		}
-		m_content->addNew<blog_edit_page>(
-		  m_posts_dir, nullptr, [this](const std::string& s) {
-			  reload_posts();
-			  setInternalPath(paths::blog_view(s), true);
-		  });
+		auto* p = m_content->addNew<blog_edit_page>(m_posts_dir, nullptr);
+		p->saved.connect([this](const std::string& s) {
+			reload_posts();
+			setInternalPath(paths::blog_view(s), true);
+		});
 	}
 	else
 	{
@@ -399,7 +400,8 @@ void altinf_app::handle_link(std::string_view rem)
 	const auto seg = paths::take_segment(rem);
 	if(seg == paths::list_seg)
 	{
-		m_content->addNew<link_list_page>(m_links, m_session, [this](long long id) {
+		auto* p = m_content->addNew<link_list_page>(m_links, m_session);
+		p->deleted.connect([this](long long id) {
 			m_link_db->remove(id);
 			reload_links();
 			handle_path(paths::link_list());
@@ -412,7 +414,8 @@ void altinf_app::handle_link(std::string_view rem)
 			show_forbidden();
 			return;
 		}
-		m_content->addNew<link_edit_page>(m_link_db.get(), nullptr, [this] {
+		auto* p = m_content->addNew<link_edit_page>(m_link_db.get(), nullptr);
+		p->saved.connect([this] {
 			reload_links();
 			handle_path(paths::link_list());
 		});
@@ -437,7 +440,8 @@ void altinf_app::handle_link(std::string_view rem)
 			return;
 		}
 		m_edit_link = opt;
-		m_content->addNew<link_edit_page>(m_link_db.get(), &(*m_edit_link), [this] {
+		auto* p     = m_content->addNew<link_edit_page>(m_link_db.get(), &(*m_edit_link));
+		p->saved.connect([this] {
 			reload_links();
 			handle_path(paths::link_list());
 		});
@@ -753,34 +757,33 @@ void altinf_app::handle_admin(std::string_view rem)
 		const auto seg = paths::take_segment(rem);
 		if(seg == paths::list_seg)
 		{
-			m_content->addNew<account_list_page>(
-			  *m_user_db, m_session, [this](const std::string& username) {
-				  if(username == m_session.username)
-				  {
-					  return;
-				  }
-				  const auto del_orgs     = m_org_db->orgs_for_user(username);
-				  const auto del_team_ids = m_kanban_db->team_ids_for_user(username);
-				  m_user_db->delete_user(username);
-				  m_org_db->remove_user_from_all_orgs(username);
-				  m_kanban_db->remove_member_from_all_teams(username);
-				  live_hub::instance().broadcast("accounts");
-				  for(const auto& org: del_orgs)
-				  {
-					  live_hub::instance().broadcast("org:" + std::to_string(org.id));
-				  }
-				  for(const auto tid: del_team_ids)
-				  {
-					  live_hub::instance().broadcast("team:" + std::to_string(tid));
-				  }
-				  handle_path(paths::account_list());
-			  });
+			auto* p = m_content->addNew<account_list_page>(*m_user_db, m_session);
+			p->deleted.connect([this](const std::string& username) {
+				if(username == m_session.username)
+				{
+					return;
+				}
+				const auto del_orgs     = m_org_db->orgs_for_user(username);
+				const auto del_team_ids = m_kanban_db->team_ids_for_user(username);
+				m_user_db->delete_user(username);
+				m_org_db->remove_user_from_all_orgs(username);
+				m_kanban_db->remove_member_from_all_teams(username);
+				live_hub::instance().broadcast("accounts");
+				for(const auto& org: del_orgs)
+				{
+					live_hub::instance().broadcast("org:" + std::to_string(org.id));
+				}
+				for(const auto tid: del_team_ids)
+				{
+					live_hub::instance().broadcast("team:" + std::to_string(tid));
+				}
+				handle_path(paths::account_list());
+			});
 		}
 		else if(seg == paths::new_seg)
 		{
-			m_content->addNew<account_edit_page>(m_user_db.get(), nullptr, [this] {
-				setInternalPath(paths::account_list(), true);
-			});
+			auto* p = m_content->addNew<account_edit_page>(m_user_db.get(), nullptr);
+			p->saved.connect([this] { setInternalPath(paths::account_list(), true); });
 		}
 		else if(seg == paths::edit_seg)
 		{
@@ -792,8 +795,8 @@ void altinf_app::handle_admin(std::string_view rem)
 				return;
 			}
 			m_edit_user = *it;
-			m_content->addNew<account_edit_page>(
-			  m_user_db.get(), &(*m_edit_user), [this] { setInternalPath(paths::account_list(), true); });
+			auto* p     = m_content->addNew<account_edit_page>(m_user_db.get(), &(*m_edit_user));
+			p->saved.connect([this] { setInternalPath(paths::account_list(), true); });
 		}
 		else
 		{

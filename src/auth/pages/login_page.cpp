@@ -4,12 +4,9 @@
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
-login_page::login_page(user_db&              db,
-                       session_data&         session,
-                       std::function<void()> on_login):
+login_page::login_page(user_db& db, session_data& session):
   m_db{db},
-  m_session{session},
-  m_on_login{std::move(on_login)}
+  m_session{session}
 {
 	setStyleClass("page login-page");
 
@@ -47,7 +44,7 @@ void login_page::submit()
 
 	if(m_db.authenticate(uname, pw, m_session))
 	{
-		m_on_login();
+		logged_in.emit();
 	}
 	else
 	{

@@ -10,11 +10,8 @@
 
 #include "paths.hpp"
 
-link_edit_page::link_edit_page(link_db*              db,
-                               const link_entry*     existing,
-                               std::function<void()> on_save):
-  m_db{db},
-  m_on_save{std::move(on_save)}
+link_edit_page::link_edit_page(link_db* db, const link_entry* existing):
+  m_db{db}
 {
 	if(existing)
 	{
@@ -133,5 +130,5 @@ void link_edit_page::save()
 		m_db->add(e);
 	}
 
-	m_on_save();
+	saved.emit();
 }
