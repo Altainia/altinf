@@ -41,9 +41,14 @@ RUN curl -fsSL "https://github.com/sass/dart-sass/releases/download/${SASS_VERSI
     | tar -xz -C /opt
 ENV PATH="/opt/dart-sass:${PATH}"
 
-# alt library — header-only, installed before source copy so this layer is cached
+# alt library — installed before source copy so this layer is cached
 RUN git clone --depth 1 https://github.com/Altainia/alt.git /alt-src \
-    && bash /alt-src/scripts/install-local.sh \
+    && cmake -S /alt-src -B /alt-src/build/local \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DALT_BUILD_TESTS=OFF \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+    && cmake --build /alt-src/build/local --parallel "$(nproc)" \
+    && cmake --install /alt-src/build/local \
     && rm -rf /alt-src
 
 COPY . /src
