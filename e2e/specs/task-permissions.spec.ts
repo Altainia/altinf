@@ -101,6 +101,9 @@ test.beforeAll(async ({ browser }) => {
   await page.locator('.kb-new-btn').click();
   await expect(page.locator('.kb-editor-page')).toBeVisible();
   await page.locator('input[placeholder="Task title"]').fill('PermTask');
+  // Wait for any in-flight Wt AJAXes (resend/keepAlive cycles) to settle before
+  // clicking Save, so the title is in the server-side formDataCache when save() runs.
+  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
   await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
   await expect(page.locator('.kb-board')).toBeVisible();
 
@@ -118,6 +121,7 @@ test.beforeAll(async ({ browser }) => {
   await page.locator('.kb-new-btn').click();
   await expect(page.locator('.kb-editor-page')).toBeVisible();
   await page.locator('input[placeholder="Task title"]').fill('PermArchived');
+  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
   await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
   await expect(page.locator('.kb-board')).toBeVisible();
 

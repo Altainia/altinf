@@ -54,14 +54,22 @@ task_popup_widget::task_popup_widget(kanban_db& db, org_db& odb, long long task_
 	finished().connect([this, cb_id](Wt::DialogCode) {
 		// Remove document listeners if popup closed without them firing
 		// (e.g. Save button, Close button, archive).
+		//
+		// NOTE: We look up listeners via window['_kbClose_'+id] rather than
+		// document.getElementById() because Wt removes dialog DOM elements
+		// before executing doJavaScript() strings, so getElementById() would
+		// return null and the cleanup would silently skip removing the listeners.
 		doJavaScript(
 		  "(function(){"
-		  "  var inp=document.getElementById('" +
+		  "  var c=window['_kbClose_" +
 		  cb_id +
-		  "');"
-		  "  if(!inp)return;"
-		  "  if(inp.__onEsc)document.removeEventListener('keydown',inp.__onEsc);"
-		  "  if(inp.__onDown)document.removeEventListener('mousedown',inp.__onDown);"
+		  "'];"
+		  "  if(!c)return;"
+		  "  document.removeEventListener('keydown',c.onEsc);"
+		  "  document.removeEventListener('mousedown',c.onDown);"
+		  "  delete window['_kbClose_" +
+		  cb_id +
+		  "'];"
 		  "})();");
 		delete this;
 	});
@@ -83,6 +91,7 @@ task_popup_widget::task_popup_widget(kanban_db& db, org_db& odb, long long task_
 	  "  var inp=document.getElementById(cbId);"
 	  "  if(!inp)return;"
 	  "  function fireClose(){"
+	  "    if(!document.contains(inp))return;"
 	  "    inp.value='CLOSE';"
 	  "    inp.dispatchEvent(new Event('change'));"
 	  "  }"
@@ -97,8 +106,7 @@ task_popup_widget::task_popup_widget(kanban_db& db, org_db& odb, long long task_
 	  "    if(e.target.closest('.Wt-datepicker'))return;"
 	  "    fireClose();"
 	  "  }"
-	  "  inp.__onEsc=onEsc;"
-	  "  inp.__onDown=onDown;"
+	  "  window['_kbClose_'+cbId]={onEsc:onEsc,onDown:onDown};"
 	  "  document.addEventListener('keydown',onEsc);"
 	  "  document.addEventListener('mousedown',onDown);"
 	  "})('" +
