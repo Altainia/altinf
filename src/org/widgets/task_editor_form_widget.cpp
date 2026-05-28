@@ -9,8 +9,6 @@
 #include <Wt/WLink.h>
 #include <Wt/WTabWidget.h>
 #include <Wt/WText.h>
-#include <Wt/WTextArea.h>
-#include <cmark.h>
 
 #include <algorithm>
 #include <alt/functional.hpp>
@@ -1168,15 +1166,8 @@ void task_editor_form_widget::rebuild_comments()
 			  ->setStyleClass("kb-comment-author");
 			hdr2->addNew<Wt::WText>(
 			  " \xe2\x80\x94 " + fmt_ts(c.created_at), Wt::TextFormat::Plain);
-			auto* bw = item->addNew<Wt::WContainerWidget>();
+			auto* bw = item->addNew<markdown_viewer_widget>(c.body);
 			bw->setStyleClass("kb-comment-body");
-			char* raw2 = cmark_markdown_to_html(
-			  c.body.c_str(), c.body.size(), CMARK_OPT_DEFAULT);
-			bw->addNew<Wt::WText>(raw2 ? std::string(raw2) : "", Wt::TextFormat::UnsafeXHTML);
-			if(raw2)
-			{
-				free(raw2);
-			}
 			if(!c.last_edited_at.empty())
 			{
 				item->addNew<Wt::WText>(
@@ -1201,21 +1192,20 @@ void task_editor_form_widget::rebuild_comments()
 				auto*             ea      = item->addNew<Wt::WContainerWidget>();
 				ea->setStyleClass("kb-comment-edit-area");
 				ea->hide();
-				auto* eta = ea->addNew<Wt::WTextArea>();
-				eta->setText(c.body);
-				eta->setStyleClass("editor-field");
+				auto* eta   = ea->addNew<markdown_editor_widget>(c.body);
 				auto* ebtns = ea->addNew<Wt::WContainerWidget>();
 				ebtns->setStyleClass("kb-comment-edit-btns");
 				auto* save_eb = ebtns->addNew<Wt::WPushButton>("Save");
 				save_eb->setStyleClass("editor-btn");
 				auto* cancel_eb = ebtns->addNew<Wt::WPushButton>("Cancel");
 				cancel_eb->setStyleClass("editor-btn editor-btn-cancel");
-				edit_btn->clicked().connect([this, cauthor, is_own, bw, ea, actions] {
+				edit_btn->clicked().connect([this, cauthor, is_own, bw, ea, actions, eta] {
 					if(is_own)
 					{
 						bw->hide();
 						actions->hide();
 						ea->show();
+						eta->focus();
 					}
 					else
 					{
@@ -1228,8 +1218,8 @@ void task_editor_form_widget::rebuild_comments()
 						yes->setStyleClass("editor-btn");
 						auto* no = d->footer()->addNew<Wt::WPushButton>("Cancel");
 						no->setStyleClass("editor-btn editor-btn-cancel");
-						yes->clicked().connect([d, bw, ea, actions] {
-							d->accept(); bw->hide(); actions->hide(); ea->show(); });
+						yes->clicked().connect([d, bw, ea, actions, eta] {
+							d->accept(); bw->hide(); actions->hide(); ea->show(); eta->focus(); });
 						no->clicked().connect([d] { d->reject(); });
 						d->finished().connect([d](Wt::DialogCode) { delete d; });
 						d->show();
@@ -1242,7 +1232,7 @@ void task_editor_form_widget::rebuild_comments()
 					{
 						return;
 					}
-					const std::string nb = eta->text().toUTF8();
+					const std::string nb = eta->value();
 					if(nb.empty())
 					{
 						return;
@@ -1285,19 +1275,19 @@ void task_editor_form_widget::rebuild_comments()
 	{
 		return;
 	}
-	auto* ta = m_comment_compose->addNew<Wt::WTextArea>();
-	ta->setPlaceholderText("Write a comment (Markdown supported)");
-	ta->setStyleClass("editor-field");
+	auto* ta   = m_comment_compose->addNew<markdown_editor_widget>();
 	auto* post = m_comment_compose->addNew<Wt::WPushButton>("Post Comment");
 	post->setStyleClass("editor-btn kb-comment-post-btn");
 	post->setDisabled(true);
-	ta->keyWentUp().connect([ta, post] { post->setDisabled(ta->text().empty()); });
+	ta->changed().connect([ta, post](const std::string& v) {
+		post->setDisabled(v.empty());
+	});
 	post->clicked().connect([this, ta, post, alive = m_alive] {
 		if(!*alive)
 		{
 			return;
 		}
-		const std::string body = ta->text().toUTF8();
+		const std::string body = ta->value();
 		if(body.empty())
 		{
 			return;
@@ -1306,7 +1296,6 @@ void task_editor_form_widget::rebuild_comments()
 		const long long tid = m_task_id != 0 ? m_task_id : m_original.id;
 		m_db.add_comment(tid, m_username, body);
 		live_hub::instance().broadcast("task:" + std::to_string(tid) + ":comments");
-		ta->setText(Wt::WString{});
 		rebuild_comments();
 	});
 }
