@@ -6,7 +6,7 @@
 
 markdown_viewer_widget::markdown_viewer_widget(const std::string& markdown)
 {
-	Wt::WApplication::instance()->require("js/toastui-editor-viewer.min.js?v=" BUILD_VERSION);
+	Wt::WApplication::instance()->require("js/toastui-editor.min.js?v=" BUILD_VERSION);
 	Wt::WApplication::instance()->useStyleSheet(Wt::WLink("css/toastui-editor.min.css"));
 
 	auto* mount = addNew<Wt::WContainerWidget>();
@@ -16,7 +16,7 @@ markdown_viewer_widget::markdown_viewer_widget(const std::string& markdown)
 	doJavaScript(
 	  "var el=document.getElementById('" + m_mount_id +
 	  "');"
-	  "el._viewer=new toastui.Viewer({el:el,initialValue:" +
+	  "el._viewer=new toastui.Editor({el:el,viewer:true,initialValue:" +
 	  js_md + "});");
 }
 
