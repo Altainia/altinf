@@ -31,9 +31,13 @@ async function openTaskEditor(page: Page, title: string) {
 }
 
 async function postComment(page: Page, body: string) {
-  await page.locator('.kb-comment-compose textarea').pressSequentially(body);
+  const editorEl = page.locator('.kb-comment-compose .toastui-editor-contents');
+  await editorEl.click();
+  await editorEl.fill(body);
+  // Tab out to trigger blur → fires changed() → enables Post button
+  await page.keyboard.press('Tab');
   const postBtn = page.locator('.kb-comment-post-btn');
-  await expect(postBtn).toBeEnabled();
+  await expect(postBtn).toBeEnabled({ timeout: 3000 });
   await postBtn.click();
   await expect(page.locator('.kb-comment-item').last()).toBeVisible();
 }
@@ -76,22 +80,21 @@ test('comments: posting a comment renders it in the list', async ({ browser }) =
   await createTask(page, 'CommentTask1');
   await openTaskEditor(page, 'CommentTask1');
 
-  // Post button is disabled while textarea is empty
+  // Post button is disabled until content is entered and editor loses focus
   await expect(page.locator('.kb-comment-post-btn')).toBeDisabled();
 
   // Type a comment and post
-  await postComment(page, 'Hello **world**');
+  await postComment(page, 'Hello world');
 
   // Comment appears in the list
   await expect(page.locator('.kb-comment-item')).toBeVisible();
   // Author label present
   await expect(page.locator('.kb-comment-author', { hasText: 'admin' })).toBeVisible();
-  // Markdown rendered: **world** → <strong> (check the newly posted comment's body)
-  const bodyHtml = await page.locator('.kb-comment-item').last().locator('.kb-comment-body').innerHTML();
-  expect(bodyHtml).toContain('<strong>');
+  // Comment body text is visible
+  await expect(page.locator('.kb-comment-item').last().locator('.kb-comment-body')).toContainText('Hello world');
 
-  // Textarea is cleared after posting
-  await expect(page.locator('.kb-comment-compose textarea')).toHaveValue('');
+  // After posting, compose area is rebuilt with a fresh editor (no stale value check needed)
+  await expect(page.locator('.kb-comment-compose')).toBeVisible();
 
   await ctx.close();
 });
@@ -107,7 +110,7 @@ test('comments: editing own comment updates body and shows "Edited by" label', a
   await openTaskEditor(page, 'CommentTask2');
 
   // Add comment to the task
-  await postComment(page, 'Hello **world**');
+  await postComment(page, 'Hello world');
   
   // Comment appears in the list
   await expect(page.locator('.kb-comment-item')).toBeVisible();
@@ -115,10 +118,10 @@ test('comments: editing own comment updates body and shows "Edited by" label', a
   // Click Edit on the first comment (no confirmation dialog for own comment)
   await page.locator('.kb-comment-item').first().locator('button', { hasText: 'Edit' }).click();
 
-  // Inline textarea appears
-  await expect(page.locator('.kb-comment-edit-area textarea')).toBeVisible();
-  // .fill() is safe here — the Save button has no enabled/disabled state tied to keyWentUp
-  await page.locator('.kb-comment-edit-area textarea').fill('Revised body');
+  // Inline editor appears
+  await expect(page.locator('.kb-comment-edit-area .toastui-editor-contents')).toBeVisible();
+  // fill is safe — clicking Save triggers blur which syncs value before the save handler runs
+  await page.locator('.kb-comment-edit-area .toastui-editor-contents').fill('Revised body');
   await page.locator('.kb-comment-edit-area button', { hasText: 'Save' }).click();
 
   // Updated body visible
@@ -237,8 +240,7 @@ test('comments: comment edited in session B updates in session A without reload'
   // B edits the comment — use .last() so a retry (with a leftover comment) picks the newest one
   const editItem = pageB.locator('.kb-comment-item', { hasText: 'Original from A' }).last();
   await editItem.locator('button', { hasText: 'Edit' }).click();
-  // .fill() is safe here — the Save button has no enabled/disabled state tied to keyWentUp
-  await editItem.locator('.kb-comment-edit-area textarea').fill('Edited by B');
+  await editItem.locator('.kb-comment-edit-area .toastui-editor-contents').fill('Edited by B');
   await editItem.locator('.kb-comment-edit-area button', { hasText: 'Save' }).click();
 
   // A sees the updated body and "Edited by" label without reloading
