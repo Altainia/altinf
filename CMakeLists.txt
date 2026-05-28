@@ -6,7 +6,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Wt REQUIRED)
 find_package(OpenSSL REQUIRED)
-find_library(CMARK_LIB cmark REQUIRED)
 find_program(SASS_EXECUTABLE sass REQUIRED)
 
 # Build timestamp used as a cache-busting query parameter on static JS assets.
@@ -25,7 +24,6 @@ target_compile_definitions(altinf PRIVATE BUILD_VERSION="${BUILD_TIMESTAMP}")
 target_link_libraries(altinf PRIVATE
   Wt::Wt Wt::HTTP wtdbo wtdbosqlite3
   OpenSSL::SSL OpenSSL::Crypto
-  ${CMARK_LIB}
 )
 
 # Compile SCSS → CSS when any .scss source is newer than the output file
