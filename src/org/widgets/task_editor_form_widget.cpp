@@ -9,6 +9,7 @@
 #include <Wt/WLink.h>
 #include <Wt/WTabWidget.h>
 #include <Wt/WText.h>
+#include <Wt/WTextArea.h>
 #include <cmark.h>
 
 #include <algorithm>
@@ -19,6 +20,8 @@
 #include "org/kanban_notifications.hpp"
 #include "org/org.hpp"
 #include "widgets/live_hub.hpp"
+#include "widgets/markdown_editor_widget.hpp"
+#include "widgets/markdown_viewer_widget.hpp"
 
 // ── Static helpers ────────────────────────────────────────────────────────────
 
@@ -196,37 +199,38 @@ task_editor_form_widget::task_editor_form_widget(
 	m_desc_field = form->addNew<Wt::WContainerWidget>();
 	m_desc_field->setStyleClass("kb-popup-field");
 
-	const std::string desc_val  = is_new ? "" : m_original.description;
-	const std::string desc_html = render_markdown(desc_val);
-	m_desc_display              = m_desc_field->addNew<Wt::WText>(desc_html, Wt::TextFormat::UnsafeXHTML);
-	m_desc_display->setStyleClass("kb-desc-display");
+	const std::string desc_val = is_new ? "" : m_original.description;
+
+	m_desc_viewer = m_desc_field->addNew<markdown_viewer_widget>(desc_val);
+	m_desc_viewer->setStyleClass("kb-desc-display");
 	if(can_edit && !is_new)
 	{
-		m_desc_display->addStyleClass("kb-popup-display");
+		m_desc_viewer->addStyleClass("kb-popup-display");
 	}
 	if(is_new)
 	{
-		m_desc_display->hide();
+		m_desc_viewer->hide();
 	}
 
-	m_desc_edit = m_desc_field->addNew<Wt::WTextArea>(desc_val);
-	m_desc_edit->setPlaceholderText("Description (optional)");
-	m_desc_edit->setStyleClass("editor-field kb-desc-field");
+	m_desc_editor = m_desc_field->addNew<markdown_editor_widget>(desc_val);
+	m_desc_editor->setStyleClass("kb-desc-field");
 	if(!is_new)
 	{
-		m_desc_edit->hide();
+		m_desc_editor->hide();
 	}
 
 	if(can_edit && !is_new)
 	{
-		m_desc_display->clicked().connect([this] {
-			enter_edit_mode(m_desc_display, m_desc_edit);
+		m_desc_viewer->clicked().connect([this] {
+			m_desc_viewer->hide();
+			m_desc_editor->show();
+			m_desc_editor->focus();
 		});
-		m_desc_edit->blurred().connect([this] {
-			const std::string v = m_desc_edit->text().toUTF8();
-			m_desc_edit->hide();
-			m_desc_display->setText(render_markdown(v));
-			m_desc_display->show();
+
+		m_desc_editor->changed().connect([this](const std::string& v) {
+			m_desc_editor->hide();
+			m_desc_viewer->set_content(v);
+			m_desc_viewer->show();
 			if(v == m_original.description)
 			{
 				unmark_field_dirty("description", m_desc_field);
@@ -869,21 +873,6 @@ bool task_editor_form_widget::is_stale() const
 
 // ── Private helpers ───────────────────────────────────────────────────────────
 
-std::string task_editor_form_widget::render_markdown(const std::string& md) const
-{
-	if(md.empty())
-	{
-		return "<em>(none)</em>";
-	}
-	char*       raw  = cmark_markdown_to_html(md.c_str(), md.size(), CMARK_OPT_DEFAULT);
-	std::string html = raw ? std::string(raw) : md;
-	if(raw)
-	{
-		free(raw);
-	}
-	return html;
-}
-
 void task_editor_form_widget::mark_stale()
 {
 	m_stale = true;
@@ -1001,7 +990,7 @@ void task_editor_form_widget::save()
 	t.team_id     = m_team_id;
 	t.status      = status;
 	t.title       = title;
-	t.description = m_desc_edit->text().toUTF8();
+	t.description = m_desc_editor->value();
 	t.type_id     = m_type_id;
 	if(const auto d = m_start_date_edit->date(); d.isValid())
 	{

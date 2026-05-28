@@ -7,7 +7,6 @@
 #include <Wt/WPushButton.h>
 #include <Wt/WSignal.h>
 #include <Wt/WText.h>
-#include <Wt/WTextArea.h>
 
 #include <map>
 #include <memory>
@@ -20,6 +19,8 @@
 #include "org/kanban_db.hpp"
 #include "org/org_db.hpp"
 #include "org/team_cap.hpp"
+#include "widgets/markdown_editor_widget.hpp"
+#include "widgets/markdown_viewer_widget.hpp"
 
 class task_editor_form_widget: public Wt::WContainerWidget
 {
@@ -59,9 +60,9 @@ private:
 	Wt::WText*            m_title_display{nullptr};
 	Wt::WContainerWidget* m_title_field{nullptr};
 
-	Wt::WTextArea*        m_desc_edit{nullptr};
-	Wt::WText*            m_desc_display{nullptr};
-	Wt::WContainerWidget* m_desc_field{nullptr};
+	markdown_editor_widget* m_desc_editor{nullptr};
+	markdown_viewer_widget* m_desc_viewer{nullptr};
+	Wt::WContainerWidget*   m_desc_field{nullptr};
 
 	Wt::WComboBox*        m_status_edit{nullptr};
 	Wt::WText*            m_status_display{nullptr};
@@ -96,13 +97,12 @@ private:
 	static const std::vector<std::string> k_status_vals;
 	static const std::vector<std::string> k_status_labels;
 
-	void        save();
-	void        mark_stale();
-	void        mark_field_dirty(const std::string& field, Wt::WContainerWidget* container);
-	void        unmark_field_dirty(const std::string& field, Wt::WContainerWidget* container);
-	void        enter_edit_mode(Wt::WText* display, Wt::WWidget* edit);
-	void        exit_edit_mode(Wt::WText* display, Wt::WWidget* edit, const std::string& new_text);
-	void        rebuild_comments();
-	void        rebuild_history();
-	std::string render_markdown(const std::string& md) const;
+	void save();
+	void mark_stale();
+	void mark_field_dirty(const std::string& field, Wt::WContainerWidget* container);
+	void unmark_field_dirty(const std::string& field, Wt::WContainerWidget* container);
+	void enter_edit_mode(Wt::WText* display, Wt::WWidget* edit);
+	void exit_edit_mode(Wt::WText* display, Wt::WWidget* edit, const std::string& new_text);
+	void rebuild_comments();
+	void rebuild_history();
 };
