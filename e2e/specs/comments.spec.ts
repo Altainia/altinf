@@ -31,13 +31,13 @@ async function openTaskEditor(page: Page, title: string) {
 }
 
 async function postComment(page: Page, body: string) {
-  const editorEl = page.locator('.kb-comment-compose .toastui-editor-contents');
+  const editorEl = page.locator('.kb-comment-compose .ProseMirror[contenteditable="true"]').filter({ visible: true });
   await editorEl.click();
   await editorEl.fill(body);
-  // Tab out to trigger blur → fires changed() → enables Post button
-  await page.keyboard.press('Tab');
+  // Blur the editor to fire changed() → enables Post button
+  await page.evaluate(() => { (document.activeElement as HTMLElement)?.blur(); });
   const postBtn = page.locator('.kb-comment-post-btn');
-  await expect(postBtn).toBeEnabled({ timeout: 3000 });
+  await expect(postBtn).toBeEnabled({ timeout: 5000 });
   await postBtn.click();
   await expect(page.locator('.kb-comment-item').last()).toBeVisible();
 }
@@ -119,9 +119,9 @@ test('comments: editing own comment updates body and shows "Edited by" label', a
   await page.locator('.kb-comment-item').first().locator('button', { hasText: 'Edit' }).click();
 
   // Inline editor appears
-  await expect(page.locator('.kb-comment-edit-area .toastui-editor-contents')).toBeVisible();
+  await expect(page.locator('.kb-comment-edit-area .ProseMirror[contenteditable="true"]').filter({ visible: true })).toBeVisible();
   // fill is safe — clicking Save triggers blur which syncs value before the save handler runs
-  await page.locator('.kb-comment-edit-area .toastui-editor-contents').fill('Revised body');
+  await page.locator('.kb-comment-edit-area .ProseMirror[contenteditable="true"]').filter({ visible: true }).fill('Revised body');
   await page.locator('.kb-comment-edit-area button', { hasText: 'Save' }).click();
 
   // Updated body visible
@@ -240,7 +240,7 @@ test('comments: comment edited in session B updates in session A without reload'
   // B edits the comment — use .last() so a retry (with a leftover comment) picks the newest one
   const editItem = pageB.locator('.kb-comment-item', { hasText: 'Original from A' }).last();
   await editItem.locator('button', { hasText: 'Edit' }).click();
-  await editItem.locator('.kb-comment-edit-area .toastui-editor-contents').fill('Edited by B');
+  await editItem.locator('.kb-comment-edit-area .ProseMirror[contenteditable="true"]').filter({ visible: true }).fill('Edited by B');
   await editItem.locator('.kb-comment-edit-area button', { hasText: 'Save' }).click();
 
   // A sees the updated body and "Edited by" label without reloading
