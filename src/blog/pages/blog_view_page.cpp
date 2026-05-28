@@ -3,12 +3,12 @@
 #include <Wt/WAnchor.h>
 #include <Wt/WLink.h>
 #include <Wt/WText.h>
-#include <cmark.h>
 
 #include <fstream>
 #include <sstream>
 
 #include "paths.hpp"
+#include "widgets/markdown_viewer_widget.hpp"
 
 blog_view_page::blog_view_page(const blog_post& post, const session_data& session)
 {
@@ -78,9 +78,7 @@ blog_view_page::blog_view_page(const blog_post& post, const session_data& sessio
 		body += line + "\n";
 	}
 
-	char* const html    = cmark_markdown_to_html(body.c_str(), body.size(), CMARK_OPT_DEFAULT);
-	auto*       content = addNew<Wt::WContainerWidget>();
+	auto* content = addNew<Wt::WContainerWidget>();
 	content->setStyleClass("post-content");
-	content->addNew<Wt::WText>(html, Wt::TextFormat::UnsafeXHTML);
-	free(html);
+	content->addNew<markdown_viewer_widget>(body);
 }
