@@ -16,7 +16,7 @@ markdown_viewer_widget::markdown_viewer_widget(const std::string& markdown)
 	doJavaScript(
 	  "var el=document.getElementById('" + m_mount_id +
 	  "');"
-	  "el._viewer=new toastui.Editor({el:el,viewer:true,initialValue:" +
+	  "el._viewer=toastui.Editor.factory({el:el,viewer:true,initialValue:" +
 	  js_md + "});");
 }
 
