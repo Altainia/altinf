@@ -5,9 +5,9 @@
 // --- design-intent colors (inputs only, never emitted directly) ---
 
 $bg-colors: (
-  'bg':      #0f0f0f,
-  'surface': #1a1a1a,
-  'border':  #2e2e2e,
+  'bg':           #0f0f0f,
+  'surface':      #1a1a1a,
+  'table-header': #303030,
 );
 
 $text-intents: (
@@ -28,12 +28,21 @@ $_ref-bg: map.get($bg-colors, 'surface');
 $text-normal: ();
 $text-large:  ();
 
+$text-th-normal: ();
+$text-th-large:  ();
+
 @each $name, $color in $text-intents {
   $pair-n: contrast.ensure-contrast(16px, false, $color, $_ref-bg);
   $text-normal: map.set($text-normal, $name, list.nth($pair-n, 1));
 
   $pair-l: contrast.ensure-contrast(24px, false, $color, $_ref-bg);
   $text-large: map.set($text-large, $name, list.nth($pair-l, 1));
+
+  $pair-thn: contrast.ensure-contrast(16px, false, $color, $_ref-bg);
+  $text-th-normal: map.set($text-th-normal, $name, list.nth($pair-thn, 1));
+
+  $pair-thl: contrast.ensure-contrast(24px, false, $color, $_ref-bg);
+  $text-th-large: map.set($text-th-large, $name, list.nth($pair-thl, 1));
 }
 
 // --- emit CSS custom properties ---
@@ -49,13 +58,24 @@ $text-large:  ();
     --color-#{$name}: #{$color};
   }
 
+  @each $name, $color in $text-th-normal {
+    --color-th-#{$name}: #{$color};
+  }
+
   // text colors verified at 3:1 (large text — use for bold ≥ 14pt or regular ≥ 18pt)
   @each $name, $color in $text-large {
     --color-#{$name}-large: #{$color};
   }
 
+  @each $name, $color in $text-th-large {
+    --color-th-#{$name}-large: #{$color};
+  }
+
   --font-sans: 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'Fira Code', 'Cascadia Code', monospace;
+
+  --color-border:        #2e2e2e;
+  --color-border-accent: #a673a6;
 
   --max-width: 720px;
   --radius:    0;

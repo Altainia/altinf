@@ -1,16 +1,29 @@
 // ── Input fields ──────────────────────────────────────────────────────────────
 
-@mixin form-input {
-  background:    var(--color-bg);
-  border:        1px solid var(--color-border);
-  border-radius: var(--radius);
-  color:         var(--color-text);
-  font-family:   var(--font-sans);
-  font-size:     0.95rem;
-  padding:       0.5rem 0.75rem;
-  width:         100%;
+@mixin form-input($important: false) {
+  @if $important {
+    background:    var(--color-bg) !important;
+    border:        1px solid var(--color-border) !important;
+    border-radius: var(--radius) !important;
+    color:         var(--color-text) !important;
+    font-family:   var(--font-sans) !important;
+    font-size:     0.95rem !important;
+    padding:       0.5rem 0.75rem !important;
+    width:         100% !important;
 
-  &:focus { border-color: var(--color-accent); outline: none; }
+    &:focus { border-color: var(--color-accent) !important; outline: none !important; }
+  } @else {
+    background:    var(--color-bg);
+    border:        1px solid var(--color-border);
+    border-radius: var(--radius);
+    color:         var(--color-text);
+    font-family:   var(--font-sans);
+    font-size:     0.95rem;
+    padding:       0.5rem 0.75rem;
+    width:         100%;
+
+    &:focus { border-color: var(--color-accent); outline: none; }
+  }
 }
 
 // ── Select dropdowns ──────────────────────────────────────────────────────────
