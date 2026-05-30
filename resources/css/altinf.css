@@ -1926,112 +1926,124 @@ a:hover {
   border-color: var(--color-border) !important;
   border-radius: var(--radius) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-md-marked-text {
+
+.toastui-editor-md-marked-text {
   color: var(--text-accent-h) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-md-code {
+
+.toastui-editor-md-code {
   background-color: var(--color-surface) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-md-code-block-line-background {
+
+.toastui-editor-md-code-block-line-background {
   background-color: var(--color-surface) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-md-preview {
+
+.toastui-editor-md-preview {
   background-color: var(--color-surface) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-contents a {
+
+.toastui-editor-contents a {
   color: var(--text-accent-h) !important;
   text-decoration: none !important;
 }
-.toastui-editor-defaultUI .toastui-editor-contents p, .toastui-editor-defaultUI .toastui-editor-contents h1, .toastui-editor-defaultUI .toastui-editor-contents h2, .toastui-editor-defaultUI .toastui-editor-contents h3, .toastui-editor-defaultUI .toastui-editor-contents h4, .toastui-editor-defaultUI .toastui-editor-contents h5 {
+.toastui-editor-contents p, .toastui-editor-contents h1, .toastui-editor-contents h2, .toastui-editor-contents h3, .toastui-editor-contents h4, .toastui-editor-contents h5 {
   color: var(--color-text) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-contents pre {
+.toastui-editor-contents pre {
   background-color: var(--color-surface) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-contents code {
+.toastui-editor-contents code {
   background-color: var(--color-surface) !important;
   color: var(--color-text) !important;
   border-color: var(--color-border) !important;
   border-radius: var(--radius) !important;
 }
-.toastui-editor-defaultUI .ProseMirror {
+
+.ProseMirror {
   color: var(--color-text) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-defaultUI-toolbar {
+
+.toastui-editor-defaultUI-toolbar {
   background-color: var(--color-surface) !important;
   border-color: var(--color-border) !important;
   border-radius: var(--radius) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-defaultUI-toolbar .toastui-editor-toolbar-icons {
+.toastui-editor-defaultUI-toolbar .toastui-editor-toolbar-icons {
   border-radius: var(--radius) !important;
   cursor: pointer !important;
   font-family: var(--font-sans) !important;
   transition: background 0.15s, color 0.15s !important;
 }
-.toastui-editor-defaultUI .toastui-editor-defaultUI-toolbar .toastui-editor-toolbar-icons:disabled {
+.toastui-editor-defaultUI-toolbar .toastui-editor-toolbar-icons:disabled {
   opacity: 0.35 !important;
   cursor: default !important;
 }
-.toastui-editor-defaultUI .toastui-editor-defaultUI-toolbar .toastui-editor-toolbar-icons {
+.toastui-editor-defaultUI-toolbar .toastui-editor-toolbar-icons {
   background-color: transparent !important;
   border: 1px solid var(--color-border) !important;
   color: var(--color-muted) !important;
   font-size: 0.95rem !important;
 }
-.toastui-editor-defaultUI .toastui-editor-defaultUI-toolbar .toastui-editor-toolbar-icons:hover {
+.toastui-editor-defaultUI-toolbar .toastui-editor-toolbar-icons:hover {
   background-color: var(--color-surface) !important;
   color: var(--color-text) !important;
   text-decoration: none !important;
 }
-.toastui-editor-defaultUI .toastui-editor-defaultUI-toolbar .toastui-editor-toolbar-icons {
+.toastui-editor-defaultUI-toolbar .toastui-editor-toolbar-icons {
   font-size: 0.85rem !important;
   padding: 0.35rem 0.85rem !important;
 }
-.toastui-editor-defaultUI .toastui-editor-md-tab-container {
+
+.toastui-editor-md-tab-container {
   background-color: var(--color-surface) !important;
   border-color: var(--color-border) !important;
   border-radius: var(--radius) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-md-tab-container .toastui-editor-tabs {
+.toastui-editor-md-tab-container .toastui-editor-tabs {
   margin-left: auto !important;
 }
-.toastui-editor-defaultUI .toastui-editor-md-table-cell {
+
+.toastui-editor-md-table-cell {
   color: var(--color-text) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-contents table th {
+
+.toastui-editor-contents table th {
   background-color: var(--color-table-header) !important;
   color: var(--color-th-text) !important;
   border: 1px solid var(--color-border) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-contents table td {
+.toastui-editor-contents table td {
   color: var(--color-text) !important;
   border: 1px solid var(--color-border) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-ww-container {
+
+.toastui-editor-ww-container {
   background-color: var(--color-bg) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-ww-code-block::after {
+
+.toastui-editor-ww-code-block::after {
   border-radius: var(--radius) !important;
   cursor: pointer !important;
   font-family: var(--font-sans) !important;
   transition: background 0.15s, color 0.15s !important;
 }
-.toastui-editor-defaultUI .toastui-editor-ww-code-block::after:disabled {
+.toastui-editor-ww-code-block::after:disabled {
   opacity: 0.35 !important;
   cursor: default !important;
 }
-.toastui-editor-defaultUI .toastui-editor-ww-code-block::after {
+.toastui-editor-ww-code-block::after {
   background-color: transparent !important;
   border: 1px solid var(--color-border) !important;
   color: var(--color-muted) !important;
   font-size: 0.95rem !important;
 }
-.toastui-editor-defaultUI .toastui-editor-ww-code-block::after:hover {
+.toastui-editor-ww-code-block::after:hover {
   background-color: var(--color-surface) !important;
   color: var(--color-text) !important;
   text-decoration: none !important;
 }
-.toastui-editor-defaultUI .toastui-editor-ww-code-block::after {
+.toastui-editor-ww-code-block::after {
   font-size: 0.85rem !important;
   padding: 0.35rem 0.85rem !important;
   height: auto !important;
@@ -2039,7 +2051,8 @@ a:hover {
   background-position: 2rem !important;
   padding: 3px 35px 0 10px !important;
 }
-.toastui-editor-defaultUI .toastui-editor-ww-code-block-language input {
+
+.toastui-editor-ww-code-block-language input {
   background: var(--color-bg) !important;
   border: 1px solid var(--color-border) !important;
   border-radius: var(--radius) !important;
@@ -2049,42 +2062,44 @@ a:hover {
   padding: 0.5rem 0.75rem !important;
   width: 100% !important;
 }
-.toastui-editor-defaultUI .toastui-editor-ww-code-block-language input:focus {
+.toastui-editor-ww-code-block-language input:focus {
   border-color: var(--color-accent) !important;
   outline: none !important;
 }
-.toastui-editor-defaultUI .toastui-editor-ww-code-block-language input {
+.toastui-editor-ww-code-block-language input {
   border-color: var(--color-border) !important;
   border-radius: var(--radius) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-mode-switch {
+
+.toastui-editor-mode-switch {
   background-color: var(--color-surface) !important;
   border-color: var(--color-border) !important;
   border-radius: var(--radius) !important;
   height: auto !important;
 }
-.toastui-editor-defaultUI .tab-item {
+
+.tab-item {
   border-radius: var(--radius) !important;
   cursor: pointer !important;
   font-family: var(--font-sans) !important;
   transition: background 0.15s, color 0.15s !important;
 }
-.toastui-editor-defaultUI .tab-item:disabled {
+.tab-item:disabled {
   opacity: 0.35 !important;
   cursor: default !important;
 }
-.toastui-editor-defaultUI .tab-item {
+.tab-item {
   background-color: transparent !important;
   border: 1px solid var(--color-border) !important;
   color: var(--color-muted) !important;
   font-size: 0.95rem !important;
 }
-.toastui-editor-defaultUI .tab-item:hover {
+.tab-item:hover {
   background-color: var(--color-surface) !important;
   color: var(--color-text) !important;
   text-decoration: none !important;
 }
-.toastui-editor-defaultUI .tab-item {
+.tab-item {
   font-size: 0.85rem !important;
   padding: 0.35rem 0.85rem !important;
   height: auto !important;
@@ -2093,76 +2108,78 @@ a:hover {
   margin-right: auto !important;
   line-height: normal !important;
 }
-.toastui-editor-defaultUI .tab-item.active {
+.tab-item.active {
   border-radius: var(--radius) !important;
   cursor: pointer !important;
   font-family: var(--font-sans) !important;
   transition: background 0.15s, color 0.15s !important;
 }
-.toastui-editor-defaultUI .tab-item.active:disabled {
+.tab-item.active:disabled {
   opacity: 0.35 !important;
   cursor: default !important;
 }
-.toastui-editor-defaultUI .tab-item.active {
+.tab-item.active {
   background-color: transparent !important;
   border: 1px solid var(--color-border-accent) !important;
   color: var(--color-muted) !important;
   font-size: 0.95rem !important;
 }
-.toastui-editor-defaultUI .tab-item.active:hover {
+.tab-item.active:hover {
   background-color: var(--color-surface) !important;
   color: var(--color-text) !important;
   text-decoration: none !important;
 }
-.toastui-editor-defaultUI .tab-item:last-child {
+.tab-item:last-child {
   margin-left: auto !important;
 }
-.toastui-editor-defaultUI .toastui-editor-dropdown-toolbar {
+
+.toastui-editor-dropdown-toolbar {
   background-color: var(--color-surface) !important;
   border-color: var(--color-border) !important;
   border-radius: var(--radius) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-popup {
+
+.toastui-editor-popup {
   background-color: var(--color-surface) !important;
   border-color: var(--color-border) !important;
   border-radius: var(--radius) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-popup .toastui-editor-table-cell {
+.toastui-editor-popup .toastui-editor-table-cell {
   background-color: var(--color-bg) !important;
   border-color: var(--color-border) !important;
   border-radius: var(--radius) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-popup .toastui-editor-file-name {
+.toastui-editor-popup .toastui-editor-file-name {
   color: var(--color-text) !important;
   border-color: var(--color-border) !important;
   border-radius: var(--radius) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-popup .toastui-editor-file-select-button {
+.toastui-editor-popup .toastui-editor-file-select-button {
   border-radius: var(--radius) !important;
   cursor: pointer !important;
   font-family: var(--font-sans) !important;
   transition: background 0.15s, color 0.15s !important;
 }
-.toastui-editor-defaultUI .toastui-editor-popup .toastui-editor-file-select-button:disabled {
+.toastui-editor-popup .toastui-editor-file-select-button:disabled {
   opacity: 0.35 !important;
   cursor: default !important;
 }
-.toastui-editor-defaultUI .toastui-editor-popup .toastui-editor-file-select-button {
+.toastui-editor-popup .toastui-editor-file-select-button {
   background-color: transparent !important;
   border: 1px solid var(--color-border) !important;
   color: var(--color-muted) !important;
   font-size: 0.95rem !important;
 }
-.toastui-editor-defaultUI .toastui-editor-popup .toastui-editor-file-select-button:hover {
+.toastui-editor-popup .toastui-editor-file-select-button:hover {
   background-color: var(--color-surface) !important;
   color: var(--color-text) !important;
   text-decoration: none !important;
 }
-.toastui-editor-defaultUI .toastui-editor-popup .toastui-editor-file-select-button {
+.toastui-editor-popup .toastui-editor-file-select-button {
   font-size: 0.85rem !important;
   padding: 0.35rem 0.85rem !important;
 }
-.toastui-editor-defaultUI .toastui-editor-popup input[type=text] {
+.toastui-editor-popup input[type=text] {
   background: var(--color-bg) !important;
   border: 1px solid var(--color-border) !important;
   border-radius: var(--radius) !important;
@@ -2172,61 +2189,63 @@ a:hover {
   padding: 0.5rem 0.75rem !important;
   width: 100% !important;
 }
-.toastui-editor-defaultUI .toastui-editor-popup input[type=text]:focus {
+.toastui-editor-popup input[type=text]:focus {
   border-color: var(--color-accent) !important;
   outline: none !important;
 }
-.toastui-editor-defaultUI .toastui-editor-popup ul li:hover {
+.toastui-editor-popup ul li:hover {
   background-color: var(--color-bg) !important;
 }
-.toastui-editor-defaultUI .toastui-editor-close-button {
+
+.toastui-editor-close-button {
   border-radius: var(--radius) !important;
   cursor: pointer !important;
   font-family: var(--font-sans) !important;
   transition: background 0.15s, color 0.15s !important;
 }
-.toastui-editor-defaultUI .toastui-editor-close-button:disabled {
+.toastui-editor-close-button:disabled {
   opacity: 0.35 !important;
   cursor: default !important;
 }
-.toastui-editor-defaultUI .toastui-editor-close-button {
+.toastui-editor-close-button {
   background-color: transparent !important;
   border: 1px solid var(--color-border) !important;
   color: var(--color-muted) !important;
   font-size: 0.95rem !important;
 }
-.toastui-editor-defaultUI .toastui-editor-close-button:hover {
+.toastui-editor-close-button:hover {
   background-color: var(--color-surface) !important;
   color: var(--color-text) !important;
   text-decoration: none !important;
 }
-.toastui-editor-defaultUI .toastui-editor-close-button {
+.toastui-editor-close-button {
   font-size: 0.85rem !important;
   padding: 0.35rem 0.85rem !important;
 }
-.toastui-editor-defaultUI .toastui-editor-ok-button {
+
+.toastui-editor-ok-button {
   border-radius: var(--radius) !important;
   cursor: pointer !important;
   font-family: var(--font-sans) !important;
   transition: background 0.15s, color 0.15s !important;
 }
-.toastui-editor-defaultUI .toastui-editor-ok-button:disabled {
+.toastui-editor-ok-button:disabled {
   opacity: 0.35 !important;
   cursor: default !important;
 }
-.toastui-editor-defaultUI .toastui-editor-ok-button {
+.toastui-editor-ok-button {
   background-color: var(--color-accent) !important;
   border: none !important;
   color: var(--color-bg) !important;
   font-size: 0.95rem !important;
   font-weight: 600 !important;
 }
-.toastui-editor-defaultUI .toastui-editor-ok-button:hover {
+.toastui-editor-ok-button:hover {
   background-color: var(--color-accent-h) !important;
   color: var(--color-bg) !important;
   text-decoration: none !important;
 }
-.toastui-editor-defaultUI .toastui-editor-ok-button {
+.toastui-editor-ok-button {
   font-size: 0.85rem !important;
   padding: 0.35rem 0.85rem !important;
 }
