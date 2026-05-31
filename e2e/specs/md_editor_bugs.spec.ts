@@ -10,6 +10,11 @@ import { loginAs } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
+// Wt renders single-page-app navigations over WebSocket; the first few on a cold
+// server (notably in Firefox) can exceed the default 10s expect timeout. Give the
+// cross-page transition waits extra headroom so the suite is stable without retries.
+const NAV = { timeout: 20_000 };
+
 let boardUrl = '';
 
 test.beforeAll(async ({ browser }) => {
@@ -17,41 +22,41 @@ test.beforeAll(async ({ browser }) => {
   await loginAs(page, 'admin', 'testpass');
 
   await page.locator('.nav-link', { hasText: 'Orgs' }).click();
-  await expect(page.locator('.org-admin-page')).toBeVisible();
+  await expect(page.locator('.org-admin-page')).toBeVisible(NAV);
 
   const orgExists = (await page.locator('.org-list-link', { hasText: /^BugTestOrg$/ }).count()) > 0;
   if (!orgExists) {
     await page.locator('input[placeholder="Organization name"]').fill('BugTestOrg');
     await page.locator('.org-create-form .editor-btn').click();
-    await expect(page.locator('.org-list-link', { hasText: /^BugTestOrg$/ })).toBeVisible();
+    await expect(page.locator('.org-list-link', { hasText: /^BugTestOrg$/ })).toBeVisible(NAV);
   }
   await page.locator('.org-list-link', { hasText: /^BugTestOrg$/ }).first().click();
-  await expect(page.locator('.org-landing-page')).toBeVisible();
+  await expect(page.locator('.org-landing-page')).toBeVisible(NAV);
 
   const teamExists = (await page.locator('.org-team-link').count()) > 0;
   if (!teamExists) {
     await page.getByRole('link', { name: 'Manage organization' }).click();
     await page.locator('input[placeholder="Team name"]').fill('BugTestTeam');
     await page.getByRole('button', { name: 'Create' }).click();
-    await expect(page.locator('.kb-team-block')).toBeVisible();
+    await expect(page.locator('.kb-team-block')).toBeVisible(NAV);
     await page.locator('.nav-link', { hasText: 'Orgs' }).click();
     await page.locator('.org-list-link', { hasText: /^BugTestOrg$/ }).first().click();
   }
   await page.locator('.org-team-link').first().click();
-  await expect(page.locator('.kb-board')).toBeVisible();
+  await expect(page.locator('.kb-board')).toBeVisible(NAV);
   boardUrl = page.url();
 
   const taskExists = (await page.locator('.kb-card', { hasText: /^BugTestTask$/ }).count()) > 0;
   if (!taskExists) {
     await page.locator('.kb-new-btn').click();
-    await expect(page.locator('.kb-editor-page')).toBeVisible();
+    await expect(page.locator('.kb-editor-page')).toBeVisible(NAV);
     await page.locator('input[placeholder="Task title"]').fill('BugTestTask');
     const descPM = page.locator('.ProseMirror[contenteditable="true"]').filter({ visible: true }).first();
     await descPM.click();
     await descPM.fill('Test description text');
     await page.evaluate(() => { (document.activeElement as HTMLElement)?.blur(); });
     await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
-    await expect(page.locator('.kb-board')).toBeVisible();
+    await expect(page.locator('.kb-board')).toBeVisible(NAV);
   }
 
   // A task with NO description — clicking its (empty) description area must still
@@ -60,18 +65,18 @@ test.beforeAll(async ({ browser }) => {
   const emptyExists = (await page.locator('.kb-card', { hasText: /^EmptyDescTask$/ }).count()) > 0;
   if (!emptyExists) {
     await page.locator('.kb-new-btn').click();
-    await expect(page.locator('.kb-editor-page')).toBeVisible();
+    await expect(page.locator('.kb-editor-page')).toBeVisible(NAV);
     await page.locator('input[placeholder="Task title"]').fill('EmptyDescTask');
     // Leave the description untouched (empty).
     await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
-    await expect(page.locator('.kb-board')).toBeVisible();
+    await expect(page.locator('.kb-board')).toBeVisible(NAV);
   }
 
   // Add a comment to BugTestTask so there is an existing comment-edit editor in the
   // popup — this creates a second TUI dropdown-toolbar, the condition under which
   // the More-dropdown regression appears.
   await page.locator('.kb-card', { hasText: 'BugTestTask' }).first().click();
-  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible(NAV);
   await page.waitForTimeout(500);
   const hasComment = (await page.locator('.kb-task-popup .kb-comment-item').count()) > 0;
   if (!hasComment) {
@@ -91,9 +96,9 @@ test.beforeAll(async ({ browser }) => {
 
 async function openTaskPopup(page: any) {
   await page.goto(boardUrl);
-  await expect(page.locator('.kb-board')).toBeVisible();
+  await expect(page.locator('.kb-board')).toBeVisible(NAV);
   await page.locator('.kb-card', { hasText: 'BugTestTask' }).first().click();
-  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible(NAV);
   await page.waitForTimeout(600);
 }
 
@@ -215,9 +220,9 @@ test('Bug 2: More dropdown opens in the comment compose editor', async ({ page }
 test('Bug 1c: clicking an empty description still enters edit mode', async ({ page }) => {
   await loginAs(page, 'admin', 'testpass');
   await page.goto(boardUrl);
-  await expect(page.locator('.kb-board')).toBeVisible();
+  await expect(page.locator('.kb-board')).toBeVisible(NAV);
   await page.locator('.kb-card', { hasText: 'EmptyDescTask' }).first().click();
-  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible(NAV);
   await page.waitForTimeout(600);
 
   const descField = page.locator('.kb-task-popup .kb-desc-field');
@@ -236,13 +241,13 @@ test('Bug 1c: clicking an empty description still enters edit mode', async ({ pa
 test('Bug 1d: clicking an empty description on the full editor page enters edit mode', async ({ page }) => {
   await loginAs(page, 'admin', 'testpass');
   await page.goto(boardUrl);
-  await expect(page.locator('.kb-board')).toBeVisible();
+  await expect(page.locator('.kb-board')).toBeVisible(NAV);
   // Reach the dedicated full editor via the popup's "Open full editor" link.
   await page.locator('.kb-card', { hasText: 'EmptyDescTask' }).first().click();
-  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible(NAV);
   await page.waitForTimeout(500);
   await page.locator('.kb-popup-full-link').click();
-  await expect(page.locator('.kb-editor-page')).toBeVisible();
+  await expect(page.locator('.kb-editor-page')).toBeVisible(NAV);
   await page.waitForTimeout(700);
 
   const descField = page.locator('.kb-editor-page .kb-desc-field');
@@ -345,11 +350,11 @@ test('Bug 4: More dropdown closes when clicking off it (popup)', async ({ page }
 test('Bug 5: editing the description, collapsing and saving persists the change', async ({ page }) => {
   await loginAs(page, 'admin', 'testpass');
   await page.goto(boardUrl);
-  await expect(page.locator('.kb-board')).toBeVisible();
+  await expect(page.locator('.kb-board')).toBeVisible(NAV);
   // Use EmptyDescTask so the test is order-independent (BugTestTask title may have
   // been edited by other suites); give it a description here.
   await page.locator('.kb-card', { hasText: 'EmptyDescTask' }).first().click();
-  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible(NAV);
   await page.waitForTimeout(600);
 
   const descField = page.locator('.kb-task-popup .kb-desc-field');
@@ -371,7 +376,7 @@ test('Bug 5: editing the description, collapsing and saving persists the change'
 
   // Reopen and confirm the new text persisted in the description.
   await page.locator('.kb-card', { hasText: 'EmptyDescTask' }).first().click();
-  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
+  await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible(NAV);
   await page.waitForTimeout(700);
   await expect(page.locator('.kb-task-popup .kb-desc-field')).toContainText(stamp);
 });
