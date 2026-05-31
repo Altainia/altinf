@@ -9,7 +9,6 @@
 #include <Wt/WLink.h>
 #include <Wt/WTabWidget.h>
 #include <Wt/WText.h>
-#include <cmark.h>
 
 #include <algorithm>
 #include <alt/functional.hpp>
@@ -19,6 +18,8 @@
 #include "org/kanban_notifications.hpp"
 #include "org/org.hpp"
 #include "widgets/live_hub.hpp"
+#include "widgets/markdown_editor_widget.hpp"
+#include "widgets/markdown_viewer_widget.hpp"
 
 // ── Static helpers ────────────────────────────────────────────────────────────
 
@@ -101,7 +102,7 @@ task_editor_form_widget::task_editor_form_widget(
 	const bool can_edit_status = not_archived &&
 	                             (is_lead || (caps.has_any(team_cap::edit_task_fields) &&
 	                                          m_settings.allow_member_move_columns));
-	const bool can_reassign = caps.has_any(team_cap::reassign_task) && not_archived;
+	const bool can_reassign    = caps.has_any(team_cap::reassign_task) && not_archived;
 
 	// ── Stale banner ──────────────────────────────────────────────────────────
 	if(!is_new)
@@ -192,41 +193,20 @@ task_editor_form_widget::task_editor_form_widget(
 	}
 
 	// ── Description ───────────────────────────────────────────────────────────
-	form->addNew<Wt::WText>("<h2>Description</h2>", Wt::TextFormat::UnsafeXHTML);
+	form->addNew<Wt::WText>("<h2>Description</h2>", Wt::TextFormat::UnsafeXHTML)->setStyleClass("section-header");
 	m_desc_field = form->addNew<Wt::WContainerWidget>();
 	m_desc_field->setStyleClass("kb-popup-field");
 
-	const std::string desc_val  = is_new ? "" : m_original.description;
-	const std::string desc_html = render_markdown(desc_val);
-	m_desc_display              = m_desc_field->addNew<Wt::WText>(desc_html, Wt::TextFormat::UnsafeXHTML);
-	m_desc_display->setStyleClass("kb-desc-display");
-	if(can_edit && !is_new)
-	{
-		m_desc_display->addStyleClass("kb-popup-display");
-	}
-	if(is_new)
-	{
-		m_desc_display->hide();
-	}
-
-	m_desc_edit = m_desc_field->addNew<Wt::WTextArea>(desc_val);
-	m_desc_edit->setPlaceholderText("Description (optional)");
-	m_desc_edit->setStyleClass("editor-field kb-desc-field");
-	if(!is_new)
-	{
-		m_desc_edit->hide();
-	}
+	const std::string desc_val = is_new ? "" : m_original.description;
 
 	if(can_edit && !is_new)
 	{
-		m_desc_display->clicked().connect([this] {
-			enter_edit_mode(m_desc_display, m_desc_edit);
-		});
-		m_desc_edit->blurred().connect([this] {
-			const std::string v = m_desc_edit->text().toUTF8();
-			m_desc_edit->hide();
-			m_desc_display->setText(render_markdown(v));
-			m_desc_display->show();
+		// Single widget in view-mode: renders as a clickable viewer; JS switches it
+		// to a full editor on click, and back to viewer when focus leaves.  This
+		// prevents toolbar button clicks (Bold, More …) from collapsing the editor.
+		m_desc_editor = m_desc_field->addNew<markdown_editor_widget>(desc_val, /*view_mode=*/true);
+		m_desc_editor->setStyleClass("kb-desc-field kb-desc-display kb-popup-display");
+		m_desc_editor->changed().connect([this](const std::string& v) {
 			if(v == m_original.description)
 			{
 				unmark_field_dirty("description", m_desc_field);
@@ -236,6 +216,23 @@ task_editor_form_widget::task_editor_form_widget(
 				mark_field_dirty("description", m_desc_field);
 			}
 		});
+	}
+	else
+	{
+		// Read-only or new task: use separate viewer + always-edit editor.
+		m_desc_viewer = m_desc_field->addNew<markdown_viewer_widget>(desc_val);
+		m_desc_viewer->setStyleClass("kb-desc-display");
+		if(is_new)
+		{
+			m_desc_viewer->hide();
+		}
+
+		m_desc_editor = m_desc_field->addNew<markdown_editor_widget>(desc_val);
+		m_desc_editor->setStyleClass("kb-desc-field");
+		if(!is_new)
+		{
+			m_desc_editor->hide();
+		}
 	}
 
 	// ── Status + Assignee row ─────────────────────────────────────────────────
@@ -249,7 +246,7 @@ task_editor_form_widget::task_editor_form_widget(
 	  ->setStyleClass("kb-field-label");
 	const std::string status_init = is_new ? "todo" : m_original.status;
 	m_status_display              = m_status_field->addNew<Wt::WText>(
-    status_lbl(status_init), Wt::TextFormat::Plain);
+	  status_lbl(status_init), Wt::TextFormat::Plain);
 	m_status_display->setStyleClass(can_edit_status && !is_new ? "kb-popup-display" : "");
 	if(is_new)
 	{
@@ -343,40 +340,40 @@ task_editor_form_widget::task_editor_form_widget(
 		{
 			auto rebuild_new_fn = std::make_shared<std::function<void()>>();
 			*rebuild_new_fn     = [this, chips_container, rebuild_new_fn]() {
-        chips_container->clear();
-        for(const auto& user: m_pending_assignees)
-        {
-          auto* chip = chips_container->addNew<Wt::WContainerWidget>();
-          chip->setStyleClass("kb-assignee-chip");
-          chip->addNew<Wt::WText>(user, Wt::TextFormat::Plain);
-          auto* rm = chip->addNew<Wt::WPushButton>("\xc3\x97");
-          rm->setStyleClass("kb-assignee-rm");
-          rm->clicked().connect([this, user, rebuild_new_fn]() {
-            auto it = std::find(
-              m_pending_assignees.begin(), m_pending_assignees.end(), user);
-            if(it != m_pending_assignees.end())
-            {
-              m_pending_assignees.erase(it);
-            }
-            (*rebuild_new_fn)();
-          });
-        }
-        if(m_add_member_combo)
-        {
-          m_add_member_combo->clear();
-          m_add_member_combo->addItem("(select member)");
-          const auto all = m_db.members_for_team(m_team_id);
-          for(const auto& mem: all)
-          {
-            if(std::find(m_pending_assignees.begin(),
-                         m_pending_assignees.end(),
-                         mem) == m_pending_assignees.end())
-            {
-              m_add_member_combo->addItem(mem);
-            }
-          }
-          m_add_member_combo->setCurrentIndex(0);
-        }
+				chips_container->clear();
+				for(const auto& user: m_pending_assignees)
+				{
+					auto* chip = chips_container->addNew<Wt::WContainerWidget>();
+					chip->setStyleClass("kb-assignee-chip");
+					chip->addNew<Wt::WText>(user, Wt::TextFormat::Plain);
+					auto* rm = chip->addNew<Wt::WPushButton>("\xc3\x97");
+					rm->setStyleClass("kb-assignee-rm");
+					rm->clicked().connect([this, user, rebuild_new_fn]() {
+						auto it = std::find(
+						  m_pending_assignees.begin(), m_pending_assignees.end(), user);
+						if(it != m_pending_assignees.end())
+						{
+							m_pending_assignees.erase(it);
+						}
+						(*rebuild_new_fn)();
+					});
+				}
+				if(m_add_member_combo)
+				{
+					m_add_member_combo->clear();
+					m_add_member_combo->addItem("(select member)");
+					const auto all = m_db.members_for_team(m_team_id);
+					for(const auto& mem: all)
+					{
+						if(std::find(m_pending_assignees.begin(),
+						             m_pending_assignees.end(),
+						             mem) == m_pending_assignees.end())
+						{
+							m_add_member_combo->addItem(mem);
+						}
+					}
+					m_add_member_combo->setCurrentIndex(0);
+				}
 			};
 
 			auto* add_row = m_assignee_list->addNew<Wt::WContainerWidget>();
@@ -410,77 +407,77 @@ task_editor_form_widget::task_editor_form_widget(
 	{
 		auto rebuild_chips_fn = std::make_shared<std::function<void()>>();
 		*rebuild_chips_fn     = [this, chips_container, can_reassign, not_archived, rebuild_chips_fn]() {
-      chips_container->clear();
-      const auto current = m_db.assignees_for_task(m_task_id);
-      for(const auto& user: current)
-      {
-        auto* chip = chips_container->addNew<Wt::WContainerWidget>();
-        chip->setStyleClass("kb-assignee-chip");
-        chip->addNew<Wt::WText>(user, Wt::TextFormat::Plain);
+			chips_container->clear();
+			const auto current = m_db.assignees_for_task(m_task_id);
+			for(const auto& user: current)
+			{
+				auto* chip = chips_container->addNew<Wt::WContainerWidget>();
+				chip->setStyleClass("kb-assignee-chip");
+				chip->addNew<Wt::WText>(user, Wt::TextFormat::Plain);
 
-        const bool is_self            = (user == m_username);
-        const bool sole               = (current.size() == 1);
-        const bool can_remove_as_lead = can_reassign;
-        const bool can_remove_as_member =
-          !can_reassign && is_self && not_archived &&
-          (sole ? m_settings.allow_abandon : m_settings.allow_self_assign_assigned);
+				const bool is_self            = (user == m_username);
+				const bool sole               = (current.size() == 1);
+				const bool can_remove_as_lead = can_reassign;
+				const bool can_remove_as_member =
+				  !can_reassign && is_self && not_archived &&
+				  (sole ? m_settings.allow_abandon : m_settings.allow_self_assign_assigned);
 
-        if(can_remove_as_lead || can_remove_as_member)
-        {
-          auto* rm = chip->addNew<Wt::WPushButton>("\xc3\x97");
-          rm->setStyleClass("kb-assignee-rm");
-          rm->clicked().connect(
-            [this, user, sole, can_reassign, rebuild_chips_fn]() {
-              auto do_remove = [this, user, rebuild_chips_fn]() {
-                m_db.remove_assignee(m_task_id, user, m_username);
-                const auto remaining = m_db.assignees_for_task(m_task_id);
-                notify_assignee_removed(
-                  m_db, m_odb, m_task_id, m_team_id, m_org_id, user, m_username, remaining);
-                live_hub::instance().broadcast(
-                  "team:" + std::to_string(m_team_id));
-                (*rebuild_chips_fn)();
-              };
-              if(can_reassign && sole && !m_settings.allow_abandon)
-              {
-                auto* dlg = addNew<Wt::WDialog>("Confirm abandon");
-                dlg->contents()->addNew<Wt::WText>(
-                  "This task has no other assignees. Removing " + user +
-                    " will leave it unassigned. Proceed?",
-                  Wt::TextFormat::Plain);
-                auto* yes =
-                  dlg->footer()->addNew<Wt::WPushButton>("Yes, abandon");
-                yes->setStyleClass("editor-btn");
-                auto* no = dlg->footer()->addNew<Wt::WPushButton>("Cancel");
-                no->setStyleClass("editor-btn editor-btn-cancel");
-                yes->clicked().connect([dlg, do_remove]() mutable {
-                  dlg->reject();
-                  do_remove();
-                });
-                no->clicked().connect([dlg]() { dlg->reject(); });
-                dlg->show();
-              }
-              else
-              {
-                do_remove();
-              }
-            });
-        }
-      }
-      // Rebuild combo to exclude already-assigned members (Bug 3 fix).
-      if(m_add_member_combo)
-      {
-        m_add_member_combo->clear();
-        m_add_member_combo->addItem("(select member)");
-        const auto all = m_db.members_for_team(m_team_id);
-        for(const auto& mem: all)
-        {
-          if(std::find(current.begin(), current.end(), mem) == current.end())
-          {
-            m_add_member_combo->addItem(mem);
-          }
-        }
-        m_add_member_combo->setCurrentIndex(0);
-      }
+				if(can_remove_as_lead || can_remove_as_member)
+				{
+					auto* rm = chip->addNew<Wt::WPushButton>("\xc3\x97");
+					rm->setStyleClass("kb-assignee-rm");
+					rm->clicked().connect(
+					  [this, user, sole, can_reassign, rebuild_chips_fn]() {
+						  auto do_remove = [this, user, rebuild_chips_fn]() {
+							  m_db.remove_assignee(m_task_id, user, m_username);
+							  const auto remaining = m_db.assignees_for_task(m_task_id);
+							  notify_assignee_removed(
+							    m_db, m_odb, m_task_id, m_team_id, m_org_id, user, m_username, remaining);
+							  live_hub::instance().broadcast(
+							    "team:" + std::to_string(m_team_id));
+							  (*rebuild_chips_fn)();
+						  };
+						  if(can_reassign && sole && !m_settings.allow_abandon)
+						  {
+							  auto* dlg = addNew<Wt::WDialog>("Confirm abandon");
+							  dlg->contents()->addNew<Wt::WText>(
+							    "This task has no other assignees. Removing " + user +
+							      " will leave it unassigned. Proceed?",
+							    Wt::TextFormat::Plain);
+							  auto* yes =
+							    dlg->footer()->addNew<Wt::WPushButton>("Yes, abandon");
+							  yes->setStyleClass("editor-btn");
+							  auto* no = dlg->footer()->addNew<Wt::WPushButton>("Cancel");
+							  no->setStyleClass("editor-btn editor-btn-cancel");
+							  yes->clicked().connect([dlg, do_remove]() mutable {
+								  dlg->reject();
+								  do_remove();
+							  });
+							  no->clicked().connect([dlg]() { dlg->reject(); });
+							  dlg->show();
+						  }
+						  else
+						  {
+							  do_remove();
+						  }
+					  });
+				}
+			}
+			// Rebuild combo to exclude already-assigned members (Bug 3 fix).
+			if(m_add_member_combo)
+			{
+				m_add_member_combo->clear();
+				m_add_member_combo->addItem("(select member)");
+				const auto all = m_db.members_for_team(m_team_id);
+				for(const auto& mem: all)
+				{
+					if(std::find(current.begin(), current.end(), mem) == current.end())
+					{
+						m_add_member_combo->addItem(mem);
+					}
+				}
+				m_add_member_combo->setCurrentIndex(0);
+			}
 		};
 
 		(*rebuild_chips_fn)();
@@ -671,7 +668,7 @@ task_editor_form_widget::task_editor_form_widget(
 	}
 
 	// ── Type chips ────────────────────────────────────────────────────────────
-	form->addNew<Wt::WText>("<h2>Type</h2>", Wt::TextFormat::UnsafeXHTML);
+	form->addNew<Wt::WText>("<h2>Type</h2>", Wt::TextFormat::UnsafeXHTML)->setStyleClass("section-header");
 	auto* type_row = form->addNew<Wt::WContainerWidget>();
 	type_row->setStyleClass("kb-type-chips");
 	m_type_id        = 0;
@@ -743,7 +740,7 @@ task_editor_form_widget::task_editor_form_widget(
 	{
 		auto* cs = form->addNew<Wt::WContainerWidget>();
 		cs->setStyleClass("kb-comment-section");
-		cs->addNew<Wt::WText>("<h2>Comments</h2>", Wt::TextFormat::UnsafeXHTML);
+		cs->addNew<Wt::WText>("<h2>Comments</h2>", Wt::TextFormat::UnsafeXHTML)->setStyleClass("section-header");
 		m_comment_list = cs->addNew<Wt::WContainerWidget>();
 		m_comment_list->setStyleClass("kb-comment-list");
 		if(caps.has_any(team_cap::comment) && !m_original.is_archived)
@@ -869,21 +866,6 @@ bool task_editor_form_widget::is_stale() const
 
 // ── Private helpers ───────────────────────────────────────────────────────────
 
-std::string task_editor_form_widget::render_markdown(const std::string& md) const
-{
-	if(md.empty())
-	{
-		return "<em>(none)</em>";
-	}
-	char*       raw  = cmark_markdown_to_html(md.c_str(), md.size(), CMARK_OPT_DEFAULT);
-	std::string html = raw ? std::string(raw) : md;
-	if(raw)
-	{
-		free(raw);
-	}
-	return html;
-}
-
 void task_editor_form_widget::mark_stale()
 {
 	m_stale = true;
@@ -1001,7 +983,7 @@ void task_editor_form_widget::save()
 	t.team_id     = m_team_id;
 	t.status      = status;
 	t.title       = title;
-	t.description = m_desc_edit->text().toUTF8();
+	t.description = m_desc_editor->value();
 	t.type_id     = m_type_id;
 	if(const auto d = m_start_date_edit->date(); d.isValid())
 	{
@@ -1179,15 +1161,8 @@ void task_editor_form_widget::rebuild_comments()
 			  ->setStyleClass("kb-comment-author");
 			hdr2->addNew<Wt::WText>(
 			  " \xe2\x80\x94 " + fmt_ts(c.created_at), Wt::TextFormat::Plain);
-			auto* bw = item->addNew<Wt::WContainerWidget>();
+			auto* bw = item->addNew<markdown_viewer_widget>(c.body);
 			bw->setStyleClass("kb-comment-body");
-			char* raw2 = cmark_markdown_to_html(
-			  c.body.c_str(), c.body.size(), CMARK_OPT_DEFAULT);
-			bw->addNew<Wt::WText>(raw2 ? std::string(raw2) : "", Wt::TextFormat::UnsafeXHTML);
-			if(raw2)
-			{
-				free(raw2);
-			}
 			if(!c.last_edited_at.empty())
 			{
 				item->addNew<Wt::WText>(
@@ -1212,21 +1187,20 @@ void task_editor_form_widget::rebuild_comments()
 				auto*             ea      = item->addNew<Wt::WContainerWidget>();
 				ea->setStyleClass("kb-comment-edit-area");
 				ea->hide();
-				auto* eta = ea->addNew<Wt::WTextArea>();
-				eta->setText(c.body);
-				eta->setStyleClass("editor-field");
+				auto* eta   = ea->addNew<markdown_editor_widget>(c.body);
 				auto* ebtns = ea->addNew<Wt::WContainerWidget>();
 				ebtns->setStyleClass("kb-comment-edit-btns");
 				auto* save_eb = ebtns->addNew<Wt::WPushButton>("Save");
 				save_eb->setStyleClass("editor-btn");
 				auto* cancel_eb = ebtns->addNew<Wt::WPushButton>("Cancel");
 				cancel_eb->setStyleClass("editor-btn editor-btn-cancel");
-				edit_btn->clicked().connect([this, cauthor, is_own, bw, ea, actions] {
+				edit_btn->clicked().connect([this, cauthor, is_own, bw, ea, actions, eta] {
 					if(is_own)
 					{
 						bw->hide();
 						actions->hide();
 						ea->show();
+						eta->focus();
 					}
 					else
 					{
@@ -1239,8 +1213,8 @@ void task_editor_form_widget::rebuild_comments()
 						yes->setStyleClass("editor-btn");
 						auto* no = d->footer()->addNew<Wt::WPushButton>("Cancel");
 						no->setStyleClass("editor-btn editor-btn-cancel");
-						yes->clicked().connect([d, bw, ea, actions] {
-							d->accept(); bw->hide(); actions->hide(); ea->show(); });
+						yes->clicked().connect([d, bw, ea, actions, eta] {
+							d->accept(); bw->hide(); actions->hide(); ea->show(); eta->focus(); });
 						no->clicked().connect([d] { d->reject(); });
 						d->finished().connect([d](Wt::DialogCode) { delete d; });
 						d->show();
@@ -1253,7 +1227,7 @@ void task_editor_form_widget::rebuild_comments()
 					{
 						return;
 					}
-					const std::string nb = eta->text().toUTF8();
+					const std::string nb = eta->value();
 					if(nb.empty())
 					{
 						return;
@@ -1296,19 +1270,19 @@ void task_editor_form_widget::rebuild_comments()
 	{
 		return;
 	}
-	auto* ta = m_comment_compose->addNew<Wt::WTextArea>();
-	ta->setPlaceholderText("Write a comment (Markdown supported)");
-	ta->setStyleClass("editor-field");
+	auto* ta   = m_comment_compose->addNew<markdown_editor_widget>();
 	auto* post = m_comment_compose->addNew<Wt::WPushButton>("Post Comment");
 	post->setStyleClass("editor-btn kb-comment-post-btn");
 	post->setDisabled(true);
-	ta->keyWentUp().connect([ta, post] { post->setDisabled(ta->text().empty()); });
+	ta->changed().connect([ta, post](const std::string& v) {
+		post->setDisabled(v.empty());
+	});
 	post->clicked().connect([this, ta, post, alive = m_alive] {
 		if(!*alive)
 		{
 			return;
 		}
-		const std::string body = ta->text().toUTF8();
+		const std::string body = ta->value();
 		if(body.empty())
 		{
 			return;
@@ -1317,7 +1291,6 @@ void task_editor_form_widget::rebuild_comments()
 		const long long tid = m_task_id != 0 ? m_task_id : m_original.id;
 		m_db.add_comment(tid, m_username, body);
 		live_hub::instance().broadcast("task:" + std::to_string(tid) + ":comments");
-		ta->setText(Wt::WString{});
 		rebuild_comments();
 	});
 }

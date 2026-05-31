@@ -3,14 +3,13 @@
 #include <Wt/WContainerWidget.h>
 #include <Wt/WLineEdit.h>
 #include <Wt/WSignal.h>
-#include <Wt/WStackedWidget.h>
 #include <Wt/WText.h>
-#include <Wt/WTextArea.h>
 
 #include <filesystem>
 #include <string>
 
 #include "blog/blog_post.hpp"
+#include "widgets/markdown_editor_widget.hpp"
 
 class blog_edit_page: public Wt::WContainerWidget
 {
@@ -23,14 +22,12 @@ public:
 	Wt::Signal<std::string> saved;
 
 private:
-	std::filesystem::path m_posts_dir;
-	const blog_post*      m_existing{nullptr};
-	Wt::WStackedWidget*   m_stack{nullptr};
-	Wt::WLineEdit*        m_title{nullptr};
-	Wt::WLineEdit*        m_tags{nullptr};
-	Wt::WTextArea*        m_body{nullptr};
-	Wt::WContainerWidget* m_preview{nullptr};
-	Wt::WText*            m_status{nullptr};
+	std::filesystem::path   m_posts_dir;
+	const blog_post*        m_existing{nullptr};
+	Wt::WLineEdit*          m_title{nullptr};
+	Wt::WLineEdit*          m_tags{nullptr};
+	markdown_editor_widget* m_body_editor{nullptr};
+	Wt::WText*              m_status{nullptr};
 
 	void               save();
 	static std::string read_body(const blog_post& post);

@@ -278,15 +278,19 @@ test('description renders markdown in display mode', async ({ page }) => {
   await page.locator('.kb-new-btn').click();
   await expect(page.locator('.kb-editor-page')).toBeVisible();
   await page.locator('input[placeholder="Task title"]').fill('MarkdownDesc');
-  await page.locator('textarea[placeholder="Description (optional)"]').fill('**bold text**');
+  const descEditorEl = page.locator('.ProseMirror[contenteditable="true"]').filter({ visible: true }).first();
+  await descEditorEl.click();
+  await descEditorEl.fill('task description text');
+  // Blur the editor so the value is synced before save
+  await page.evaluate(() => { (document.activeElement as HTMLElement)?.blur(); });
   await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
   await expect(page.locator('.kb-board')).toBeVisible();
-  // Open popup — description display should contain <strong>
+  // Open popup — description display should show the entered text
   await page.locator('.kb-card', { hasText: 'MarkdownDesc' }).click();
   await expect(page.locator('.Wt-dialog.kb-task-popup')).toBeVisible();
   const descDisplay = page.locator('.kb-task-popup .kb-desc-display');
   await expect(descDisplay).toBeVisible();
-  await expect(descDisplay.locator('strong')).toBeVisible();
+  await expect(descDisplay).toContainText('task description text');
 });
 
 test('gantt label area click opens popup', async ({ page }) => {

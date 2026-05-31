@@ -1,49 +1,93 @@
 // ── Base ──────────────────────────────────────────────────────────────────────
 
-@mixin btn-base {
-  border-radius: var(--radius);
-  cursor:        pointer;
-  font-family:   var(--font-sans);
-  transition:    background 0.15s, color 0.15s;
+@mixin btn-base($important: false) {
+  @if $important {
+    border-radius: var(--radius) !important;
+    cursor:        pointer !important;
+    font-family:   var(--font-sans) !important;
+    transition:    background 0.15s, color 0.15s !important;
 
-  &:disabled { opacity: 0.35; cursor: default; }
+    &:disabled { opacity: 0.35 !important; cursor: default !important; }
+  } @else {
+    border-radius: var(--radius);
+    cursor:        pointer;
+    font-family:   var(--font-sans);
+    transition:    background 0.15s, color 0.15s;
+
+    &:disabled { opacity: 0.35; cursor: default; }
+  }
 }
 
 // ── Role variants ─────────────────────────────────────────────────────────────
 
-@mixin btn-primary {
-  @include btn-base;
-  background:  var(--color-accent);
-  border:      none;
-  color:       var(--color-bg);
-  font-size:   0.95rem;
-  font-weight: 600;
-  padding:     0.5rem 1rem;
+@mixin btn-active($important: false) {
+  @include btn-base($important: $important);
+  @if $important {
+    background-color: transparent !important;
+    border:     1px solid var(--color-border-accent) !important;
+    color:      var(--color-muted) !important;
+    font-size:  0.95rem !important;
 
-  &:hover { background: var(--color-accent-h); color: var(--color-bg); text-decoration: none; }
+    &:hover { background-color: var(--color-surface) !important; color: var(--color-text) !important; text-decoration: none !important; }
+  } @else {
+    background-color: transparent;
+    border:     1px solid var(--color-border-accent);
+    color:      var(--color-muted);
+    font-size:  0.95rem;
+
+    &:hover { background-color: var(--color-surface); color: var(--color-text); text-decoration: none; }
+  }
 }
 
-@mixin btn-ghost {
-  @include btn-base;
-  background: transparent;
-  border:     1px solid var(--color-border);
-  color:      var(--color-muted);
-  font-size:  0.95rem;
-  padding:    0.5rem 1rem;
+@mixin btn-primary($important: false) {
+  @include btn-base($important: $important);
+  @if $important {
+    background-color:  var(--color-accent) !important;
+    border:      none !important;
+    color:       var(--color-bg) !important;
+    font-size:   0.95rem !important;
+    font-weight: 600 !important;
 
-  &:hover { background: var(--color-surface); color: var(--color-text); text-decoration: none; }
+    &:hover { background-color: var(--color-accent-h) !important; color: var(--color-bg) !important; text-decoration: none !important; }
+  } @else {
+    background-color:  var(--color-accent);
+    border:      none;
+    color:       var(--color-bg);
+    font-size:   0.95rem;
+    font-weight: 600;
+
+    &:hover { background-color: var(--color-accent-h); color: var(--color-bg); text-decoration: none; }
+  }
+}
+
+@mixin btn-ghost($important: false) {
+  @include btn-base($important: $important);
+  @if $important {
+    background-color: transparent !important;
+    border:     1px solid var(--color-border) !important;
+    color:      var(--color-muted) !important;
+    font-size:  0.95rem !important;
+
+    &:hover { background-color: var(--color-surface) !important; color: var(--color-text) !important; text-decoration: none !important; }
+  } @else {
+    background-color: transparent;
+    border:     1px solid var(--color-border);
+    color:      var(--color-muted);
+    font-size:  0.95rem;
+
+    &:hover { background-color: var(--color-surface); color: var(--color-text); text-decoration: none; }
+  }
 }
 
 @mixin btn-danger {
   @include btn-base;
-  background:  #7a2424;
+  background-color:  #7a2424;
   border:      1px solid #a33;
   color:       var(--color-text);
   font-size:   0.95rem;
   font-weight: 600;
-  padding:     0.5rem 1rem;
 
-  &:hover { background: #922; }
+  &:hover { background-color: #922; }
 }
 
 @mixin btn-ghost-danger {
@@ -51,18 +95,29 @@
   border-color: #e06c6c33;
   color:        var(--color-error);
 
-  &:hover { background: #e06c6c22; color: var(--color-error); }
+  &:hover { background-color: #e06c6c22; color: var(--color-error); }
 }
 
 // ── Size variants (compose with any role) ─────────────────────────────────────
 
-@mixin btn-sm {
-  font-size: 0.85rem;
-  padding:   0.35rem 0.85rem;
+@mixin btn-sm($important: false) {
+  @if $important {
+    font-size: 0.85rem !important;
+    padding:   0.35rem 0.85rem !important;
+  } @else {
+    font-size: 0.85rem;
+    padding:   0.35rem 0.85rem;
+  }
 }
 
-@mixin btn-xs {
-  font-size:   0.78rem;
-  font-weight: 400;
-  padding:     0.2rem 0.65rem;
+@mixin btn-xs($important: false) {
+  @if $important {
+    font-size:   0.78rem !important;
+    font-weight: 400 !important;
+    padding:     0.2rem 0.65rem !important;
+  } @else {
+    font-size:   0.78rem;
+    font-weight: 400;
+    padding:     0.2rem 0.65rem;
+  }
 }

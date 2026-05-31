@@ -160,7 +160,7 @@ test('task editor shows title and description fields', async ({ page }) => {
   await loginAndGoToBoard(page);
   await page.locator('.kb-new-btn').click();
   await expect(page.locator('input[placeholder="Task title"]')).toBeVisible();
-  await expect(page.locator('textarea[placeholder="Description (optional)"]')).toBeVisible();
+  await expect(page.locator('.ProseMirror[contenteditable="true"]').filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
 });
 
 test('task editor shows Status dropdown and Assignees section', async ({ page }) => {

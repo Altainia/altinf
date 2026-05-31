@@ -1,0 +1,190 @@
+@use 'buttons';
+@use 'forms';
+
+.toastui-editor-defaultUI {
+	border-color: var(--color-border) !important;
+	border-radius: var(--radius) !important;
+}
+
+.toastui-editor-md-marked-text {
+	color: var(--text-accent-h) !important;
+}
+
+.toastui-editor-md-code {
+	background-color: var(--color-surface) !important;
+}
+
+.toastui-editor-md-code-block-line-background {
+	background-color: var(--color-surface) !important;
+}
+
+.toastui-editor-md-preview {
+	background-color: var(--color-surface) !important;
+}
+
+.toastui-editor-contents {
+	a {
+		color: var(--text-accent-h) !important;
+		text-decoration: none !important;
+	}
+
+	p, h1, h2, h3, h4, h5 {
+		color: var(--color-text) !important;
+	}
+
+	pre {
+		background-color: var(--color-surface) !important;
+	}
+
+	code {
+		background-color: var(--color-surface) !important;
+		color: var(--color-text) !important;
+		border-color: var(--color-border) !important;
+		border-radius: var(--radius) !important;
+	}
+
+}
+
+.ProseMirror {
+	color: var(--color-text) !important;
+}
+
+.toastui-editor-defaultUI-toolbar {
+	background-color: var(--color-surface) !important;
+	border-color: var(--color-border) !important;
+	border-radius: var(--radius) !important;
+
+	.toastui-editor-toolbar-icons {
+		@include buttons.btn-ghost($important: true);
+		@include buttons.btn-sm($important: true);
+	}
+
+}
+
+.toastui-editor-md-tab-container {
+	background-color: var(--color-surface) !important;
+	border-color: var(--color-border) !important;
+	border-radius: var(--radius) !important;
+
+	.toastui-editor-tabs {
+		margin-left: auto !important;
+	}
+
+}
+
+.toastui-editor-md-table-cell {
+		color: var(--color-text) !important;
+}
+
+.toastui-editor-contents {
+	table {
+		th {
+			background-color: var(--color-table-header) !important;
+			color: var(--color-th-text) !important;
+			border: 1px solid var(--color-border) !important;
+		}
+
+		td {
+			color: var(--color-text) !important;
+			border: 1px solid var(--color-border) !important;
+		}
+
+	}
+
+}
+
+.toastui-editor-ww-container {
+	background-color: var(--color-bg) !important;
+}
+
+.toastui-editor-ww-code-block {
+	&::after {
+		@include buttons.btn-ghost($important: true);
+		@include buttons.btn-sm($important: true);
+		height: auto !important;
+		background-size: 3rem !important;
+		background-position: 2rem !important;
+		padding: 3px 35px 0 10px !important;
+	}
+
+}
+
+.toastui-editor-ww-code-block-language input {
+	@include forms.form-input($important: true);
+	border-color: var(--color-border) !important;
+	border-radius: var(--radius) !important;
+}
+
+.toastui-editor-mode-switch {
+	background-color: var(--color-surface) !important;
+	border-color: var(--color-border) !important;
+	border-radius: var(--radius) !important;
+	height: auto !important;
+}
+
+.tab-item {
+	@include buttons.btn-ghost($important: true);
+	@include buttons.btn-sm($important: true);
+	height: auto !important;
+	width: auto !important;
+	margin-top: auto !important;
+	margin-right: auto !important;
+	line-height: normal !important;
+
+	&.active {
+		@include buttons.btn-active($important: true);
+	}
+
+	&:last-child {
+		margin-left: auto !important;
+	}
+
+}
+
+.toastui-editor-dropdown-toolbar {
+	background-color: var(--color-surface) !important;
+	border-color: var(--color-border) !important;
+	border-radius: var(--radius) !important;
+}
+
+.toastui-editor-popup {
+	background-color: var(--color-surface) !important;
+	border-color: var(--color-border) !important;
+	border-radius: var(--radius) !important;
+
+	.toastui-editor-table-cell {
+		background-color: var(--color-bg) !important;
+		border-color: var(--color-border) !important;
+		border-radius: var(--radius) !important;
+	}
+
+	.toastui-editor-file-name {
+		color: var(--color-text) !important;
+		border-color: var(--color-border) !important;
+		border-radius: var(--radius) !important;
+	}
+
+	.toastui-editor-file-select-button {
+		@include buttons.btn-ghost($important: true);
+		@include buttons.btn-sm($important: true);
+	}
+
+	input[type="text"] {
+		@include forms.form-input($important: true);
+	}
+
+	ul li:hover{
+		background-color: var(--color-bg) !important;
+	}
+
+}
+
+.toastui-editor-close-button {
+	@include buttons.btn-ghost($important: true);
+	@include buttons.btn-sm($important: true);
+}
+
+.toastui-editor-ok-button {
+	@include buttons.btn-primary($important: true);
+	@include buttons.btn-sm($important: true);
+}
