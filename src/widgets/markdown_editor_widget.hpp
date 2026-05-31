@@ -9,16 +9,18 @@
 class markdown_editor_widget: public Wt::WContainerWidget
 {
 public:
-	explicit markdown_editor_widget(const std::string& initial = "");
+	// view_mode = true : starts as a clickable viewer; click enters edit mode,
+	//                    focusout returns to viewer.  Used for existing-task fields.
+	// view_mode = false: always-edit mode (default).  Used for new tasks and comments.
+	explicit markdown_editor_widget(const std::string& initial = "", bool view_mode = false);
 
-	// Last value synced from the editor (updated when the editor loses focus).
+	// Last value synced from the editor (updated when focus leaves the editor).
 	const std::string& value() const;
 
-	// Call after showing this widget (e.g. entering edit mode) to
-	// move keyboard focus into the TUI editor surface.
+	// Move keyboard focus into the TUI editor surface (always-edit mode).
 	void focus();
 
-	// Fires when the editor loses focus, carrying the current markdown string.
+	// Fires when focus leaves the editor, carrying the current markdown string.
 	Wt::Signal<std::string>& changed();
 
 private:

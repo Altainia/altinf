@@ -199,36 +199,14 @@ task_editor_form_widget::task_editor_form_widget(
 
 	const std::string desc_val = is_new ? "" : m_original.description;
 
-	m_desc_viewer = m_desc_field->addNew<markdown_viewer_widget>(desc_val);
-	m_desc_viewer->setStyleClass("kb-desc-display");
 	if(can_edit && !is_new)
 	{
-		m_desc_viewer->addStyleClass("kb-popup-display");
-	}
-	if(is_new)
-	{
-		m_desc_viewer->hide();
-	}
-
-	m_desc_editor = m_desc_field->addNew<markdown_editor_widget>(desc_val);
-	m_desc_editor->setStyleClass("kb-desc-field");
-	if(!is_new)
-	{
-		m_desc_editor->hide();
-	}
-
-	if(can_edit && !is_new)
-	{
-		m_desc_viewer->clicked().connect([this] {
-			m_desc_viewer->hide();
-			m_desc_editor->show();
-			m_desc_editor->focus();
-		});
-
+		// Single widget in view-mode: renders as a clickable viewer; JS switches it
+		// to a full editor on click, and back to viewer when focus leaves.  This
+		// prevents toolbar button clicks (Bold, More …) from collapsing the editor.
+		m_desc_editor = m_desc_field->addNew<markdown_editor_widget>(desc_val, /*view_mode=*/true);
+		m_desc_editor->setStyleClass("kb-desc-field kb-desc-display kb-popup-display");
 		m_desc_editor->changed().connect([this](const std::string& v) {
-			m_desc_editor->hide();
-			m_desc_viewer->set_content(v);
-			m_desc_viewer->show();
 			if(v == m_original.description)
 			{
 				unmark_field_dirty("description", m_desc_field);
@@ -238,6 +216,23 @@ task_editor_form_widget::task_editor_form_widget(
 				mark_field_dirty("description", m_desc_field);
 			}
 		});
+	}
+	else
+	{
+		// Read-only or new task: use separate viewer + always-edit editor.
+		m_desc_viewer = m_desc_field->addNew<markdown_viewer_widget>(desc_val);
+		m_desc_viewer->setStyleClass("kb-desc-display");
+		if(is_new)
+		{
+			m_desc_viewer->hide();
+		}
+
+		m_desc_editor = m_desc_field->addNew<markdown_editor_widget>(desc_val);
+		m_desc_editor->setStyleClass("kb-desc-field");
+		if(!is_new)
+		{
+			m_desc_editor->hide();
+		}
 	}
 
 	// ── Status + Assignee row ─────────────────────────────────────────────────
