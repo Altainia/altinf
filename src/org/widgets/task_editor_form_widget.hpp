@@ -97,6 +97,11 @@ private:
 	static const std::vector<std::string> k_status_vals;
 	static const std::vector<std::string> k_status_labels;
 
+	// True when the current user may edit descriptive task fields (title,
+	// description, dates, type): always for leads, and for members when the
+	// team setting allows it.
+	bool can_edit_details() const;
+
 	void save();
 	void mark_stale();
 	void mark_field_dirty(const std::string& field, Wt::WContainerWidget* container);
