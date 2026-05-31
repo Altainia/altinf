@@ -13,3 +13,58 @@ a {
 
   &:hover { color: var(--color-accent-h); text-decoration: underline; }
 }
+
+p {
+  padding: 1em 0 0 0;
+}
+
+input[type="checkbox"] {
+  appearance: none;
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  margin: 6px;
+  padding: 0;
+  border: 1px solid var(--color-muted);
+  background-color: var(--color-bg);
+  outline: none;
+  display: inline-grid;
+  place-content: center;
+
+  &::before {
+    content: "";
+    width: 1em;
+    height: 1em;
+    box-shadow: none;
+    transform-origin: bottom left;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    transition: box-shadow 0.15s linear;
+  }
+
+  &:checked::before {
+    box-shadow: inset 1em 1em var(--color-accent-h);
+  }
+
+  &:focus {
+    border-color: var(--color-text);
+  }
+}
+
+input[type="color"] {
+  width:         44px;
+  height:        32px;
+  border:        1px solid var(--color-border);
+  border-radius: var(--radius);
+  background:    none;
+  cursor:        pointer;
+  padding:       0;
+}
+
+.vertical-section {
+  display: flex;
+  flex-direction: column;
+
+  &:not(:first-child) {
+    margin-top: 1em;
+  }
+}

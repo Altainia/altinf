@@ -26,18 +26,23 @@ team_settings_page::team_settings_page(kanban_db&          db,
 
 	const long long org_id = team->org_id;
 
-	addNew<Wt::WText>("<h1>Team Settings \xe2\x80\x94 " + team->name + "</h1>",
-	                  Wt::TextFormat::UnsafeXHTML);
+	auto* header_section = addNew<Wt::WContainerWidget>();
+	header_section->setStyleClass("vertical-section");
 
-	addNew<Wt::WAnchor>(
-	  Wt::WLink{Wt::LinkType::InternalPath, paths::team_kanban(team_id)},
-	  "\xe2\x86\x90 Back to board")
+	header_section->addNew<Wt::WText>("<h1>Team Settings \xe2\x80\x94 " + team->name + "</h1>",
+	                                  Wt::TextFormat::UnsafeXHTML);
+
+	header_section->addNew<Wt::WAnchor>(
+	                Wt::WLink{Wt::LinkType::InternalPath, paths::team_kanban(team_id)},
+	                "\xe2\x86\x90 Back to board")
 	  ->setStyleClass("editor-btn editor-btn-cancel");
 
 	// ── Team name ──────────────────────────────────────────────────────────────
-	addNew<Wt::WText>("<h2>Team name</h2>", Wt::TextFormat::UnsafeXHTML);
+	auto* team_name_section = addNew<Wt::WContainerWidget>();
+	team_name_section->setStyleClass("vertical-section");
+	team_name_section->addNew<Wt::WText>("<h2>Team name</h2>", Wt::TextFormat::UnsafeXHTML);
 
-	auto* name_row = addNew<Wt::WContainerWidget>();
+	auto* name_row = team_name_section->addNew<Wt::WContainerWidget>();
 	name_row->setStyleClass("settings-field-row");
 
 	auto* name_input = name_row->addNew<Wt::WLineEdit>();
@@ -58,15 +63,17 @@ team_settings_page::team_settings_page(kanban_db&          db,
 	  });
 
 	// ── Member permissions ─────────────────────────────────────────────────────
-	addNew<Wt::WText>("<h2>Member permissions</h2>", Wt::TextFormat::UnsafeXHTML);
 
 	const auto settings = db.settings_for_team(team_id);
 
-	auto* move_cb    = addNew<Wt::WCheckBox>("Members can move tasks between columns");
-	auto* self_un_cb = addNew<Wt::WCheckBox>("Members can self-assign unassigned tasks");
-	auto* self_as_cb =
-	  addNew<Wt::WCheckBox>("Members can self-assign already-assigned tasks");
-	auto* abandon_cb = addNew<Wt::WCheckBox>("Members can abandon tasks");
+	auto* permissions_list = addNew<Wt::WContainerWidget>();
+	permissions_list->setStyleClass("vertical-section");
+	permissions_list->addNew<Wt::WText>("<h2>Member permissions</h2>", Wt::TextFormat::UnsafeXHTML);
+
+	auto* move_cb    = permissions_list->addNew<Wt::WCheckBox>("Members can move tasks between columns");
+	auto* self_un_cb = permissions_list->addNew<Wt::WCheckBox>("Members can self-assign unassigned tasks");
+	auto* self_as_cb = permissions_list->addNew<Wt::WCheckBox>("Members can self-assign already-assigned tasks");
+	auto* abandon_cb = permissions_list->addNew<Wt::WCheckBox>("Members can abandon tasks");
 
 	move_cb->setChecked(settings.allow_member_move_columns);
 	self_un_cb->setChecked(settings.allow_self_assign_unassigned);

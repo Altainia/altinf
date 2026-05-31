@@ -24,11 +24,11 @@
 #include "org/pages/org_admin_page.hpp"
 #include "org/pages/org_board_page.hpp"
 #include "org/pages/org_landing_page.hpp"
+#include "org/pages/org_management_page.hpp"
 #include "org/pages/org_type_manager_page.hpp"
 #include "org/pages/settings_page.hpp"
 #include "org/pages/task_edit_page.hpp"
 #include "org/pages/team_archive_page.hpp"
-#include "org/pages/team_edit_page.hpp"
 #include "org/pages/team_kanban_page.hpp"
 #include "org/pages/team_settings_page.hpp"
 #include "pages/main_page.hpp"
@@ -527,7 +527,7 @@ void altinf_app::handle_org(std::string_view rem)
 			show_forbidden();
 			return;
 		}
-		m_content->addNew<team_edit_page>(
+		m_content->addNew<org_management_page>(
 		  *m_org_db, *m_kanban_db, *m_user_db, org_id, m_session, paths::org_view(org_id));
 	}
 	else
@@ -655,11 +655,6 @@ void altinf_app::handle_team(std::string_view rem)
 		if(sub.empty())
 		{
 			setInternalPath(paths::team_edit_members(team_id), true);
-		}
-		else if(sub == "members")
-		{
-			m_content->addNew<team_edit_page>(
-			  *m_org_db, *m_kanban_db, *m_user_db, team->org_id, m_session, paths::team_kanban(team_id));
 		}
 		else if(sub == "settings")
 		{

@@ -323,7 +323,7 @@
 
 .kb-team-page {
   padding-top: 2rem;
-  h1 { font-size: 2rem; margin-bottom: 1.5rem; }
+  h1 { font-size: 2rem; }
 }
 
 .kb-team-form {
@@ -351,14 +351,17 @@
   align-items: center;
 }
 
-.kb-member-input { width: 200px; flex: 0 0 auto; }
+.kb-member-input { width: 200px; flex: 1 0 auto; }
 
 .kb-back-link {
   display:    inline-block;
-  margin-top: 0.5rem;
   font-size:  0.85rem;
   color:      var(--color-muted);
   &:hover { color: var(--color-text); }
+}
+
+.kb-team-name-label {
+  flex-grow: 1;
 }
 
 // ── Type chip selector ────────────────────────────────────────────────────
@@ -630,4 +633,9 @@
   font-size: 0.875rem;
   display:   block;
   padding:   0.125rem 0;
+}
+
+.settings-field-row {
+  display: flex;
+  flex-direction: row;
 }

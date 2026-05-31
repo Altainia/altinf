@@ -72,11 +72,6 @@ team_kanban_page::team_kanban_page(kanban_db&          db,
 	if(caps.has_any(team_cap::manage_team))
 	{
 		hdr->addNew<Wt::WAnchor>(
-		     Wt::WLink{Wt::LinkType::InternalPath, paths::team_edit_members(team_id)},
-		     "Manage Team")
-		  ->setStyleClass("editor-btn editor-btn-cancel kb-manage-link");
-
-		hdr->addNew<Wt::WAnchor>(
 		     Wt::WLink{Wt::LinkType::InternalPath, paths::team_edit_settings(team_id)},
 		     "Settings")
 		  ->setStyleClass("editor-btn editor-btn-cancel kb-manage-link");
@@ -97,7 +92,7 @@ team_kanban_page::team_kanban_page(kanban_db&          db,
 	const bool can_move_columns = is_lead ||
 	                              (m_caps.has_any(team_cap::edit_task_fields) &&
 	                               m_settings.allow_member_move_columns);
-	const bool can_move_done = is_lead;
+	const bool can_move_done    = is_lead;
 
 	if(show_gantt)
 	{
@@ -188,7 +183,7 @@ void team_kanban_page::refresh()
 	const bool can_move_columns = is_lead ||
 	                              (m_caps.has_any(team_cap::edit_task_fields) &&
 	                               m_settings.allow_member_move_columns);
-	const bool can_move_done = is_lead;
+	const bool can_move_done    = is_lead;
 
 	const auto tasks = m_db.tasks_for_team(m_team_id);
 	if(m_show_gantt && m_gantt_widget)

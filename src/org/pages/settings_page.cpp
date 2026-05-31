@@ -8,13 +8,17 @@
 settings_page::settings_page(org_db& odb, const session_data& session)
 {
 	setStyleClass("page settings-page");
-	addNew<Wt::WText>("<h1>Settings</h1>", Wt::TextFormat::UnsafeXHTML);
+
+	auto* header_section = addNew<Wt::WContainerWidget>();
+	header_section->setStyleClass("vertical-section");
+
+	header_section->addNew<Wt::WText>("<h1>Settings</h1>", Wt::TextFormat::UnsafeXHTML);
 
 	const auto orgs = odb.orgs_for_user(session.username);
 	if(orgs.empty())
 	{
-		addNew<Wt::WText>(
-		  "You are not a member of any organizations.", Wt::TextFormat::Plain)
+		header_section->addNew<Wt::WText>(
+		                "You are not a member of any organizations.", Wt::TextFormat::Plain)
 		  ->setStyleClass("settings-empty");
 		return;
 	}
@@ -22,7 +26,7 @@ settings_page::settings_page(org_db& odb, const session_data& session)
 	for(const auto& org: orgs)
 	{
 		auto* section = addNew<Wt::WContainerWidget>();
-		section->setStyleClass("settings-org-section");
+		section->setStyleClass("vertical-section");
 		section->addNew<Wt::WText>("<h2>" + org.name + "</h2>",
 		                           Wt::TextFormat::UnsafeXHTML);
 
@@ -30,10 +34,11 @@ settings_page::settings_page(org_db& odb, const session_data& session)
 		const auto      username = session.username;
 		const auto      pref     = odb.get_user_org_pref(username, org_id);
 
-		auto* available_cb  = section->addNew<Wt::WCheckBox>("New task available");
-		auto* unassigned_cb = section->addNew<Wt::WCheckBox>("Removed from task");
-		auto* coassignee_cb = section->addNew<Wt::WCheckBox>("Co-assignee changed");
-		auto* abandoned_cb  = section->addNew<Wt::WCheckBox>("Task abandoned");
+		section->addNew<Wt::WText>("Notify me when...");
+		auto* available_cb  = section->addNew<Wt::WCheckBox>("A new task becomes available");
+		auto* unassigned_cb = section->addNew<Wt::WCheckBox>("I am removed from a task");
+		auto* coassignee_cb = section->addNew<Wt::WCheckBox>("A co-assignee has been changed");
+		auto* abandoned_cb  = section->addNew<Wt::WCheckBox>("A task is abandoned");
 
 		available_cb->setChecked(pref.notify_task_available);
 		unassigned_cb->setChecked(pref.notify_task_unassigned);

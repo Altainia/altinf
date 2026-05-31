@@ -1,4 +1,4 @@
-#include "team_edit_page.hpp"
+#include "org_management_page.hpp"
 
 #include <Wt/WAnchor.h>
 #include <Wt/WApplication.h>
@@ -15,12 +15,12 @@
 #include "paths.hpp"
 #include "widgets/live_hub.hpp"
 
-team_edit_page::team_edit_page(org_db&             odb,
-                               kanban_db&          kdb,
-                               user_db&            udb,
-                               long long           org_id,
-                               const session_data& session,
-                               const std::string&  back_url):
+org_management_page::org_management_page(org_db&             odb,
+                                         kanban_db&          kdb,
+                                         user_db&            udb,
+                                         long long           org_id,
+                                         const session_data& session,
+                                         const std::string&  back_url):
   m_odb{odb},
   m_kdb{kdb},
   m_udb{udb},
@@ -38,31 +38,33 @@ team_edit_page::team_edit_page(org_db&             odb,
 
 	m_org_name = org->name;
 
-	addNew<Wt::WText>("<h1>Manage: " + org->name + "</h1>",
-	                  Wt::TextFormat::UnsafeXHTML);
+	auto* header_section = addNew<Wt::WContainerWidget>();
+	header_section->setStyleClass("vertical-section");
+	header_section->addNew<Wt::WText>("<h1>Manage: " + org->name + "</h1>",
+	                                  Wt::TextFormat::UnsafeXHTML);
 
 	m_back_url = back_url.empty() ? paths::org_view(org_id) : back_url;
-	addNew<Wt::WAnchor>(
-	  Wt::WLink{Wt::LinkType::InternalPath, m_back_url},
-	  "\xe2\x86\x90 Back")
+	header_section->addNew<Wt::WAnchor>(
+	                Wt::WLink{Wt::LinkType::InternalPath, m_back_url},
+	                "\xe2\x86\x90 Back")
 	  ->setStyleClass("kb-back-link");
 
 	// ── Members ───────────────────────────────────────────────────────────────
-	addNew<Wt::WText>("<h2>Members</h2>", Wt::TextFormat::UnsafeXHTML);
 	m_members_section = addNew<Wt::WContainerWidget>();
-	m_members_section->setStyleClass("kb-members-container");
+	m_members_section->setStyleClass("kb-members-container vertical-section");
 	refresh_members();
 
 	// ── Pending invites ───────────────────────────────────────────────────────
-	addNew<Wt::WText>("<h2>Pending invites</h2>", Wt::TextFormat::UnsafeXHTML);
 	m_pending_section = addNew<Wt::WContainerWidget>();
-	m_pending_section->setStyleClass("kb-members-container");
+	m_pending_section->setStyleClass("kb-members-container vertical-section");
 	refresh_pending();
 
 	// ── Invite form ───────────────────────────────────────────────────────────
-	addNew<Wt::WText>("<h2>Invite user</h2>", Wt::TextFormat::UnsafeXHTML);
+	auto* invite_section = addNew<Wt::WContainerWidget>();
+	invite_section->setStyleClass("vertical-section");
+	invite_section->addNew<Wt::WText>("<h2>Invite user</h2>", Wt::TextFormat::UnsafeXHTML);
 
-	auto* invite_row = addNew<Wt::WContainerWidget>();
+	auto* invite_row = invite_section->addNew<Wt::WContainerWidget>();
 	invite_row->setStyleClass("kb-member-add-row");
 
 	m_invite_input = invite_row->addNew<Wt::WLineEdit>();
@@ -97,11 +99,10 @@ team_edit_page::team_edit_page(org_db&             odb,
 	invite_btn->clicked().connect(do_invite);
 	m_invite_input->enterPressed().connect(do_invite);
 
-	m_invite_msg = addNew<Wt::WText>("", Wt::TextFormat::Plain);
+	m_invite_msg = invite_section->addNew<Wt::WText>("", Wt::TextFormat::Plain);
 	m_invite_msg->setStyleClass("editor-status");
 
 	// ── Teams ─────────────────────────────────────────────────────────────────
-	addNew<Wt::WText>("<h2>Teams</h2>", Wt::TextFormat::UnsafeXHTML);
 	m_teams_section = addNew<Wt::WContainerWidget>();
 	m_teams_section->setStyleClass("kb-teams-container");
 	refresh_teams();
@@ -112,7 +113,7 @@ team_edit_page::team_edit_page(org_db&             odb,
 		if(!archived.empty())
 		{
 			auto* details = addNew<Wt::WContainerWidget>();
-			details->setStyleClass("kb-archived-teams");
+			details->setStyleClass("kb-archived-teams vertical-section");
 			details->addNew<Wt::WText>("<h2>Archived Teams</h2>",
 			                           Wt::TextFormat::UnsafeXHTML);
 			for(const auto& team: archived)
@@ -136,9 +137,12 @@ team_edit_page::team_edit_page(org_db&             odb,
 	}
 
 	// ── New team form ─────────────────────────────────────────────────────────
-	addNew<Wt::WText>("<h2>Create team</h2>", Wt::TextFormat::UnsafeXHTML);
+	auto* new_team_section = addNew<Wt::WContainerWidget>();
+	new_team_section->setStyleClass("vertical-section");
 
-	auto* new_team_row = addNew<Wt::WContainerWidget>();
+	new_team_section->addNew<Wt::WText>("<h2>Create team</h2>", Wt::TextFormat::UnsafeXHTML);
+
+	auto* new_team_row = new_team_section->addNew<Wt::WContainerWidget>();
 	new_team_row->setStyleClass("kb-member-add-row");
 
 	m_new_team_input = new_team_row->addNew<Wt::WLineEdit>();
@@ -174,7 +178,7 @@ team_edit_page::team_edit_page(org_db&             odb,
 	  });
 }
 
-team_edit_page::~team_edit_page()
+org_management_page::~org_management_page()
 {
 	*m_alive = false;
 	if(!m_session_id.empty())
@@ -184,16 +188,17 @@ team_edit_page::~team_edit_page()
 	}
 }
 
-void team_edit_page::refresh()
+void org_management_page::refresh()
 {
 	refresh_members();
 	refresh_pending();
 	refresh_teams();
 }
 
-void team_edit_page::refresh_members()
+void org_management_page::refresh_members()
 {
 	m_members_section->clear();
+	m_members_section->addNew<Wt::WText>("<h2>Members</h2>", Wt::TextFormat::UnsafeXHTML);
 	const auto members = m_odb.org_members(m_org_id);
 	if(members.empty())
 	{
@@ -274,9 +279,10 @@ void team_edit_page::refresh_members()
 	}
 }
 
-void team_edit_page::refresh_pending()
+void org_management_page::refresh_pending()
 {
 	m_pending_section->clear();
+	m_pending_section->addNew<Wt::WText>("<h2>Pending invites</h2>", Wt::TextFormat::UnsafeXHTML);
 	const auto pending = m_odb.org_pending(m_org_id);
 	if(pending.empty())
 	{
@@ -307,9 +313,10 @@ void team_edit_page::refresh_pending()
 	}
 }
 
-void team_edit_page::refresh_teams()
+void org_management_page::refresh_teams()
 {
 	m_teams_section->clear();
+	m_teams_section->addNew<Wt::WText>("<h2>Teams</h2>", Wt::TextFormat::UnsafeXHTML);
 	const auto teams = m_kdb.teams_for_org(m_org_id);
 	if(teams.empty())
 	{
@@ -323,8 +330,8 @@ void team_edit_page::refresh_teams()
 	}
 }
 
-void team_edit_page::build_team_block(Wt::WContainerWidget* parent,
-                                      const team_entry&     team)
+void org_management_page::build_team_block(Wt::WContainerWidget* parent,
+                                           const team_entry&     team)
 {
 	auto* block = parent->addNew<Wt::WContainerWidget>();
 	block->setStyleClass("kb-team-block");
