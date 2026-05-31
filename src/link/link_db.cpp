@@ -3,19 +3,25 @@
 #include <Wt/Dbo/Transaction.h>
 #include <Wt/Dbo/backend/Sqlite3.h>
 
+#include "db/migrator.hpp"
+
+namespace
+{
+	// Post-baseline schema deltas for the "link" domain, in version order. The
+	// baseline (version 1) is the schema createTables() builds from link_record.
+	const std::vector<db::migrator::migration>& link_migrations()
+	{
+		static const std::vector<db::migrator::migration> migrations{};
+		return migrations;
+	}
+} // namespace
+
 link_db::link_db(const std::string& db_path)
 {
 	m_dbo.setConnection(std::make_unique<Wt::Dbo::backend::Sqlite3>(db_path));
 	m_dbo.mapClass<link_record>("link");
 
-	try
-	{
-		m_dbo.createTables();
-	}
-	catch(const Wt::Dbo::Exception&)
-	{
-		// Tables already exist — ignore
-	}
+	db::migrator::run(m_dbo, "link", link_migrations());
 }
 
 std::vector<link_entry> link_db::load_all()

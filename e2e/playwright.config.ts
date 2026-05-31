@@ -24,6 +24,12 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   webServer: {
     command: [
+      // Prepare a fresh app-root immediately before launching the server, so it
+      // exists when the app migrates the DB at startup (Playwright does not
+      // guarantee globalSetup finishes before the webServer starts).
+      `rm -rf ${TEST_DIR} &&`,
+      `mkdir -p ${TEST_DIR} &&`,
+      `(cp -r ${PROJECT_ROOT}/posts ${TEST_DIR}/posts 2>/dev/null || mkdir -p ${TEST_DIR}/posts) &&`,
       `ALTINF_ADMIN_PASSWORD=testpass`,
       BINARY,
       `--approot ${TEST_DIR}`,

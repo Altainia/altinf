@@ -4,6 +4,20 @@
 #include <Wt/Dbo/backend/Sqlite3.h>
 #include <Wt/WDateTime.h>
 
+#include "db/migrator.hpp"
+
+namespace
+{
+	// Post-baseline schema deltas for the "kanban" domain, in version order. The
+	// baseline (version 1) is the schema createTables() builds from the team,
+	// task, comment and settings structs.
+	const std::vector<db::migrator::migration>& kanban_migrations()
+	{
+		static const std::vector<db::migrator::migration> migrations{};
+		return migrations;
+	}
+} // namespace
+
 kanban_db::kanban_db(const std::string& db_path)
 {
 	m_dbo.setConnection(std::make_unique<Wt::Dbo::backend::Sqlite3>(db_path));
@@ -19,81 +33,7 @@ kanban_db::kanban_db(const std::string& db_path)
 	m_dbo.mapClass<team_settings_record>("team_settings");
 	m_dbo.mapClass<team_settings_event_record>("team_settings_event");
 
-	try
-	{
-		m_dbo.createTables();
-	}
-	catch(const Wt::Dbo::Exception&)
-	{}
-
-	// Idempotent column migrations.
-	auto migrate = [this](const std::string& sql) {
-		try
-		{
-			Wt::Dbo::Transaction t{m_dbo};
-			m_dbo.execute(sql);
-		}
-		catch(...)
-		{}
-	};
-
-	migrate("ALTER TABLE team ADD COLUMN org_id INTEGER NOT NULL DEFAULT 0");
-	migrate("ALTER TABLE team_member ADD COLUMN is_lead INTEGER NOT NULL DEFAULT 0");
-	migrate("ALTER TABLE kanban_task ADD COLUMN type_id INTEGER NOT NULL DEFAULT 0");
-	migrate("ALTER TABLE kanban_task ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0");
-	migrate("ALTER TABLE team ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0");
-	migrate("ALTER TABLE team_settings ADD COLUMN allow_member_edit_details integer not null default 1");
-
-	migrate(
-	  "CREATE TABLE IF NOT EXISTS task_comment ("
-	  "id integer primary key autoincrement,"
-	  " version integer not null default 0,"
-	  " task_id integer not null default 0,"
-	  " author text not null default '',"
-	  " body text not null default '',"
-	  " created_at text not null default '',"
-	  " is_deleted integer not null default 0)");
-
-	migrate(
-	  "CREATE TABLE IF NOT EXISTS task_comment_event ("
-	  "id integer primary key autoincrement,"
-	  " version integer not null default 0,"
-	  " comment_id integer not null default 0,"
-	  " actor text not null default '',"
-	  " occurred_at text not null default '',"
-	  " event_type text not null default '',"
-	  " body_snapshot text not null default '')");
-
-	migrate(
-	  "CREATE TABLE IF NOT EXISTS task_assignee ("
-	  "id integer primary key autoincrement,"
-	  " version integer not null default 0,"
-	  " task_id integer not null default 0,"
-	  " username text not null default '')");
-
-	migrate(
-	  "CREATE TABLE IF NOT EXISTS team_settings ("
-	  "id integer primary key autoincrement,"
-	  " version integer not null default 0,"
-	  " org_id integer not null default 0,"
-	  " team_id integer not null default 0,"
-	  " allow_member_move_columns integer not null default 1,"
-	  " allow_self_assign_unassigned integer not null default 1,"
-	  " allow_self_assign_assigned integer not null default 1,"
-	  " allow_abandon integer not null default 1,"
-	  " allow_member_edit_details integer not null default 1)");
-
-	migrate(
-	  "CREATE TABLE IF NOT EXISTS team_settings_event ("
-	  "id integer primary key autoincrement,"
-	  " version integer not null default 0,"
-	  " org_id integer not null default 0,"
-	  " team_id integer not null default 0,"
-	  " actor text not null default '',"
-	  " occurred_at text not null default '',"
-	  " field_name text not null default '',"
-	  " old_value text not null default '',"
-	  " new_value text not null default '')");
+	db::migrator::run(m_dbo, "kanban", kanban_migrations());
 }
 
 // ---- static helpers ----

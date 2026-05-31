@@ -1,19 +1,7 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
-const TEST_DIR = '/tmp/altinf-e2e-test';
-const PROJECT_ROOT = path.resolve(__dirname, '..');
-
 export default async function globalSetup() {
-  // Fresh test app-root on each run so ALTINF_ADMIN_PASSWORD creates a clean admin
-  fs.rmSync(TEST_DIR, { recursive: true, force: true });
-  fs.mkdirSync(TEST_DIR, { recursive: true });
-
-  // Copy posts into the test app-root so the blog page has content
-  const postsDir = path.join(PROJECT_ROOT, 'posts');
-  if (fs.existsSync(postsDir)) {
-    fs.cpSync(postsDir, path.join(TEST_DIR, 'posts'), { recursive: true });
-  } else {
-    fs.mkdirSync(path.join(TEST_DIR, 'posts'));
-  }
+  // App-root preparation (wipe, mkdir, copy posts) now happens in the
+  // webServer command in playwright.config.ts, immediately before the server
+  // launches. Doing it here would race with — and could wipe the DB created
+  // by — a server that the app migrates at startup, since Playwright does not
+  // guarantee globalSetup completes before the webServer starts.
 }
