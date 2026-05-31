@@ -70,17 +70,19 @@ team_settings_page::team_settings_page(kanban_db&          db,
 	permissions_list->setStyleClass("vertical-section");
 	permissions_list->addNew<Wt::WText>("<h2>Member permissions</h2>", Wt::TextFormat::UnsafeXHTML);
 
-	auto* move_cb    = permissions_list->addNew<Wt::WCheckBox>("Members can move tasks between columns");
-	auto* self_un_cb = permissions_list->addNew<Wt::WCheckBox>("Members can self-assign unassigned tasks");
-	auto* self_as_cb = permissions_list->addNew<Wt::WCheckBox>("Members can self-assign already-assigned tasks");
-	auto* abandon_cb = permissions_list->addNew<Wt::WCheckBox>("Members can abandon tasks");
+	auto* move_cb         = permissions_list->addNew<Wt::WCheckBox>("Members can move tasks between columns");
+	auto* self_un_cb      = permissions_list->addNew<Wt::WCheckBox>("Members can self-assign unassigned tasks");
+	auto* self_as_cb      = permissions_list->addNew<Wt::WCheckBox>("Members can self-assign already-assigned tasks");
+	auto* abandon_cb      = permissions_list->addNew<Wt::WCheckBox>("Members can abandon tasks");
+	auto* edit_details_cb = permissions_list->addNew<Wt::WCheckBox>("Members can edit task details");
 
 	move_cb->setChecked(settings.allow_member_move_columns);
 	self_un_cb->setChecked(settings.allow_self_assign_unassigned);
 	self_as_cb->setChecked(settings.allow_self_assign_assigned);
 	abandon_cb->setChecked(settings.allow_abandon);
+	edit_details_cb->setChecked(settings.allow_member_edit_details);
 
-	for(auto* cb: {move_cb, self_un_cb, self_as_cb, abandon_cb})
+	for(auto* cb: {move_cb, self_un_cb, self_as_cb, abandon_cb, edit_details_cb})
 	{
 		cb->setStyleClass("settings-pref-check");
 	}
@@ -112,6 +114,13 @@ team_settings_page::team_settings_page(kanban_db&          db,
 	  [&db, team_id, actor, abandon_cb] {
 		  auto s          = db.settings_for_team(team_id);
 		  s.allow_abandon = abandon_cb->isChecked();
+		  db.set_team_settings(s, actor);
+		  live_hub::instance().broadcast("team:" + std::to_string(team_id));
+	  });
+	edit_details_cb->changed().connect(
+	  [&db, team_id, actor, edit_details_cb] {
+		  auto s                      = db.settings_for_team(team_id);
+		  s.allow_member_edit_details = edit_details_cb->isChecked();
 		  db.set_team_settings(s, actor);
 		  live_hub::instance().broadcast("team:" + std::to_string(team_id));
 	  });
