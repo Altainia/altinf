@@ -42,6 +42,7 @@ kanban_db::kanban_db(const std::string& db_path)
 	migrate("ALTER TABLE kanban_task ADD COLUMN type_id INTEGER NOT NULL DEFAULT 0");
 	migrate("ALTER TABLE kanban_task ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0");
 	migrate("ALTER TABLE team ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0");
+	migrate("ALTER TABLE team_settings ADD COLUMN allow_member_edit_details integer not null default 1");
 
 	migrate(
 	  "CREATE TABLE IF NOT EXISTS task_comment ("
@@ -81,8 +82,6 @@ kanban_db::kanban_db(const std::string& db_path)
 	  " allow_self_assign_assigned integer not null default 1,"
 	  " allow_abandon integer not null default 1,"
 	  " allow_member_edit_details integer not null default 1)");
-
-	migrate("ALTER TABLE team_settings ADD COLUMN allow_member_edit_details integer not null default 1");
 
 	migrate(
 	  "CREATE TABLE IF NOT EXISTS team_settings_event ("
