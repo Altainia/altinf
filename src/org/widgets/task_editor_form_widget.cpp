@@ -109,7 +109,7 @@ task_editor_form_widget::task_editor_form_widget(
 	const bool can_edit_status = not_archived &&
 	                             (is_lead || (caps.has_any(team_cap::edit_task_fields) &&
 	                                          m_settings.allow_member_move_columns));
-	const bool can_reassign = caps.has_any(team_cap::reassign_task) && not_archived;
+	const bool can_reassign    = caps.has_any(team_cap::reassign_task) && not_archived;
 
 	// ── Stale banner ──────────────────────────────────────────────────────────
 	if(!is_new)
@@ -253,7 +253,7 @@ task_editor_form_widget::task_editor_form_widget(
 	  ->setStyleClass("kb-field-label");
 	const std::string status_init = is_new ? "todo" : m_original.status;
 	m_status_display              = m_status_field->addNew<Wt::WText>(
-    status_lbl(status_init), Wt::TextFormat::Plain);
+	  status_lbl(status_init), Wt::TextFormat::Plain);
 	m_status_display->setStyleClass(can_edit_status && !is_new ? "kb-popup-display" : "");
 	if(is_new)
 	{
@@ -347,40 +347,40 @@ task_editor_form_widget::task_editor_form_widget(
 		{
 			auto rebuild_new_fn = std::make_shared<std::function<void()>>();
 			*rebuild_new_fn     = [this, chips_container, rebuild_new_fn]() {
-        chips_container->clear();
-        for(const auto& user: m_pending_assignees)
-        {
-          auto* chip = chips_container->addNew<Wt::WContainerWidget>();
-          chip->setStyleClass("kb-assignee-chip");
-          chip->addNew<Wt::WText>(user, Wt::TextFormat::Plain);
-          auto* rm = chip->addNew<Wt::WPushButton>("\xc3\x97");
-          rm->setStyleClass("kb-assignee-rm");
-          rm->clicked().connect([this, user, rebuild_new_fn]() {
-            auto it = std::find(
-              m_pending_assignees.begin(), m_pending_assignees.end(), user);
-            if(it != m_pending_assignees.end())
-            {
-              m_pending_assignees.erase(it);
-            }
-            (*rebuild_new_fn)();
-          });
-        }
-        if(m_add_member_combo)
-        {
-          m_add_member_combo->clear();
-          m_add_member_combo->addItem("(select member)");
-          const auto all = m_db.members_for_team(m_team_id);
-          for(const auto& mem: all)
-          {
-            if(std::find(m_pending_assignees.begin(),
-                         m_pending_assignees.end(),
-                         mem) == m_pending_assignees.end())
-            {
-              m_add_member_combo->addItem(mem);
-            }
-          }
-          m_add_member_combo->setCurrentIndex(0);
-        }
+				chips_container->clear();
+				for(const auto& user: m_pending_assignees)
+				{
+					auto* chip = chips_container->addNew<Wt::WContainerWidget>();
+					chip->setStyleClass("kb-assignee-chip");
+					chip->addNew<Wt::WText>(user, Wt::TextFormat::Plain);
+					auto* rm = chip->addNew<Wt::WPushButton>("\xc3\x97");
+					rm->setStyleClass("kb-assignee-rm");
+					rm->clicked().connect([this, user, rebuild_new_fn]() {
+						auto it = std::find(
+						  m_pending_assignees.begin(), m_pending_assignees.end(), user);
+						if(it != m_pending_assignees.end())
+						{
+							m_pending_assignees.erase(it);
+						}
+						(*rebuild_new_fn)();
+					});
+				}
+				if(m_add_member_combo)
+				{
+					m_add_member_combo->clear();
+					m_add_member_combo->addItem("(select member)");
+					const auto all = m_db.members_for_team(m_team_id);
+					for(const auto& mem: all)
+					{
+						if(std::find(m_pending_assignees.begin(),
+						             m_pending_assignees.end(),
+						             mem) == m_pending_assignees.end())
+						{
+							m_add_member_combo->addItem(mem);
+						}
+					}
+					m_add_member_combo->setCurrentIndex(0);
+				}
 			};
 
 			auto* add_row = m_assignee_list->addNew<Wt::WContainerWidget>();
@@ -414,77 +414,77 @@ task_editor_form_widget::task_editor_form_widget(
 	{
 		auto rebuild_chips_fn = std::make_shared<std::function<void()>>();
 		*rebuild_chips_fn     = [this, chips_container, can_reassign, not_archived, rebuild_chips_fn]() {
-      chips_container->clear();
-      const auto current = m_db.assignees_for_task(m_task_id);
-      for(const auto& user: current)
-      {
-        auto* chip = chips_container->addNew<Wt::WContainerWidget>();
-        chip->setStyleClass("kb-assignee-chip");
-        chip->addNew<Wt::WText>(user, Wt::TextFormat::Plain);
+			chips_container->clear();
+			const auto current = m_db.assignees_for_task(m_task_id);
+			for(const auto& user: current)
+			{
+				auto* chip = chips_container->addNew<Wt::WContainerWidget>();
+				chip->setStyleClass("kb-assignee-chip");
+				chip->addNew<Wt::WText>(user, Wt::TextFormat::Plain);
 
-        const bool is_self            = (user == m_username);
-        const bool sole               = (current.size() == 1);
-        const bool can_remove_as_lead = can_reassign;
-        const bool can_remove_as_member =
-          !can_reassign && is_self && not_archived &&
-          (sole ? m_settings.allow_abandon : m_settings.allow_self_assign_assigned);
+				const bool is_self            = (user == m_username);
+				const bool sole               = (current.size() == 1);
+				const bool can_remove_as_lead = can_reassign;
+				const bool can_remove_as_member =
+				  !can_reassign && is_self && not_archived &&
+				  (sole ? m_settings.allow_abandon : m_settings.allow_self_assign_assigned);
 
-        if(can_remove_as_lead || can_remove_as_member)
-        {
-          auto* rm = chip->addNew<Wt::WPushButton>("\xc3\x97");
-          rm->setStyleClass("kb-assignee-rm");
-          rm->clicked().connect(
-            [this, user, sole, can_reassign, rebuild_chips_fn]() {
-              auto do_remove = [this, user, rebuild_chips_fn]() {
-                m_db.remove_assignee(m_task_id, user, m_username);
-                const auto remaining = m_db.assignees_for_task(m_task_id);
-                notify_assignee_removed(
-                  m_db, m_odb, m_task_id, m_team_id, m_org_id, user, m_username, remaining);
-                live_hub::instance().broadcast(
-                  "team:" + std::to_string(m_team_id));
-                (*rebuild_chips_fn)();
-              };
-              if(can_reassign && sole && !m_settings.allow_abandon)
-              {
-                auto* dlg = addNew<Wt::WDialog>("Confirm abandon");
-                dlg->contents()->addNew<Wt::WText>(
-                  "This task has no other assignees. Removing " + user +
-                    " will leave it unassigned. Proceed?",
-                  Wt::TextFormat::Plain);
-                auto* yes =
-                  dlg->footer()->addNew<Wt::WPushButton>("Yes, abandon");
-                yes->setStyleClass("editor-btn");
-                auto* no = dlg->footer()->addNew<Wt::WPushButton>("Cancel");
-                no->setStyleClass("editor-btn editor-btn-cancel");
-                yes->clicked().connect([dlg, do_remove]() mutable {
-                  dlg->reject();
-                  do_remove();
-                });
-                no->clicked().connect([dlg]() { dlg->reject(); });
-                dlg->show();
-              }
-              else
-              {
-                do_remove();
-              }
-            });
-        }
-      }
-      // Rebuild combo to exclude already-assigned members (Bug 3 fix).
-      if(m_add_member_combo)
-      {
-        m_add_member_combo->clear();
-        m_add_member_combo->addItem("(select member)");
-        const auto all = m_db.members_for_team(m_team_id);
-        for(const auto& mem: all)
-        {
-          if(std::find(current.begin(), current.end(), mem) == current.end())
-          {
-            m_add_member_combo->addItem(mem);
-          }
-        }
-        m_add_member_combo->setCurrentIndex(0);
-      }
+				if(can_remove_as_lead || can_remove_as_member)
+				{
+					auto* rm = chip->addNew<Wt::WPushButton>("\xc3\x97");
+					rm->setStyleClass("kb-assignee-rm");
+					rm->clicked().connect(
+					  [this, user, sole, can_reassign, rebuild_chips_fn]() {
+						  auto do_remove = [this, user, rebuild_chips_fn]() {
+							  m_db.remove_assignee(m_task_id, user, m_username);
+							  const auto remaining = m_db.assignees_for_task(m_task_id);
+							  notify_assignee_removed(
+							    m_db, m_odb, m_task_id, m_team_id, m_org_id, user, m_username, remaining);
+							  live_hub::instance().broadcast(
+							    "team:" + std::to_string(m_team_id));
+							  (*rebuild_chips_fn)();
+						  };
+						  if(can_reassign && sole && !m_settings.allow_abandon)
+						  {
+							  auto* dlg = addNew<Wt::WDialog>("Confirm abandon");
+							  dlg->contents()->addNew<Wt::WText>(
+							    "This task has no other assignees. Removing " + user +
+							      " will leave it unassigned. Proceed?",
+							    Wt::TextFormat::Plain);
+							  auto* yes =
+							    dlg->footer()->addNew<Wt::WPushButton>("Yes, abandon");
+							  yes->setStyleClass("editor-btn");
+							  auto* no = dlg->footer()->addNew<Wt::WPushButton>("Cancel");
+							  no->setStyleClass("editor-btn editor-btn-cancel");
+							  yes->clicked().connect([dlg, do_remove]() mutable {
+								  dlg->reject();
+								  do_remove();
+							  });
+							  no->clicked().connect([dlg]() { dlg->reject(); });
+							  dlg->show();
+						  }
+						  else
+						  {
+							  do_remove();
+						  }
+					  });
+				}
+			}
+			// Rebuild combo to exclude already-assigned members (Bug 3 fix).
+			if(m_add_member_combo)
+			{
+				m_add_member_combo->clear();
+				m_add_member_combo->addItem("(select member)");
+				const auto all = m_db.members_for_team(m_team_id);
+				for(const auto& mem: all)
+				{
+					if(std::find(current.begin(), current.end(), mem) == current.end())
+					{
+						m_add_member_combo->addItem(mem);
+					}
+				}
+				m_add_member_combo->setCurrentIndex(0);
+			}
 		};
 
 		(*rebuild_chips_fn)();
