@@ -132,7 +132,7 @@ test('member cannot edit task title when the setting is off', async ({ browser }
   await loginAs(page, 'edit_member', 'editpass');
   await openDetailTaskEditor(page);
 
-  await expect(page.locator('input[placeholder="Task title"][readonly]')).toBeVisible();
+  await expect(page.locator('input[placeholder="Task title"]')).toHaveAttribute('readonly', 'readonly');
   await ctx.close();
 });
 
@@ -148,6 +148,6 @@ test('member can edit task title when the setting is on', async ({ browser }) =>
   await loginAs(page, 'edit_member', 'editpass');
   await openDetailTaskEditor(page);
 
-  await expect(page.locator('input[placeholder="Task title"][readonly]')).toHaveCount(0);
+  await expect(page.locator('input[placeholder="Task title"]')).not.toHaveAttribute('readonly', 'readonly');
   await ctx.close();
 });
