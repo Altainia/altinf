@@ -237,8 +237,7 @@ test('archive team: tasks from archived team appear on archive page', async ({ b
     await createTask(page, 'TeamArchiveTask');
 
     // Navigate to the manage page and archive the team.
-    await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
-    await expect(page.locator('.kb-team-page')).toBeVisible();
+    await goToManage(page);
     await page.locator('.kb-team-block:has(.kb-team-name-label:text-is("TeamToArchive"))')
       .getByRole('button', { name: 'Archive' }).click();
 

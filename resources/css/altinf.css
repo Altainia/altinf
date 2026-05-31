@@ -52,10 +52,6 @@ a:hover {
   text-decoration: underline;
 }
 
-h1 {
-  margin-bottom: 0;
-}
-
 p {
   padding: 1em 0 0 0;
 }
@@ -1330,7 +1326,6 @@ input[type=color] {
 }
 .kb-team-page h1 {
   font-size: 2rem;
-  margin-bottom: 1.5rem;
 }
 
 .kb-team-form {
@@ -1375,7 +1370,7 @@ input[type=color] {
 
 .kb-member-input {
   width: 200px;
-  flex: 0 0 auto;
+  flex: 1 0 auto;
 }
 
 .kb-back-link {
@@ -1385,6 +1380,10 @@ input[type=color] {
 }
 .kb-back-link:hover {
   color: var(--color-text);
+}
+
+.kb-team-name-label {
+  flex-grow: 1;
 }
 
 .kb-type-chips {

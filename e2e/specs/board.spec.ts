@@ -25,6 +25,19 @@ async function loginAndGoToBoard(page: Page) {
   await expect(page.locator('.kb-board')).toBeVisible();
 }
 
+// Team/member management now lives on the org-level management page, reached via
+// the org landing's "Manage organization" link (the per-team "Manage Team" link
+// was removed as redundant).
+async function goToOrgManage(page: Page) {
+  await login(page);
+  await page.locator('.nav-link', { hasText: 'Orgs' }).click();
+  await expect(page.locator('.org-admin-page')).toBeVisible();
+  await page.locator('.org-list-link', { hasText: 'BoardTestOrg' }).first().click();
+  await expect(page.locator('.org-landing-page')).toBeVisible();
+  await page.getByRole('link', { name: 'Manage organization' }).click();
+  await expect(page.locator('.kb-team-page')).toBeVisible();
+}
+
 // ── setup ─────────────────────────────────────────────────────────────────────
 
 test.beforeAll(async ({ browser }) => {
@@ -135,11 +148,6 @@ test('Board tab has active style, Gantt tab does not', async ({ page }) => {
 test('admin sees + New Task button', async ({ page }) => {
   await loginAndGoToBoard(page);
   await expect(page.locator('.kb-new-btn')).toBeVisible();
-});
-
-test('admin sees Manage Team link', async ({ page }) => {
-  await loginAndGoToBoard(page);
-  await expect(page.locator('.kb-manage-link', { hasText: 'Manage Team' })).toBeVisible();
 });
 
 test('board header shows team name', async ({ page }) => {
@@ -558,10 +566,9 @@ test('Gantt view renders today line and label when a task spans today', async ({
 
 // ── team management ───────────────────────────────────────────────────────────
 
-test('Manage Team link opens team management page', async ({ page }) => {
-  await loginAndGoToBoard(page);
-  await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
-  await expect(page.locator('.kb-team-page')).toBeVisible();
+test('org management page lists team blocks', async ({ page }) => {
+  await goToOrgManage(page);
+  await expect(page.locator('.kb-team-block')).toBeVisible();
 });
 
 test('team settings page shows the current team name in the rename field', async ({ page }) => {
@@ -588,9 +595,7 @@ test('team name can be renamed and the new name appears on the board', async ({ 
 });
 
 test('member can be added to the team', async ({ page }) => {
-  await loginAndGoToBoard(page);
-  await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
-  await expect(page.locator('.kb-team-page')).toBeVisible();
+  await goToOrgManage(page);
 
   // Scope to the team block — the org-members section also has .kb-member-row for admin.
   const teamMemberRow = page.locator('.kb-team-block .kb-member-row', { hasText: 'admin' });
@@ -607,19 +612,16 @@ test('member can be added to the team', async ({ page }) => {
 });
 
 test('added member appears in the Assigned to dropdown', async ({ page }) => {
-  await loginAndGoToBoard(page);
-
   // Ensure admin is a team member.  Scope to .kb-team-block to avoid matching
   // the org-members section row which also contains 'admin'.
-  await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
-  await expect(page.locator('.kb-team-page')).toBeVisible();
+  await goToOrgManage(page);
   const teamMemberRow = page.locator('.kb-team-block .kb-member-row', { hasText: 'admin' });
   if (!(await teamMemberRow.isVisible())) {
     await page.locator('.kb-team-block .kb-member-add-row .editor-btn-cancel').click();
     await expect(teamMemberRow).toBeVisible();
   }
-  await page.locator('.kb-back-link').click();
-  await expect(page.locator('.kb-board')).toBeVisible();
+  // Navigate to the team board.
+  await loginAndGoToBoard(page);
 
   // Open the task editor and check the assignee options.
   await page.locator('.kb-new-btn').click();
@@ -629,9 +631,7 @@ test('added member appears in the Assigned to dropdown', async ({ page }) => {
 });
 
 test('member can be removed from the team', async ({ page }) => {
-  await loginAndGoToBoard(page);
-  await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
-  await expect(page.locator('.kb-team-page')).toBeVisible();
+  await goToOrgManage(page);
 
   // Scope to .kb-team-block to avoid matching the org-members section row.
   const teamMemberRow = page.locator('.kb-team-block .kb-member-row', { hasText: 'admin' });
@@ -646,10 +646,8 @@ test('member can be removed from the team', async ({ page }) => {
   await expect(teamMemberRow).not.toBeVisible();
 });
 
-test('team page back-to-board link returns to the board', async ({ page }) => {
-  await loginAndGoToBoard(page);
-  await page.locator('.kb-manage-link', { hasText: 'Manage Team' }).click();
-  await expect(page.locator('.kb-team-page')).toBeVisible();
+test('management page back link returns to the org landing page', async ({ page }) => {
+  await goToOrgManage(page);
   await page.locator('.kb-back-link').click();
-  await expect(page.locator('.kb-page')).toBeVisible();
+  await expect(page.locator('.org-landing-page')).toBeVisible();
 });

@@ -654,7 +654,7 @@ void altinf_app::handle_team(std::string_view rem)
 		const auto sub = paths::take_segment(rem);
 		if(sub.empty())
 		{
-			setInternalPath(paths::team_edit_members(team_id), true);
+			setInternalPath(paths::team_edit_settings(team_id), true);
 		}
 		else if(sub == "settings")
 		{
