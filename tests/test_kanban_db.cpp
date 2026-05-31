@@ -973,3 +973,28 @@ TEST_CASE("kanban_db - set_team_settings records audit event")
 	  });
 	CHECK(found_move);
 }
+
+TEST_CASE("kanban_db - allow_member_edit_details round-trips and is audited")
+{
+	kanban_db       db{":memory:"};
+	const long long tid = db.create_team("Engineering", 1);
+
+	// Defaults to true (members allowed) when no row exists.
+	CHECK(db.settings_for_team(tid).allow_member_edit_details);
+
+	// Turn it off and persist.
+	auto s                      = db.settings_for_team(tid);
+	s.org_id                    = 1;
+	s.team_id                   = tid;
+	s.allow_member_edit_details = false;
+	db.set_team_settings(s, "lead");
+
+	CHECK_FALSE(db.settings_for_team(tid).allow_member_edit_details);
+
+	// The change is recorded in the audit log.
+	const auto events  = db.settings_events_for_team(tid);
+	const bool audited = std::ranges::any_of(events, [](const auto& e) {
+		return e.field_name == "allow_member_edit_details" && e.new_value == "0";
+	});
+	CHECK(audited);
+}

@@ -79,7 +79,10 @@ kanban_db::kanban_db(const std::string& db_path)
 	  " allow_member_move_columns integer not null default 1,"
 	  " allow_self_assign_unassigned integer not null default 1,"
 	  " allow_self_assign_assigned integer not null default 1,"
-	  " allow_abandon integer not null default 1)");
+	  " allow_abandon integer not null default 1,"
+	  " allow_member_edit_details integer not null default 1)");
+
+	migrate("ALTER TABLE team_settings ADD COLUMN allow_member_edit_details integer not null default 1");
 
 	migrate(
 	  "CREATE TABLE IF NOT EXISTS team_settings_event ("
@@ -905,6 +908,7 @@ team_settings_entry kanban_db::settings_for_team(long long team_id)
 		e.allow_self_assign_unassigned = r->allow_self_assign_unassigned != 0;
 		e.allow_self_assign_assigned   = r->allow_self_assign_assigned != 0;
 		e.allow_abandon                = r->allow_abandon != 0;
+		e.allow_member_edit_details    = r->allow_member_edit_details != 0;
 		return e;
 	}
 
@@ -933,6 +937,7 @@ team_settings_entry kanban_db::settings_for_team(long long team_id)
 		e.allow_self_assign_unassigned = r->allow_self_assign_unassigned != 0;
 		e.allow_self_assign_assigned   = r->allow_self_assign_assigned != 0;
 		e.allow_abandon                = r->allow_abandon != 0;
+		e.allow_member_edit_details    = r->allow_member_edit_details != 0;
 		return e;
 	}
 
@@ -991,6 +996,7 @@ void kanban_db::set_team_settings(const team_settings_entry& s,
 		record_change("allow_self_assign_unassigned", "1", to_s(s.allow_self_assign_unassigned));
 		record_change("allow_self_assign_assigned", "1", to_s(s.allow_self_assign_assigned));
 		record_change("allow_abandon", "1", to_s(s.allow_abandon));
+		record_change("allow_member_edit_details", "1", to_s(s.allow_member_edit_details));
 
 		auto r                                   = m_dbo.add(std::make_unique<team_settings_record>());
 		r.modify()->org_id                       = s.org_id;
@@ -999,6 +1005,7 @@ void kanban_db::set_team_settings(const team_settings_entry& s,
 		r.modify()->allow_self_assign_unassigned = s.allow_self_assign_unassigned ? 1 : 0;
 		r.modify()->allow_self_assign_assigned   = s.allow_self_assign_assigned ? 1 : 0;
 		r.modify()->allow_abandon                = s.allow_abandon ? 1 : 0;
+		r.modify()->allow_member_edit_details    = s.allow_member_edit_details ? 1 : 0;
 	}
 	else
 	{
@@ -1015,11 +1022,15 @@ void kanban_db::set_team_settings(const team_settings_entry& s,
 		record_change("allow_abandon",
 		              to_s(r->allow_abandon != 0),
 		              to_s(s.allow_abandon));
+		record_change("allow_member_edit_details",
+		              to_s(r->allow_member_edit_details != 0),
+		              to_s(s.allow_member_edit_details));
 
 		r.modify()->allow_member_move_columns    = s.allow_member_move_columns ? 1 : 0;
 		r.modify()->allow_self_assign_unassigned = s.allow_self_assign_unassigned ? 1 : 0;
 		r.modify()->allow_self_assign_assigned   = s.allow_self_assign_assigned ? 1 : 0;
 		r.modify()->allow_abandon                = s.allow_abandon ? 1 : 0;
+		r.modify()->allow_member_edit_details    = s.allow_member_edit_details ? 1 : 0;
 	}
 }
 

@@ -137,6 +137,7 @@ struct team_settings_record
 	int       allow_self_assign_unassigned{1};
 	int       allow_self_assign_assigned{1};
 	int       allow_abandon{1};
+	int       allow_member_edit_details{1};
 
 	template<class Action>
 	void persist(Action& a)
@@ -147,6 +148,7 @@ struct team_settings_record
 		Wt::Dbo::field(a, allow_self_assign_unassigned, "allow_self_assign_unassigned");
 		Wt::Dbo::field(a, allow_self_assign_assigned, "allow_self_assign_assigned");
 		Wt::Dbo::field(a, allow_abandon, "allow_abandon");
+		Wt::Dbo::field(a, allow_member_edit_details, "allow_member_edit_details");
 	}
 };
 
@@ -158,6 +160,7 @@ struct team_settings_entry
 	bool      allow_self_assign_unassigned{true};
 	bool      allow_self_assign_assigned{true};
 	bool      allow_abandon{true};
+	bool      allow_member_edit_details{true};
 };
 
 struct team_settings_event_record
