@@ -105,7 +105,25 @@ int main(int argc, char** argv)
 	std::unique_ptr<Wt::Auth::GoogleService> google_service;
 	if(Wt::Auth::GoogleService::configured())
 	{
-		google_service = std::make_unique<Wt::Auth::GoogleService>(auth_service);
+		auto svc = std::make_unique<Wt::Auth::GoogleService>(auth_service);
+
+		// Wt deploys the OAuth callback as a static resource at the redirect URL's
+		// path. If that path is empty or "/", it collides with the application
+		// entry point ("a static resource was already deployed on path '/'") and
+		// every sign-in attempt fatally crashes the session. Catch the
+		// misconfiguration at startup and run with Google disabled instead.
+		const std::string redirect_path = svc->redirectEndpointPath();
+		if(redirect_path.empty() || redirect_path == "/")
+		{
+			std::cerr << "Google sign-in disabled: google-oauth2-redirect-endpoint must "
+			             "include a distinct path (e.g. https://host/oauth2callback), not "
+			             "the bare application root. Got path '"
+			          << redirect_path << "'.\n";
+		}
+		else
+		{
+			google_service = std::move(svc);
+		}
 	}
 	const Wt::Auth::OAuthService* const google = google_service.get();
 

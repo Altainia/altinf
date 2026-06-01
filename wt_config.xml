@@ -22,7 +22,13 @@
          injects a <properties> block from the ALTINF_GOOGLE_* env vars at container
          start. When those are unset, no properties exist and Google sign-in stays
          disabled (GoogleService::configured() is false) — note an *empty* property
-         still counts as configured, so it must be absent, not blank. The redirect
-         endpoint must also be registered in the Google Cloud console. -->
+         still counts as configured, so it must be absent, not blank.
+
+         The redirect endpoint MUST include a distinct path (e.g.
+         https://your.host/oauth2callback) — NOT the bare application root. Wt
+         deploys the OAuth callback as a static resource at that path; a path of
+         "/" collides with the app entry point and crashes every sign-in. The same
+         URL must be registered as an authorized redirect URI in the Google Cloud
+         console. For local testing: http://localhost:<port>/oauth2callback -->
   </application-settings>
 </server>

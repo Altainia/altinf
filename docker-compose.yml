@@ -17,8 +17,10 @@ services:
     environment:
       - ALTINF_ADMIN_PASSWORD=${ALTINF_ADMIN_PASSWORD:-}
       # Google OAuth (optional). Set all three to enable "Sign in with Google".
-      # ALTINF_GOOGLE_REDIRECT must match an authorized redirect URI registered
-      # in the Google Cloud console, e.g. https://your.domain/oauth2callback
+      # ALTINF_GOOGLE_REDIRECT must include a distinct path (NOT the bare domain)
+      # and match an authorized redirect URI registered in the Google Cloud
+      # console, e.g. https://your.domain/oauth2callback. A path of "/" collides
+      # with the app entry point and disables Google sign-in at startup.
       - ALTINF_GOOGLE_CLIENT_ID=${ALTINF_GOOGLE_CLIENT_ID:-}
       - ALTINF_GOOGLE_CLIENT_SECRET=${ALTINF_GOOGLE_CLIENT_SECRET:-}
       - ALTINF_GOOGLE_REDIRECT=${ALTINF_GOOGLE_REDIRECT:-}
