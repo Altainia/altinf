@@ -7,10 +7,16 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake ninja-build git ca-certificates \
+    gcc-14 g++-14 \
     libboost-all-dev libssl-dev libsqlite3-dev zlib1g-dev \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /usr/lib/x86_64-linux-gnu/libssl.so    /usr/lib/libssl.so \
     && ln -sf /usr/lib/x86_64-linux-gnu/libcrypto.so /usr/lib/libcrypto.so
+
+# Ubuntu 24.04's build-essential pins GCC 13, which lacks std::ranges::to
+# (libstdc++ implements P1206R7 only in GCC 14+). Default to GCC 14 so the
+# whole image — Wt, alt, and altinf — builds with C++23 ranges::to support.
+ENV CC=gcc-14 CXX=g++-14
 
 RUN git clone --depth 1 --branch ${WT_VERSION} \
         https://github.com/emweb/wt.git /wt-src
