@@ -60,6 +60,12 @@ bool write_post_file(const std::filesystem::path& filepath,
                      const std::string&           tags,
                      const std::string&           body)
 {
+	// Ensure the posts directory exists. In production approot points at a
+	// fresh /data volume with no posts/ subdirectory, and std::ofstream does
+	// not create parent directories — without this the open below fails.
+	std::error_code ec;
+	std::filesystem::create_directories(filepath.parent_path(), ec);
+
 	std::ofstream out{filepath};
 	if(!out)
 	{
