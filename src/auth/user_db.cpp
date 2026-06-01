@@ -10,7 +10,20 @@
 #include <stdexcept>
 
 #include "api_token.hpp"
+#include "db/migrator.hpp"
 #include "session_token.hpp"
+
+namespace
+{
+	// Post-baseline schema deltas for the "auth" domain, in version order. The
+	// baseline (version 1) is the schema createTables() builds from the user,
+	// api_token and session_token structs.
+	const std::vector<db::migrator::migration>& auth_migrations()
+	{
+		static const std::vector<db::migrator::migration> migrations{};
+		return migrations;
+	}
+} // namespace
 
 static std::string sha256_hex(const std::string& input)
 {
@@ -55,37 +68,7 @@ user_db::user_db(const std::string& db_path)
 	m_dbo.mapClass<api_token>("api_token");
 	m_dbo.mapClass<session_token>("session_token");
 
-	try
-	{
-		m_dbo.createTables();
-	}
-	catch(const Wt::Dbo::Exception&)
-	{
-		// Tables already exist — run targeted migrations for any new columns/tables.
-		Wt::Dbo::Transaction t{m_dbo};
-		m_dbo.execute(
-		  "CREATE TABLE IF NOT EXISTS \"api_token\" ("
-		  "  \"id\" integer primary key autoincrement,"
-		  "  \"version\" integer not null,"
-		  "  \"token_hash\" text not null,"
-		  "  \"username\" text not null"
-		  ")");
-		m_dbo.execute(
-		  "CREATE TABLE IF NOT EXISTS \"session_token\" ("
-		  "  \"id\" integer primary key autoincrement,"
-		  "  \"version\" integer not null,"
-		  "  \"token_hash\" text not null,"
-		  "  \"username\" text not null"
-		  ")");
-		try
-		{
-			m_dbo.execute("ALTER TABLE \"user\" ADD COLUMN \"display_name\" text not null default ''");
-		}
-		catch(const Wt::Dbo::Exception&)
-		{
-			// Column already exists — nothing to do.
-		}
-	}
+	db::migrator::run(m_dbo, "auth", auth_migrations());
 }
 
 bool user_db::authenticate(const std::string& uname,

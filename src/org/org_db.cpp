@@ -4,6 +4,20 @@
 #include <Wt/Dbo/backend/Sqlite3.h>
 #include <Wt/WDateTime.h>
 
+#include "db/migrator.hpp"
+
+namespace
+{
+	// Post-baseline schema deltas for the "org" domain, in version order. The
+	// baseline (version 1) is the schema createTables() builds from the org,
+	// member, notification and preference structs.
+	const std::vector<db::migrator::migration>& org_migrations()
+	{
+		static const std::vector<db::migrator::migration> migrations{};
+		return migrations;
+	}
+} // namespace
+
 org_db::org_db(const std::string& db_path)
 {
 	m_dbo.setConnection(std::make_unique<Wt::Dbo::backend::Sqlite3>(db_path));
@@ -13,41 +27,7 @@ org_db::org_db(const std::string& db_path)
 	m_dbo.mapClass<user_pref_record>("user_pref");
 	m_dbo.mapClass<user_org_pref_record>("user_org_pref");
 
-	try
-	{
-		m_dbo.createTables();
-	}
-	catch(const Wt::Dbo::Exception&)
-	{
-		// Tables already exist — ignore.
-	}
-
-	try
-	{
-		m_dbo.execute("ALTER TABLE organization ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0");
-	}
-	catch(const Wt::Dbo::Exception&)
-	{
-		// Column already exists — ignore.
-	}
-
-	try
-	{
-		m_dbo.execute(
-		  "CREATE TABLE IF NOT EXISTS user_org_pref ("
-		  "id integer primary key autoincrement,"
-		  " version integer not null default 0,"
-		  " username text not null default '',"
-		  " org_id integer not null default 0,"
-		  " notify_task_available integer not null default 1,"
-		  " notify_task_unassigned integer not null default 1,"
-		  " notify_coassignee_changed integer not null default 1,"
-		  " notify_task_abandoned integer not null default 1)");
-	}
-	catch(const Wt::Dbo::Exception&)
-	{
-		// Table already exists — ignore.
-	}
+	db::migrator::run(m_dbo, "org", org_migrations());
 }
 
 // ---- static helpers ----
