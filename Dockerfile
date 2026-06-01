@@ -90,15 +90,18 @@ RUN ldconfig
 
 COPY --from=app-builder /src/build/altinf   /app/altinf
 COPY --from=app-builder /src/build/resources /app/resources
+# Baked-in baseline config. Production overrides this by bind-mounting its own
+# wt_config.xml over this path (see docker-compose.yml), so prod edits persist
+# across image updates and Google OAuth is configured directly in that file.
 COPY wt_config.template.xml /app/wt_config.xml
-COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
 
 # /data  → volume for SQLite DB + posts/
 VOLUME ["/data"]
 
 EXPOSE 8080
 
-# The entrypoint builds the runtime config (injecting Google OAuth properties
-# from ALTINF_GOOGLE_* env vars when present) before launching altinf.
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+ENTRYPOINT ["/app/altinf", \
+    "--config",       "/app/wt_config.xml", \
+    "--docroot",      "/app/resources;/css,/js", \
+    "--approot",      "/data", \
+    "--http-address", "0.0.0.0", "--http-port", "8080"]
