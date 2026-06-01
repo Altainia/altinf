@@ -53,19 +53,28 @@ gantt_view_widget::gantt_view_widget(std::vector<kanban_task_entry>          tas
 	m_cb_id = cb->id();
 	cb->changed().connect([this, cb] {
 		const std::string p = cb->text().toUTF8();
-		if(p.rfind("EDIT:", 0) == 0)
+		if(p.rfind("EDIT:", 0) == 0 || p.rfind("NAV:", 0) == 0)
 		{
-			long long tid = 0;
+			const bool        is_nav = (p.rfind("NAV:", 0) == 0);
+			const std::size_t prefix = is_nav ? 4 : 5;
+			long long         tid    = 0;
 			try
 			{
-				tid = std::stoll(p.substr(5));
+				tid = std::stoll(p.substr(prefix));
 			}
 			catch(...)
 			{
 				cb->setText(Wt::WString{});
 				return;
 			} // malformed payload
-			edit_requested.emit(tid);
+			if(is_nav)
+			{
+				nav_requested.emit(tid);
+			}
+			else
+			{
+				edit_requested.emit(tid);
+			}
 		}
 		cb->setText(Wt::WString{});
 	});

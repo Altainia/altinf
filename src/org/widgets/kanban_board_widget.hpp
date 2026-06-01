@@ -27,6 +27,9 @@ public:
 
 	Wt::Signal<long long, std::string, int> moved;
 	Wt::Signal<long long>                   edit_requested;
+	// Emitted on mobile, where a card tap navigates to the full-page editor
+	// instead of opening the popup dialog.
+	Wt::Signal<long long> nav_requested;
 
 private:
 	std::string                      m_mount_id;

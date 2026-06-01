@@ -92,7 +92,7 @@ team_kanban_page::team_kanban_page(kanban_db&          db,
 	const bool can_move_columns = is_lead ||
 	                              (m_caps.has_any(team_cap::edit_task_fields) &&
 	                               m_settings.allow_member_move_columns);
-	const bool can_move_done    = is_lead;
+	const bool can_move_done = is_lead;
 
 	if(show_gantt)
 	{
@@ -100,6 +100,9 @@ team_kanban_page::team_kanban_page(kanban_db&          db,
 		m_gantt_widget->edit_requested.connect([this](long long tid) {
 			new task_popup_widget(
 			  m_db, m_odb, tid, m_session, m_caps, m_settings, m_team_id);
+		});
+		m_gantt_widget->nav_requested.connect([](long long tid) {
+			Wt::WApplication::instance()->setInternalPath(paths::task_edit(tid), true);
 		});
 	}
 	else
@@ -129,6 +132,9 @@ team_kanban_page::team_kanban_page(kanban_db&          db,
 		m_board_widget->edit_requested.connect([this](long long tid) {
 			new task_popup_widget(
 			  m_db, m_odb, tid, m_session, m_caps, m_settings, m_team_id);
+		});
+		m_board_widget->nav_requested.connect([](long long tid) {
+			Wt::WApplication::instance()->setInternalPath(paths::task_edit(tid), true);
 		});
 	}
 
@@ -183,7 +189,7 @@ void team_kanban_page::refresh()
 	const bool can_move_columns = is_lead ||
 	                              (m_caps.has_any(team_cap::edit_task_fields) &&
 	                               m_settings.allow_member_move_columns);
-	const bool can_move_done    = is_lead;
+	const bool can_move_done = is_lead;
 
 	const auto tasks = m_db.tasks_for_team(m_team_id);
 	if(m_show_gantt && m_gantt_widget)

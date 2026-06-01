@@ -23,6 +23,9 @@ public:
 	             const std::map<long long, std::string>& type_colors);
 
 	Wt::Signal<long long> edit_requested;
+	// Emitted on mobile, where tapping an agenda item navigates to the full-page
+	// editor instead of opening the popup dialog.
+	Wt::Signal<long long> nav_requested;
 
 private:
 	std::map<long long, std::string> m_type_colors;

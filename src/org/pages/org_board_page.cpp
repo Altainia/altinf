@@ -82,6 +82,12 @@ org_board_page::org_board_page(org_db&             odb,
 			Wt::WApplication::instance()->setInternalPath(
 			  paths::task_edit(task_id), true);
 		});
+		// On mobile the card tap fires nav_requested; the org board navigates to the
+		// full-page editor in both cases.
+		board->nav_requested.connect([](long long task_id) {
+			Wt::WApplication::instance()->setInternalPath(
+			  paths::task_edit(task_id), true);
+		});
 	}
 
 	// Subscribe to live updates when task types change for this org.

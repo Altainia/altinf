@@ -2,6 +2,18 @@
 @use 'sass:list';
 @use 'contrast';
 
+// --- responsive breakpoints ---
+// Keep $bp-mobile in sync with the JS isMobile() checks in kanban.js / gantt.js.
+$bp-mobile: 768px;
+
+@mixin mobile {
+  @media (max-width: #{$bp-mobile}) { @content; }
+}
+
+@mixin desktop {
+  @media (min-width: #{$bp-mobile + 1}) { @content; }
+}
+
 // --- design-intent colors (inputs only, never emitted directly) ---
 
 $bg-colors: (

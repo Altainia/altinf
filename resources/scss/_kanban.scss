@@ -1,5 +1,6 @@
 @use 'buttons';
 @use 'forms';
+@use 'variables' as vars;
 
 // JS callback input — off-screen so Wt still registers the change event listener
 .kb-cb-hidden {
@@ -638,4 +639,159 @@
 .settings-field-row {
   display: flex;
   flex-direction: row;
+}
+
+// ── Mobile (≤ $bp-mobile) ───────────────────────────────────────────────────
+// Additive overrides only; desktop output above is untouched. The JS in
+// kanban.js / gantt.js switches behavior at the same 768px breakpoint.
+
+@include vars.mobile {
+
+  // Board: stack vertically, show one status column at a time via tabs.
+  .kb-board {
+    flex-direction: column;
+    overflow-x:     visible;
+  }
+
+  .kb-column {
+    flex:      1 1 auto;
+    min-width: 0;
+    width:     100%;
+
+    &--hidden { display: none; }
+  }
+
+  .kb-status-tabs {
+    display: flex;
+    gap:     0.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .kb-status-tab {
+    @include buttons.btn-ghost;
+    flex:       1;
+    min-height: 40px;
+    font-size:  0.8rem;
+    text-align: center;
+
+    &--active {
+      background:   var(--color-surface);
+      color:        var(--color-text);
+      border-color: var(--color-accent);
+    }
+  }
+
+  .kb-status-tab-count {
+    color:      var(--color-muted);
+    font-size:  0.72rem;
+    margin-left: 0.2rem;
+  }
+
+  // Larger touch targets; make room for the move affordance.
+  .kb-card {
+    position: relative;
+    padding:  0.7rem 2.4rem 0.7rem 0.85rem;
+  }
+
+  .kb-card-move {
+    @include buttons.btn-ghost;
+    position:    absolute;
+    top:         0.35rem;
+    right:       0.35rem;
+    min-width:   40px;
+    min-height:  40px;
+    padding:     0;
+    line-height: 1;
+    font-size:   1.2rem;
+    display:     flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .kb-move-menu {
+    position:      absolute;
+    top:           2.6rem;
+    right:         0.35rem;
+    z-index:       50;
+    display:       flex;
+    flex-direction: column;
+    min-width:     9rem;
+    background:    var(--color-surface);
+    border:        1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow:    0 4px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  .kb-move-item {
+    @include buttons.btn-ghost;
+    border:      none;
+    text-align:  left;
+    min-height:  44px;
+    border-radius: 0;
+
+    &:hover { background: var(--color-border); }
+  }
+
+  // Gantt: hide the SVG timeline, show the agenda list.
+  .gv-scroll,
+  .gv-controls { display: none; }
+
+  .gv-agenda {
+    display:        flex;
+    flex-direction: column;
+    gap:            0.4rem;
+  }
+
+  .gv-agenda-week {
+    font-size:      0.78rem;
+    font-weight:    700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color:          var(--color-muted);
+    margin:         0.75rem 0 0.25rem;
+  }
+
+  .gv-agenda-item {
+    background:    var(--color-surface);
+    border:       1px solid var(--color-border);
+    border-left:  3px solid var(--color-border);
+    border-radius: var(--radius);
+    padding:      0.6rem 0.8rem;
+
+    &:hover { border-color: var(--color-accent); }
+  }
+
+  .gv-agenda-title {
+    font-size:   0.9rem;
+    font-weight: 500;
+    color:       var(--color-text);
+  }
+
+  .gv-agenda-meta {
+    font-size:  0.75rem;
+    color:      var(--color-muted);
+    margin-top: 0.2rem;
+  }
+
+  .gv-agenda-bar {
+    height:        5px;
+    border-radius: 3px;
+    margin-top:    0.4rem;
+    background:    var(--color-accent);
+  }
+
+  // Task editor: single-column reflow on the full-page editor (and any popup
+  // reached at a narrow width).
+  .kb-editor-page {
+    padding-top: 1rem;
+    h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+  }
+
+  .kb-editor-form { max-width: none; }
+
+  .kb-editor-row { flex-direction: column; gap: 0.75rem; }
+
+  .kb-editor-field-wrap { min-width: 0; }
+
+  .kb-popup-title-field { flex-wrap: wrap; }
 }

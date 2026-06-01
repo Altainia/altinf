@@ -441,6 +441,71 @@ test('gantt label hit-rect click triggers EDIT callback', function () {
   assert(fired === 'EDIT:88', 'expected EDIT:88, got "' + fired + '"');
 });
 
+// ── Mobile agenda view ──────────────────────────────────────────────────────
+
+console.log('\nMobile agenda view');
+
+// Build a DOM with a controllable viewport width so isMobile() can be exercised.
+function makeAgendaDOM(width, cbId) {
+  const cbHtml = cbId ? '<input id="' + cbId + '">' : '';
+  const dom = new JSDOM(
+    '<!DOCTYPE html><body>' + cbHtml + '<div id="mount"></div></body>',
+    { runScripts: 'dangerously' });
+  Object.defineProperty(dom.window, 'innerWidth', { value: width, configurable: true });
+  dom.window.eval(GANTT_SRC);
+  return dom;
+}
+
+test('mobile width renders agenda list, not an SVG', function () {
+  const dom = makeAgendaDOM(390);
+  dom.window.initGantt('mount', [makeTask(1, -1, 5)]);
+  const doc = dom.window.document;
+  assert(doc.getElementById('mount').classList.contains('gv-agenda'),
+    'mount should carry the gv-agenda class');
+  assert(doc.querySelector('#mount .gv-agenda-item'), 'expected agenda items');
+  assert(!doc.querySelector('#mount svg'), 'no SVG should render on mobile');
+});
+
+test('desktop width still renders the SVG timeline (regression guard)', function () {
+  const dom = makeAgendaDOM(1200);
+  // getBoundingClientRect mock so the SVG sizing path works under jsdom.
+  dom.window.Element.prototype.getBoundingClientRect = function () {
+    return { width: 1200, height: 0, top: 0, left: 0, right: 1200, bottom: 0 };
+  };
+  dom.window.initGantt('mount', [makeTask(1, -1, 5)]);
+  const doc = dom.window.document;
+  assert(doc.querySelector('#mount svg'), 'expected an SVG on desktop');
+  assert(!doc.getElementById('mount').classList.contains('gv-agenda'), 'no agenda on desktop');
+});
+
+test('agenda buckets a current task under "This week"', function () {
+  const dom = makeAgendaDOM(390);
+  dom.window.initGantt('mount', [makeTask(1, 0, 3)]);
+  const weeks = Array.from(dom.window.document.querySelectorAll('.gv-agenda-week'))
+    .map(function (h) { return h.textContent; });
+  assert(weeks.includes('This week'), 'expected a "This week" group, got ' + weeks.join(','));
+});
+
+test('agenda buckets a past-due task under "Overdue"', function () {
+  const dom = makeAgendaDOM(390);
+  dom.window.initGantt('mount', [makeTask(1, -12, -3)]);
+  const weeks = Array.from(dom.window.document.querySelectorAll('.gv-agenda-week'))
+    .map(function (h) { return h.textContent; });
+  assert(weeks.includes('Overdue'), 'expected an "Overdue" group, got ' + weeks.join(','));
+});
+
+test('agenda item tap fires NAV callback (full-page editor on mobile)', function () {
+  const dom = makeAgendaDOM(390, 'cb-nav');
+  let fired = '';
+  dom.window.document.getElementById('cb-nav')
+    .addEventListener('change', function () { fired = this.value; });
+  dom.window.initGantt('mount', [makeTask(42, 0, 4)], 'cb-nav');
+  const item = dom.window.document.querySelector('#mount .gv-agenda-item');
+  assert(item, 'expected an agenda item');
+  item.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+  assertEq(fired, 'NAV:42', 'agenda tap should fire NAV');
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 
 console.log('\n' + (failed ? '✗' : '✓') + ' ' + passed + ' passed, ' + failed + ' failed\n');

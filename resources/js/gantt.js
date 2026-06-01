@@ -10,6 +10,13 @@
   var RANGE_OPTIONS      = [7, 13, 21, 30, 60];
   var FADE_PX            = 24;   // max fade width in SVG units at a clipped edge
 
+  // Keep in sync with $bp-mobile in resources/scss/_variables.scss.
+  var MOBILE_BP = 768;
+  function isMobile() { return window.innerWidth <= MOBILE_BP; }
+
+  // Per-mount resize listeners so refresh() re-inits don't stack them.
+  var gvResizeHandlers = {};
+
   function svgEl(tag) {
     return document.createElementNS('http://www.w3.org/2000/svg', tag);
   }
@@ -64,6 +71,20 @@
   function todayDate() {
     var now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  // Monday on or before the given date (week alignment matches the SVG grid).
+  function mondayOf(d) {
+    var day = d.getDay();           // 0=Sun .. 6=Sat
+    var back = (day === 0) ? 6 : day - 1;
+    return addDays(d, -back);
+  }
+
+  function fmtRange(s, e) {
+    if (s && e) return fmtDate(s) + ' – ' + fmtDate(e);
+    if (s)      return 'from ' + fmtDate(s);
+    if (e)      return 'due ' + fmtDate(e);
+    return 'no dates';
   }
 
   function todayViewStart(rangeDays) {
@@ -343,6 +364,116 @@
     }
   }
 
+  // Mobile view: a chronological, weekly-grouped list instead of the SVG timeline.
+  function renderAgenda(mount, tasks, cbId) {
+    mount.innerHTML = '';
+    mount.className = 'gv-agenda';
+
+    var today   = todayDate();
+    var thisMon = mondayOf(today);
+    var nextMon = addDays(thisMon, 7);
+
+    // Bucket a task into an ordered week group. Overdue = has a real end date in
+    // the past; ongoing/undated tasks bucket by their start (or end) week.
+    function bucketFor(task) {
+      var s = task._startDate, e = task._endDate;
+      if (!s && !e)      return { order: 9999, label: 'Undated' };
+      if (e && e < today) return { order: -1, label: 'Overdue' };
+      var startMon = mondayOf(s || e);
+      if (startMon < nextMon)              return { order: 0, label: 'This week' };
+      if (startMon < addDays(nextMon, 7))  return { order: 1, label: 'Next week' };
+      var weeks = Math.round(daysBetween(thisMon, startMon) / 7);
+      return { order: weeks, label: 'Week of ' + fmtDate(startMon) };
+    }
+
+    var groups = {};
+    var order  = [];
+    tasks.forEach(function (t) {
+      var b = bucketFor(t);
+      if (!groups[b.label]) {
+        groups[b.label] = { order: b.order, label: b.label, items: [] };
+        order.push(b.label);
+      }
+      groups[b.label].items.push(t);
+    });
+
+    if (!order.length) {
+      var empty = document.createElement('p');
+      empty.className = 'gv-empty';
+      empty.textContent = 'No active tasks.';
+      mount.appendChild(empty);
+      return;
+    }
+
+    order.sort(function (a, b) { return groups[a].order - groups[b].order; });
+
+    order.forEach(function (label) {
+      var grp = groups[label];
+      // Earliest first within a week; undated/dateless sink to the bottom.
+      grp.items.sort(function (a, b) {
+        var da = a._startDate || a._endDate;
+        var db = b._startDate || b._endDate;
+        if (!da && !db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        return da - db;
+      });
+
+      var hdr = document.createElement('h3');
+      hdr.className = 'gv-agenda-week';
+      hdr.textContent = grp.label;
+      mount.appendChild(hdr);
+
+      grp.items.forEach(function (task) {
+        var item = document.createElement('div');
+        item.className = 'gv-agenda-item';
+        if (task.color) item.style.borderLeftColor = task.color;
+
+        var title = document.createElement('div');
+        title.className = 'gv-agenda-title';
+        title.textContent = task.title;
+        item.appendChild(title);
+
+        var meta = document.createElement('div');
+        meta.className = 'gv-agenda-meta';
+        meta.textContent = (task.assigned_to || 'Unassigned') + ' · ' +
+          fmtRange(task._startDate, task._endDate);
+        item.appendChild(meta);
+
+        // Decorative duration bar. Bounded ranges scale with length; a single
+        // open-ended date renders a short faded stub.
+        var bar = document.createElement('div');
+        bar.className = 'gv-agenda-bar';
+        if (task.color) bar.style.backgroundColor = task.color;
+        if (task._startDate && task._endDate) {
+          var days = Math.max(1, daysBetween(task._startDate, task._endDate));
+          bar.style.width = Math.min(100, Math.max(15, days / 14 * 100)) + '%';
+        } else if (task._startDate || task._endDate) {
+          bar.style.width = '30%';
+          bar.style.opacity = '0.5';
+        } else {
+          bar.style.width = '15%';
+          bar.style.opacity = '0.3';
+        }
+        item.appendChild(bar);
+
+        if (cbId) {
+          item.style.cursor = 'pointer';
+          item.addEventListener('click', function () {
+            var inp = document.getElementById(cbId);
+            if (inp) {
+              inp.value = '';
+              inp.value = 'NAV:' + task.id;
+              inp.dispatchEvent(new Event('change'));
+            }
+          });
+        }
+
+        mount.appendChild(item);
+      });
+    });
+  }
+
   window.initGantt = function (mountId, tasks, cbId) {
     var mount = document.getElementById(mountId);
     if (!mount) return;
@@ -352,6 +483,32 @@
       t._startDate = parseDate(t.start_date);
       t._endDate   = parseDate(t.end_date);
     });
+
+    // Re-render when crossing the mobile/desktop breakpoint. Dedup per mount so
+    // live-update refreshes don't stack listeners.
+    if (gvResizeHandlers[mountId]) {
+      window.removeEventListener('resize', gvResizeHandlers[mountId]);
+    }
+    var lastMobile = isMobile();
+    var timer = null;
+    var handler = function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        if (isMobile() !== lastMobile) {
+          lastMobile = isMobile();
+          window.initGantt(mountId, tasks, cbId);
+        }
+      }, 150);
+    };
+    gvResizeHandlers[mountId] = handler;
+    window.addEventListener('resize', handler);
+
+    // Mobile: a weekly agenda list replaces the wide SVG timeline.
+    if (isMobile()) {
+      renderAgenda(mount, tasks, cbId);
+      return;
+    }
+    mount.className = '';
 
     // Use a today-centered view when today falls within any task's date range;
     // otherwise open at the earliest task start so past/future boards show

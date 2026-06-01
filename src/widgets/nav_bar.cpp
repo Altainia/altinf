@@ -1,7 +1,7 @@
 #include "nav_bar.hpp"
 
-#include <Wt/WAnchor.h>
 #include <Wt/WLink.h>
+#include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
 #include "auth/permission.hpp"
@@ -14,40 +14,63 @@ nav_bar::nav_bar(const session_data& session, org_db* odb):
 {
 	setStyleClass("nav-bar");
 
+	// Hamburger toggles the drawer on mobile; hidden on desktop via CSS.
+	auto* burger = addNew<Wt::WPushButton>("\xe2\x98\xb0"); // ☰
+	burger->setStyleClass("nav-hamburger");
+	burger->clicked().connect([this] {
+		m_drawer->toggleStyleClass("nav-drawer--open",
+		                           !m_drawer->hasStyleClass("nav-drawer--open"));
+	});
+	m_hamburger = burger;
+
 	auto* brand = addNew<Wt::WAnchor>(
 	  Wt::WLink{Wt::LinkType::InternalPath, "/"}, "AltInf");
 	brand->setStyleClass("nav-brand");
 
-	auto* links = addNew<Wt::WContainerWidget>();
+	// Drawer: collapses to inline links on desktop, slides in on mobile.
+	m_drawer = addNew<Wt::WContainerWidget>();
+	m_drawer->setStyleClass("nav-drawer");
+
+	auto* links = m_drawer->addNew<Wt::WContainerWidget>();
 	links->setStyleClass("nav-links");
+	drawer_link(links, "/", "Home", "nav-link");
+	drawer_link(links, paths::link_list(), "Links", "nav-link");
+	drawer_link(links, paths::blog_list(), "Blog", "nav-link");
 
-	links->addNew<Wt::WAnchor>(
-	       Wt::WLink{Wt::LinkType::InternalPath, "/"}, "Home")
-	  ->setStyleClass("nav-link");
+	m_menu = m_drawer->addNew<Wt::WContainerWidget>();
+	m_menu->setStyleClass("nav-menu");
 
-	links->addNew<Wt::WAnchor>(
-	       Wt::WLink{Wt::LinkType::InternalPath, paths::link_list()}, "Links")
-	  ->setStyleClass("nav-link");
-
-	links->addNew<Wt::WAnchor>(
-	       Wt::WLink{Wt::LinkType::InternalPath, paths::blog_list()}, "Blog")
-	  ->setStyleClass("nav-link");
-
-	m_auth_area = addNew<Wt::WContainerWidget>();
-	m_auth_area->setStyleClass("nav-auth");
+	// Persistent top-bar slots (populated in update()).
+	m_org_wrap  = addNew<Wt::WContainerWidget>();
+	m_bell_wrap = addNew<Wt::WContainerWidget>();
+	m_bell_wrap->setStyleClass("nav-bell-wrap");
 
 	update();
 }
 
+Wt::WAnchor* nav_bar::drawer_link(Wt::WContainerWidget* parent,
+                                  const std::string&    path,
+                                  const std::string&    text,
+                                  const std::string&    style)
+{
+	auto* a = parent->addNew<Wt::WAnchor>(
+	  Wt::WLink{Wt::LinkType::InternalPath, path}, text);
+	a->setStyleClass(style);
+	a->clicked().connect([this] { m_drawer->removeStyleClass("nav-drawer--open"); });
+	return a;
+}
+
 void nav_bar::update()
 {
-	m_auth_area->clear();
+	m_menu->clear();
+	m_org_wrap->clear();
+	m_org_wrap->setStyleClass("");
+	m_bell_wrap->clear();
+	m_bell = nullptr;
 
 	if(!m_session.logged_in)
 	{
-		m_auth_area->addNew<Wt::WAnchor>(
-		             Wt::WLink{Wt::LinkType::InternalPath, std::string{paths::login_path}}, "Login")
-		  ->setStyleClass("nav-link nav-login");
+		drawer_link(m_menu, std::string{paths::login_path}, "Login", "nav-link nav-login");
 		return;
 	}
 
@@ -85,74 +108,73 @@ void nav_bar::update()
 				}
 			}
 
-			auto* org_area = m_auth_area->addNew<Wt::WContainerWidget>();
-			org_area->setStyleClass(
+			m_org_wrap->setStyleClass(
 			  orgs.size() > 1 ? "nav-org-area nav-org-area--multi" : "nav-org-area");
 
 			// Primary link — always shown.
-			org_area->addNew<Wt::WAnchor>(
-			          Wt::WLink{Wt::LinkType::InternalPath,
-			                    paths::org_view(active_id)},
-			          active_name)
+			m_org_wrap->addNew<Wt::WAnchor>(
+			            Wt::WLink{Wt::LinkType::InternalPath, paths::org_view(active_id)},
+			            active_name)
 			  ->setStyleClass("nav-link nav-org-link");
 
-			// Dropdown panel — shown on CSS :hover when there are multiple orgs.
+			// Caret toggles the dropdown on tap (touch-friendly); desktop also
+			// opens it on hover via CSS.
 			if(orgs.size() > 1)
 			{
-				auto* dropdown = org_area->addNew<Wt::WContainerWidget>();
+				auto* caret = m_org_wrap->addNew<Wt::WText>("\xe2\x96\xbe"); // ▾
+				caret->setStyleClass("nav-org-caret");
+				caret->clicked().connect([this] {
+					m_org_wrap->toggleStyleClass(
+					  "nav-org-area--open",
+					  !m_org_wrap->hasStyleClass("nav-org-area--open"));
+				});
+
+				auto* dropdown = m_org_wrap->addNew<Wt::WContainerWidget>();
 				dropdown->setStyleClass("nav-org-dropdown");
 				for(const auto& o: orgs)
 				{
-					dropdown->addNew<Wt::WAnchor>(
-					          Wt::WLink{Wt::LinkType::InternalPath,
-					                    paths::org_view(o.id)},
-					          o.name)
-					  ->setStyleClass(o.id == active_id ? "nav-org-item nav-org-item--active" : "nav-org-item");
+					auto* item = dropdown->addNew<Wt::WAnchor>(
+					  Wt::WLink{Wt::LinkType::InternalPath, paths::org_view(o.id)},
+					  o.name);
+					item->setStyleClass(
+					  o.id == active_id ? "nav-org-item nav-org-item--active" : "nav-org-item");
+					item->clicked().connect([this] {
+						m_org_wrap->removeStyleClass("nav-org-area--open");
+					});
 				}
 			}
 		}
 	}
 
-	// ── Admin / author links ───────────────────────────────────────────────────
+	// ── Admin / author links (drawer) ──────────────────────────────────────────
 	if(m_session.permissions.has_any(permission::post_write))
 	{
-		m_auth_area->addNew<Wt::WAnchor>(
-		             Wt::WLink{Wt::LinkType::InternalPath, paths::blog_new()}, "New Post")
-		  ->setStyleClass("nav-link");
+		drawer_link(m_menu, paths::blog_new(), "New Post", "nav-link");
 	}
 
 	if(m_session.permissions.has_any(permission::admin) ||
 	   m_session.permissions.has_any(permission::manage_users))
 	{
-		m_auth_area->addNew<Wt::WAnchor>(
-		             Wt::WLink{Wt::LinkType::InternalPath, paths::account_list()}, "Accounts")
-		  ->setStyleClass("nav-link");
+		drawer_link(m_menu, paths::account_list(), "Accounts", "nav-link");
 	}
 
 	if(m_session.permissions.has_any(permission::org_create) ||
 	   m_session.permissions.has_any(permission::admin))
 	{
-		m_auth_area->addNew<Wt::WAnchor>(
-		             Wt::WLink{Wt::LinkType::InternalPath, paths::admin_org_list()}, "Orgs")
-		  ->setStyleClass("nav-link");
+		drawer_link(m_menu, paths::admin_org_list(), "Orgs", "nav-link");
 	}
 
-	// ── Settings ──────────────────────────────────────────────────────────────
-	m_auth_area->addNew<Wt::WAnchor>(
-	             Wt::WLink{Wt::LinkType::InternalPath, std::string{paths::settings_path}}, "Settings")
-	  ->setStyleClass("nav-link");
+	drawer_link(m_menu, std::string{paths::settings_path}, "Settings", "nav-link");
 
-	// ── Notification bell ─────────────────────────────────────────────────────
+	// ── Notification bell (top bar) ─────────────────────────────────────────────
 	if(m_org_db)
 	{
 		const int count = m_org_db->unread_count(m_session.username);
-		m_bell          = m_auth_area->addNew<notification_bell>(count);
+		m_bell          = m_bell_wrap->addNew<notification_bell>(count);
 	}
 
-	// ── Logout ────────────────────────────────────────────────────────────────
-	m_auth_area->addNew<Wt::WAnchor>(
-	             Wt::WLink{Wt::LinkType::InternalPath, std::string{paths::logout_path}}, "Logout")
-	  ->setStyleClass("nav-link nav-logout");
+	// ── Logout (drawer) ─────────────────────────────────────────────────────────
+	drawer_link(m_menu, std::string{paths::logout_path}, "Logout", "nav-link nav-logout");
 }
 
 void nav_bar::refresh_bell()

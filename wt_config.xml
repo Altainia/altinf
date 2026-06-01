@@ -11,5 +11,11 @@
     <trusted-proxy-networks>172.16.0.0/12</trusted-proxy-networks>
     <max-request-size>1048576</max-request-size>
     <debug>false</debug>
+    <!-- Responsive viewport: inserted verbatim into <head> for every page,
+         independent of the AJAX/bootstrap mode (addMetaHeader() is a no-op in
+         AJAX sessions). Required so mobile media queries use the device width. -->
+    <head-matter>
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+    </head-matter>
   </application-settings>
 </server>

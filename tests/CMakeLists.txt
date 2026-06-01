@@ -56,15 +56,19 @@ target_include_directories(test_org_db PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_org_db PRIVATE Catch2::Catch2WithMain Wt::Wt wtdbo wtdbosqlite3)
 catch_discover_tests(test_org_db)
 
-# test_gantt (JavaScript — requires Node.js)
+# test_gantt / test_kanban (JavaScript — requires Node.js)
 find_program(NODE_EXECUTABLE node)
 if(NODE_EXECUTABLE)
   add_test(
     NAME    gantt_js
     COMMAND ${NODE_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/js/test_gantt.js
   )
+  add_test(
+    NAME    kanban_js
+    COMMAND ${NODE_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/js/test_kanban.js
+  )
 else()
-  message(STATUS "Node.js not found — skipping gantt JS tests")
+  message(STATUS "Node.js not found — skipping JS tests")
 endif()
 
 # test_live_hub — live_hub with injected synchronous dispatcher

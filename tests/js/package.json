@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node test_gantt.js"
+    "test": "node test_gantt.js && node test_kanban.js"
   },
   "keywords": [],
   "author": "",

@@ -81,6 +81,11 @@ kanban_board_widget::kanban_board_widget(
 			const long long tid = std::stoll(payload.substr(5));
 			edit_requested.emit(tid);
 		}
+		else if(payload.starts_with("NAV:"))
+		{
+			const long long tid = std::stoll(payload.substr(4));
+			nav_requested.emit(tid);
+		}
 	});
 
 	init_js(serialize_tasks(tasks), can_move_columns, can_move_done);
