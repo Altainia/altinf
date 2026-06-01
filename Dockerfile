@@ -91,14 +91,14 @@ RUN ldconfig
 COPY --from=app-builder /src/build/altinf   /app/altinf
 COPY --from=app-builder /src/build/resources /app/resources
 COPY wt_config.xml /app/wt_config.xml
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
 
 # /data  → volume for SQLite DB + posts/
 VOLUME ["/data"]
 
 EXPOSE 8080
 
-ENTRYPOINT ["/app/altinf", \
-    "--config",       "/app/wt_config.xml", \
-    "--docroot",      "/app/resources;/css,/js", \
-    "--approot",      "/data", \
-    "--http-address", "0.0.0.0", "--http-port", "8080"]
+# The entrypoint builds the runtime config (injecting Google OAuth properties
+# from ALTINF_GOOGLE_* env vars when present) before launching altinf.
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

@@ -1,3 +1,5 @@
+#include <Wt/Auth/AuthService.h>
+#include <Wt/Auth/GoogleService.h>
 #include <Wt/Dbo/Session.h>
 #include <Wt/Dbo/backend/Sqlite3.h>
 #include <Wt/WApplication.h>
@@ -96,9 +98,38 @@ int main(int argc, char** argv)
 	auto api = std::make_shared<post_api_resource>(db_path, posts_dir);
 	server.addResource(api, "/api/posts");
 
+	// Shared, read-only auth services (server lifetime). Google sign-in is an
+	// opt-in feature: only enabled when the google-oauth2-* config properties are
+	// present (injected from ALTINF_GOOGLE_* env vars at deploy time).
+	const Wt::Auth::AuthService              auth_service;
+	std::unique_ptr<Wt::Auth::GoogleService> google_service;
+	if(Wt::Auth::GoogleService::configured())
+	{
+		auto svc = std::make_unique<Wt::Auth::GoogleService>(auth_service);
+
+		// Wt deploys the OAuth callback as a static resource at the redirect URL's
+		// path. If that path is empty or "/", it collides with the application
+		// entry point ("a static resource was already deployed on path '/'") and
+		// every sign-in attempt fatally crashes the session. Catch the
+		// misconfiguration at startup and run with Google disabled instead.
+		const std::string redirect_path = svc->redirectEndpointPath();
+		if(redirect_path.empty() || redirect_path == "/")
+		{
+			std::cerr << "Google sign-in disabled: google-oauth2-redirect-endpoint must "
+			             "include a distinct path (e.g. https://host/oauth2callback), not "
+			             "the bare application root. Got path '"
+			          << redirect_path << "'.\n";
+		}
+		else
+		{
+			google_service = std::move(svc);
+		}
+	}
+	const Wt::Auth::OAuthService* const google = google_service.get();
+
 	server.addEntryPoint(Wt::EntryPointType::Application,
-	                     [](const Wt::WEnvironment& env) {
-		                     return std::make_unique<altinf_app>(env);
+	                     [google](const Wt::WEnvironment& env) {
+		                     return std::make_unique<altinf_app>(env, google);
 	                     });
 
 	if(server.start())

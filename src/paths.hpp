@@ -27,6 +27,7 @@ namespace paths
 	inline constexpr std::string_view logout_path        = "/logout";
 	inline constexpr std::string_view notifications_path = "/notifications";
 	inline constexpr std::string_view settings_path      = "/settings";
+	inline constexpr std::string_view account_path       = "/account";
 
 	// ── Segment helpers ───────────────────────────────────────────────────────
 

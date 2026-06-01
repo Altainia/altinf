@@ -164,6 +164,7 @@ void nav_bar::update()
 		drawer_link(m_menu, paths::admin_org_list(), "Orgs", "nav-link");
 	}
 
+	drawer_link(m_menu, std::string{paths::account_path}, "Account", "nav-link");
 	drawer_link(m_menu, std::string{paths::settings_path}, "Settings", "nav-link");
 
 	// ── Notification bell (top bar) ─────────────────────────────────────────────

@@ -223,3 +223,70 @@ TEST_CASE("user_db - create_session_token unknown user throws")
 	user_db db{":memory:"};
 	CHECK_THROWS(db.create_session_token("nobody"));
 }
+
+TEST_CASE("user_db - load_session populates without password")
+{
+	user_db        db{":memory:"};
+	constexpr auto perms = permission::admin | permission::post_write;
+	db.create_user("alice", "secret", perms, "Alice");
+	session_data out;
+	REQUIRE(db.load_session("alice", out));
+	CHECK(out.logged_in);
+	CHECK(out.username == "alice");
+	CHECK(out.display_name == "Alice");
+	CHECK(out.permissions == perms);
+}
+
+TEST_CASE("user_db - load_session unknown user fails")
+{
+	user_db      db{":memory:"};
+	session_data out;
+	CHECK(!db.load_session("nobody", out));
+	CHECK(!out.logged_in);
+}
+
+TEST_CASE("user_db - link_google then look up by sub and email")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none);
+	CHECK(!db.google_email_for("alice"));
+
+	db.link_google("alice", "google-sub-123", "alice@gmail.com");
+	REQUIRE(db.google_email_for("alice"));
+	CHECK(*db.google_email_for("alice") == "alice@gmail.com");
+
+	REQUIRE(db.username_for_google_sub("google-sub-123"));
+	CHECK(*db.username_for_google_sub("google-sub-123") == "alice");
+	CHECK(!db.username_for_google_sub("google-sub-999"));
+}
+
+TEST_CASE("user_db - link_google replaces an existing link for the user")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none);
+	db.link_google("alice", "sub-old", "old@gmail.com");
+	db.link_google("alice", "sub-new", "new@gmail.com");
+
+	CHECK(*db.google_email_for("alice") == "new@gmail.com");
+	CHECK(!db.username_for_google_sub("sub-old"));
+	CHECK(*db.username_for_google_sub("sub-new") == "alice");
+}
+
+TEST_CASE("user_db - unlink_google removes the link")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none);
+	db.link_google("alice", "sub-1", "alice@gmail.com");
+	db.unlink_google("alice");
+	CHECK(!db.google_email_for("alice"));
+	CHECK(!db.username_for_google_sub("sub-1"));
+}
+
+TEST_CASE("user_db - delete_user clears any google link")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none);
+	db.link_google("alice", "sub-1", "alice@gmail.com");
+	db.delete_user("alice");
+	CHECK(!db.username_for_google_sub("sub-1"));
+}
