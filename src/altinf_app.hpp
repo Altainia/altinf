@@ -19,13 +19,18 @@
 #include "org/org_db.hpp"
 #include "org/team_cap.hpp"
 
+namespace Wt::Auth
+{
+	class OAuthService;
+}
+
 class nav_bar;
 class notifications_page;
 
 class altinf_app: public Wt::WApplication
 {
 public:
-	explicit altinf_app(const Wt::WEnvironment& env);
+	altinf_app(const Wt::WEnvironment& env, const Wt::Auth::OAuthService* google);
 	~altinf_app() override;
 
 private:
@@ -45,6 +50,10 @@ private:
 	Wt::WContainerWidget*            m_content{nullptr};
 	notifications_page*              m_notifications_page{nullptr};
 
+	// Shared, read-only Google OAuth service (server lifetime); null when the
+	// deployment hasn't configured Google credentials.
+	const Wt::Auth::OAuthService* m_google{nullptr};
+
 	void handle_path(const std::string& path);
 
 	// Domain handlers — each receives the path remainder after the prefix
@@ -60,6 +69,7 @@ private:
 	void handle_logout();
 	void handle_notifications();
 	void handle_settings();
+	void handle_account();
 	void show_main();
 
 	void reload_posts();

@@ -25,6 +25,8 @@
 
 .login-btn { @include buttons.btn-primary; }
 
+.login-google-btn { @include buttons.btn-ghost; }
+
 .login-error {
   font-size:  0.85rem;
   color:      var(--color-error);

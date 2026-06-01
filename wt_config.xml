@@ -17,5 +17,12 @@
     <head-matter>
       <meta name="viewport" content="width=device-width, initial-scale=1" />
     </head-matter>
+    <!-- Google OAuth properties (google-oauth2-redirect-endpoint / -client-id /
+         -client-secret) are intentionally NOT committed here. docker-entrypoint.sh
+         injects a <properties> block from the ALTINF_GOOGLE_* env vars at container
+         start. When those are unset, no properties exist and Google sign-in stays
+         disabled (GoogleService::configured() is false) — note an *empty* property
+         still counts as configured, so it must be absent, not blank. The redirect
+         endpoint must also be registered in the Google Cloud console. -->
   </application-settings>
 </server>

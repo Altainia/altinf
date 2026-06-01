@@ -1,3 +1,5 @@
+#include <Wt/Auth/AuthService.h>
+#include <Wt/Auth/GoogleService.h>
 #include <Wt/Dbo/Session.h>
 #include <Wt/Dbo/backend/Sqlite3.h>
 #include <Wt/WApplication.h>
@@ -96,9 +98,20 @@ int main(int argc, char** argv)
 	auto api = std::make_shared<post_api_resource>(db_path, posts_dir);
 	server.addResource(api, "/api/posts");
 
+	// Shared, read-only auth services (server lifetime). Google sign-in is an
+	// opt-in feature: only enabled when the google-oauth2-* config properties are
+	// present (injected from ALTINF_GOOGLE_* env vars at deploy time).
+	const Wt::Auth::AuthService              auth_service;
+	std::unique_ptr<Wt::Auth::GoogleService> google_service;
+	if(Wt::Auth::GoogleService::configured())
+	{
+		google_service = std::make_unique<Wt::Auth::GoogleService>(auth_service);
+	}
+	const Wt::Auth::OAuthService* const google = google_service.get();
+
 	server.addEntryPoint(Wt::EntryPointType::Application,
-	                     [](const Wt::WEnvironment& env) {
-		                     return std::make_unique<altinf_app>(env);
+	                     [google](const Wt::WEnvironment& env) {
+		                     return std::make_unique<altinf_app>(env, google);
 	                     });
 
 	if(server.start())

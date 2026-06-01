@@ -2,6 +2,7 @@
 
 #include <Wt/Dbo/Session.h>
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -30,6 +31,10 @@ public:
 	bool authenticate(const std::string& username,
 	                  const std::string& password,
 	                  session_data&      out_session);
+
+	// Populate a session for an already-authenticated user (e.g. after a Google
+	// sign-in), bypassing the password check. Returns false if the user is gone.
+	bool load_session(const std::string& username, session_data& out_session);
 
 	void create_user(const std::string& username,
 	                 const std::string& password,
@@ -65,6 +70,22 @@ public:
 	bool verify_session_token(const std::string& raw_token, session_data& out_session);
 
 	void delete_session_token(const std::string& raw_token);
+
+	// ── Google account linkage ────────────────────────────────────────────────
+
+	// Link (or re-link) a user's account to a Google identity. Replaces any
+	// existing link for this user.
+	void link_google(const std::string& username,
+	                 const std::string& google_sub,
+	                 const std::string& email);
+
+	void unlink_google(const std::string& username);
+
+	// The linked Google email for a user, if any (for display).
+	std::optional<std::string> google_email_for(const std::string& username);
+
+	// The username linked to a Google subject id, if any (sign-in lookup).
+	std::optional<std::string> username_for_google_sub(const std::string& google_sub);
 
 private:
 	Wt::Dbo::Session m_dbo;

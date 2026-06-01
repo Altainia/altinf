@@ -12,6 +12,7 @@
 
 #include "admin/account/pages/account_edit_page.hpp"
 #include "admin/account/pages/account_list_page.hpp"
+#include "auth/pages/account_page.hpp"
 #include "auth/pages/login_page.hpp"
 #include "auth/permission.hpp"
 #include "blog/blog_loader.hpp"
@@ -47,8 +48,9 @@ altinf_app::~altinf_app()
 	}
 }
 
-altinf_app::altinf_app(const Wt::WEnvironment& env):
-  Wt::WApplication{env}
+altinf_app::altinf_app(const Wt::WEnvironment& env, const Wt::Auth::OAuthService* google):
+  Wt::WApplication{env},
+  m_google{google}
 {
 	setTitle("AltInf");
 	enableUpdates(true);
@@ -204,6 +206,11 @@ void altinf_app::handle_path(const std::string& path)
 		handle_settings();
 		return;
 	}
+	if(sv == paths::account_path)
+	{
+		handle_account();
+		return;
+	}
 
 	// Bare domain roots → canonical redirect
 	if(sv == "/blog")
@@ -274,7 +281,7 @@ void altinf_app::show_main()
 
 void altinf_app::handle_login()
 {
-	auto* login = m_content->addNew<login_page>(*m_user_db, m_session);
+	auto* login = m_content->addNew<login_page>(*m_user_db, m_session, m_google);
 	login->logged_in.connect([this] {
 		try
 		{
@@ -332,6 +339,16 @@ void altinf_app::handle_settings()
 		return;
 	}
 	m_content->addNew<settings_page>(*m_org_db, m_session);
+}
+
+void altinf_app::handle_account()
+{
+	if(!m_session.logged_in)
+	{
+		setInternalPath(std::string{paths::login_path}, true);
+		return;
+	}
+	m_content->addNew<account_page>(*m_user_db, m_session, m_google);
 }
 
 void altinf_app::handle_blog(std::string_view rem)

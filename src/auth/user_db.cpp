@@ -11,6 +11,7 @@
 
 #include "api_token.hpp"
 #include "db/migrator.hpp"
+#include "google_identity.hpp"
 #include "session_token.hpp"
 
 namespace
@@ -20,7 +21,20 @@ namespace
 	// api_token and session_token structs.
 	const std::vector<db::migrator::migration>& auth_migrations()
 	{
-		static const std::vector<db::migrator::migration> migrations{};
+		static const std::vector<db::migrator::migration> migrations{
+		  // v2: link Google accounts to existing users. DDL mirrors what
+		  // createTables() generates for the google_identity struct so fresh and
+		  // migrated databases converge.
+		  db::migrator::sql_migration(
+		    2,
+		    "add google_identity table",
+		    "CREATE TABLE \"google_identity\" ("
+		    "\"id\" integer primary key autoincrement, "
+		    "\"version\" integer not null, "
+		    "\"username\" text not null, "
+		    "\"google_sub\" text not null, "
+		    "\"email\" text not null)"),
+		};
 		return migrations;
 	}
 } // namespace
@@ -67,6 +81,7 @@ user_db::user_db(const std::string& db_path)
 	m_dbo.mapClass<user>("user");
 	m_dbo.mapClass<api_token>("api_token");
 	m_dbo.mapClass<session_token>("session_token");
+	m_dbo.mapClass<google_identity>("google_identity");
 
 	db::migrator::run(m_dbo, "auth", auth_migrations());
 }
@@ -94,6 +109,27 @@ bool user_db::authenticate(const std::string& uname,
 	{
 		return false;
 	}
+
+	out.logged_in    = true;
+	out.username     = uname;
+	out.display_name = found->display_name;
+	out.permissions  = found->permissions;
+
+	return true;
+}
+
+bool user_db::load_session(const std::string& uname, session_data& out)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto results =
+	  m_dbo.find<user>().where("username = ?").bind(uname).resultList();
+	if(results.empty())
+	{
+		return false;
+	}
+
+	const Wt::Dbo::ptr<user> found = *results.begin();
 
 	out.logged_in    = true;
 	out.username     = uname;
@@ -168,6 +204,15 @@ void user_db::delete_user(const std::string& username)
 	for(const auto& tok: session_toks)
 	{
 		Wt::Dbo::ptr<session_token> p = tok;
+		p.remove();
+	}
+
+	// Remove any linked Google identity
+	const auto google_links =
+	  m_dbo.find<google_identity>().where("username = ?").bind(username).resultList();
+	for(const auto& g: google_links)
+	{
+		Wt::Dbo::ptr<google_identity> p = g;
 		p.remove();
 	}
 
@@ -364,4 +409,65 @@ void user_db::delete_session_token(const std::string& raw_token)
 		Wt::Dbo::ptr<session_token> p = tok;
 		p.remove();
 	}
+}
+
+void user_db::link_google(const std::string& username,
+                          const std::string& google_sub,
+                          const std::string& email)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	// One link per user: drop any existing row before adding the new one.
+	const auto existing =
+	  m_dbo.find<google_identity>().where("username = ?").bind(username).resultList();
+	for(const auto& g: existing)
+	{
+		Wt::Dbo::ptr<google_identity> p = g;
+		p.remove();
+	}
+
+	auto link                 = m_dbo.add(std::make_unique<google_identity>());
+	link.modify()->username   = username;
+	link.modify()->google_sub = google_sub;
+	link.modify()->email      = email;
+}
+
+void user_db::unlink_google(const std::string& username)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto results =
+	  m_dbo.find<google_identity>().where("username = ?").bind(username).resultList();
+	for(const auto& g: results)
+	{
+		Wt::Dbo::ptr<google_identity> p = g;
+		p.remove();
+	}
+}
+
+std::optional<std::string> user_db::google_email_for(const std::string& username)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto results =
+	  m_dbo.find<google_identity>().where("username = ?").bind(username).resultList();
+	if(results.empty())
+	{
+		return std::nullopt;
+	}
+	return (*results.begin())->email;
+}
+
+std::optional<std::string>
+  user_db::username_for_google_sub(const std::string& google_sub)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto results =
+	  m_dbo.find<google_identity>().where("google_sub = ?").bind(google_sub).resultList();
+	if(results.empty())
+	{
+		return std::nullopt;
+	}
+	return (*results.begin())->username;
 }
