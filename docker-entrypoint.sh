@@ -8,7 +8,12 @@
 # configured, hence we add the block only when every value is non-empty).
 set -e
 
+# Prefer an operator-supplied config mounted into the /data volume; fall back to
+# the secret-free baseline baked into the image. This lets production keep its
+# own config (editable via the existing ./data mount, surviving image updates)
+# without that file living in git.
 TEMPLATE=/app/wt_config.xml
+[ -f /data/wt_config.xml ] && TEMPLATE=/data/wt_config.xml
 RUNTIME=/tmp/wt_config.xml
 
 cp "$TEMPLATE" "$RUNTIME"

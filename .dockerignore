@@ -6,3 +6,5 @@ e2e/test-results/
 e2e/playwright-report/
 .git/
 .vscode/
+# Live config is never baked in; the image uses wt_config.template.xml.
+wt_config.xml

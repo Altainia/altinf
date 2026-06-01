@@ -6,7 +6,9 @@ const TEST_DIR = '/tmp/altinf-e2e-test';
 const PORT = 9090;
 const BINARY = path.join(PROJECT_ROOT, 'build', 'altinf');
 const DOCROOT = path.join(PROJECT_ROOT, 'build', 'resources');
-const WT_CONFIG = path.join(PROJECT_ROOT, 'wt_config.xml');
+// Tests use the committed template, not the (untracked) live wt_config.xml, so
+// local config edits never change test behavior and a fresh clone always works.
+const WT_CONFIG = path.join(PROJECT_ROOT, 'wt_config.template.xml');
 
 export default defineConfig({
   testDir: './specs',

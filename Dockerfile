@@ -90,7 +90,7 @@ RUN ldconfig
 
 COPY --from=app-builder /src/build/altinf   /app/altinf
 COPY --from=app-builder /src/build/resources /app/resources
-COPY wt_config.xml /app/wt_config.xml
+COPY wt_config.template.xml /app/wt_config.xml
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
