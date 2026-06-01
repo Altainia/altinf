@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from './helpers';
 
+// Run serially: the post-creation regression test below adds a post, which would
+// otherwise race the "tag chip filters the list" test's before/after post counts
+// when workers run in parallel.
+test.describe.configure({ mode: 'serial' });
+
 test('blog page shows heading', async ({ page }) => {
   await page.goto('/blog/list');
   await expect(page.locator('h1')).toContainText('Blog');
@@ -54,4 +59,40 @@ test('logged-in admin sees edit post link on post page', async ({ page }) => {
   await page.locator('.nav-link', { hasText: 'Blog' }).click();
   await page.locator('.post-title').first().click();
   await expect(page.locator('.post-edit-link')).toBeVisible();
+});
+
+// Regression: the markdown editor's hidden value carrier used to be an <input>,
+// which strips CR/LF via the HTML value-sanitization algorithm. Multi-paragraph
+// posts collapsed into a single paragraph. The carrier is now a <textarea>, which
+// preserves newlines — so two markdown paragraphs must render as two <p> elements.
+test('creating a post preserves newlines between paragraphs', async ({ page }) => {
+  await loginAs(page, 'admin', 'testpass');
+
+  await page.goto('/blog/new');
+  await expect(page.locator('.post-editor-page')).toBeVisible({ timeout: 20_000 });
+
+  const stamp = 'nl-' + Date.now();
+  await page.locator('input[placeholder="Title"]').fill('Newline Test ' + stamp);
+
+  const pm = page.locator('.post-body-editor .ProseMirror[contenteditable="true"]')
+    .filter({ visible: true }).first();
+  await pm.click();
+  await pm.type('First paragraph ' + stamp);
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter'); // blank line -> separate markdown paragraph
+  await pm.type('Second paragraph ' + stamp);
+
+  // Blur the editor so its focusout handler syncs the markdown back to Wt.
+  await page.locator('input[placeholder="Title"]').click();
+  await page.waitForTimeout(400);
+
+  await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel)').click();
+
+  // Saved -> redirected to the rendered post page.
+  await expect(page.locator('.blog-post-page')).toBeVisible({ timeout: 20_000 });
+  const paragraphs = page.locator('.post-content p');
+  // Two distinct paragraphs prove the newline survived (was 1 before the fix).
+  expect(await paragraphs.count()).toBeGreaterThanOrEqual(2);
+  await expect(page.locator('.post-content')).toContainText('First paragraph ' + stamp);
+  await expect(page.locator('.post-content')).toContainText('Second paragraph ' + stamp);
 });
