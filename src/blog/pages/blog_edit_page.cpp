@@ -36,12 +36,30 @@ blog_edit_page::blog_edit_page(const std::filesystem::path& posts_dir,
 	m_tags->setPlaceholderText("Tags (comma-separated)");
 	m_tags->setStyleClass("editor-field");
 
-	const auto initial_body = m_existing ? read_body(*m_existing) : std::string{};
-	m_body_editor           = form->addNew<markdown_editor_widget>(initial_body);
+	std::string initial_body;
+	if(m_existing)
+	{
+		if(auto body = read_body(*m_existing))
+		{
+			initial_body = std::move(*body);
+		}
+		else
+		{
+			m_read_failed = true;
+		}
+	}
+	m_body_editor = form->addNew<markdown_editor_widget>(initial_body);
 	m_body_editor->setStyleClass("post-body-editor");
 
 	m_status = form->addNew<Wt::WText>();
 	m_status->setStyleClass("editor-status");
+
+	if(m_read_failed)
+	{
+		m_status->setText(
+		  "Could not read the existing post file; saving is disabled to avoid "
+		  "overwriting it with empty content.");
+	}
 
 	auto* btn_row = form->addNew<Wt::WContainerWidget>();
 	btn_row->setStyleClass("editor-btn-row");
@@ -71,6 +89,12 @@ blog_edit_page::blog_edit_page(const std::filesystem::path& posts_dir,
 
 void blog_edit_page::save()
 {
+	if(m_read_failed)
+	{
+		m_status->setText("Cannot save: the existing post file could not be read.");
+		return;
+	}
+
 	const auto title = m_title->text().toUTF8();
 	const auto tags  = m_tags->text().toUTF8();
 	const auto body  = m_body_editor->value();
@@ -112,13 +136,18 @@ void blog_edit_page::save()
 	saved.emit(slug);
 }
 
-std::string blog_edit_page::read_body(const blog_post& post)
+std::optional<std::string> blog_edit_page::read_body(const blog_post& post)
 {
 	std::ifstream file{post.filepath};
-	std::string   line;
-	bool          in_frontmatter   = false;
-	bool          past_frontmatter = false;
-	std::string   body;
+	if(!file)
+	{
+		return std::nullopt;
+	}
+
+	std::string line;
+	bool        in_frontmatter   = false;
+	bool        past_frontmatter = false;
+	std::string body;
 
 	while(std::getline(file, line))
 	{

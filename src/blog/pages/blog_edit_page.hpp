@@ -6,6 +6,7 @@
 #include <Wt/WText.h>
 
 #include <filesystem>
+#include <optional>
 #include <string>
 
 #include "blog/blog_post.hpp"
@@ -28,7 +29,8 @@ private:
 	Wt::WLineEdit*          m_tags{nullptr};
 	markdown_editor_widget* m_body_editor{nullptr};
 	Wt::WText*              m_status{nullptr};
+	bool                    m_read_failed{false};
 
-	void               save();
-	static std::string read_body(const blog_post& post);
+	void                              save();
+	static std::optional<std::string> read_body(const blog_post& post);
 };

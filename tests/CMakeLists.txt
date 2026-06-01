@@ -112,3 +112,10 @@ add_executable(test_post_api_resource test_post_api_resource.cpp)
 target_include_directories(test_post_api_resource PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_post_api_resource PRIVATE Catch2::Catch2WithMain)
 catch_discover_tests(test_post_api_resource)
+
+# test_post_writer — slug/path/file writing
+add_executable(test_post_writer test_post_writer.cpp
+  ${CMAKE_SOURCE_DIR}/src/blog/post_writer.cpp)
+target_include_directories(test_post_writer PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_post_writer PRIVATE Catch2::Catch2WithMain Wt::Wt)
+catch_discover_tests(test_post_writer)

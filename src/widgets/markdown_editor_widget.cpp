@@ -13,7 +13,10 @@ markdown_editor_widget::markdown_editor_widget(const std::string& initial, bool 
 	auto* mount = addNew<Wt::WContainerWidget>();
 	m_mount_id  = mount->id();
 
-	m_hidden = addNew<Wt::WLineEdit>();
+	// A <textarea>, not a <input>: text inputs apply the HTML value-sanitization
+	// algorithm that strips CR/LF, which would collapse multi-line markdown into a
+	// single line before Wt ever reads it.  A textarea preserves newlines.
+	m_hidden = addNew<Wt::WTextArea>();
 	m_hidden->setStyleClass("kb-cb-hidden");
 	const std::string& cb_id = m_hidden->id();
 	m_hidden->changed().connect([this] {

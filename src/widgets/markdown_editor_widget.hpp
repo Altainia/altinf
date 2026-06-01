@@ -1,8 +1,8 @@
 #pragma once
 
 #include <Wt/WContainerWidget.h>
-#include <Wt/WLineEdit.h>
 #include <Wt/WSignal.h>
+#include <Wt/WTextArea.h>
 
 #include <string>
 
@@ -26,6 +26,6 @@ public:
 private:
 	std::string             m_mount_id;
 	std::string             m_value;
-	Wt::WLineEdit*          m_hidden{nullptr};
+	Wt::WTextArea*          m_hidden{nullptr};
 	Wt::Signal<std::string> m_changed;
 };
