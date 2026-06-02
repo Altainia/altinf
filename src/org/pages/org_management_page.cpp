@@ -212,9 +212,10 @@ void org_management_page::refresh_members()
 		auto* row = m_members_section->addNew<Wt::WContainerWidget>();
 		row->setStyleClass("kb-member-row");
 
-		row->addNew<Wt::WText>(m.username + (m.is_lead ? " (lead)" : ""),
+		const auto info = m_odb.resolve_user(m.username);
+		row->addNew<Wt::WText>(info.display_name + (m.is_lead ? " (lead)" : ""),
 		                       Wt::TextFormat::Plain)
-		  ->setStyleClass("kb-member-name");
+		  ->setStyleClass(info.deleted ? "kb-member-name user-deleted" : "kb-member-name");
 
 		// Lead toggle — blocked server-side if it would leave 0 leads.
 		const std::string toggle_label = m.is_lead ? "Demote" : "Make lead";
@@ -296,9 +297,10 @@ void org_management_page::refresh_pending()
 		auto* row = m_pending_section->addNew<Wt::WContainerWidget>();
 		row->setStyleClass("kb-member-row");
 
-		row->addNew<Wt::WText>(p.username + (p.is_lead ? " (invited as lead)" : ""),
+		const auto info = m_odb.resolve_user(p.username);
+		row->addNew<Wt::WText>(info.display_name + (p.is_lead ? " (invited as lead)" : ""),
 		                       Wt::TextFormat::Plain)
-		  ->setStyleClass("kb-member-name");
+		  ->setStyleClass(info.deleted ? "kb-member-name user-deleted" : "kb-member-name");
 
 		auto* withdraw = row->addNew<Wt::WPushButton>("Withdraw");
 		withdraw->setStyleClass("link-action-btn link-delete-btn");
@@ -369,9 +371,10 @@ void org_management_page::build_team_block(Wt::WContainerWidget* parent,
 		auto* row = mem_list->addNew<Wt::WContainerWidget>();
 		row->setStyleClass("kb-member-row");
 
-		row->addNew<Wt::WText>(m.username + (m.is_lead ? " (lead)" : ""),
+		const auto info = m_kdb.resolve_user(m.username);
+		row->addNew<Wt::WText>(info.display_name + (m.is_lead ? " (lead)" : ""),
 		                       Wt::TextFormat::Plain)
-		  ->setStyleClass("kb-member-name");
+		  ->setStyleClass(info.deleted ? "kb-member-name user-deleted" : "kb-member-name");
 
 		const std::string lead_label = m.is_lead ? "Remove lead" : "Make lead";
 		auto*             lead_btn   = row->addNew<Wt::WPushButton>(lead_label);

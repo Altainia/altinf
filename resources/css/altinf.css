@@ -2135,6 +2135,54 @@ input[type=color] {
   width: 100%;
 }
 
+.account-token-name {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.account-note {
+  font-size: 0.9rem;
+  color: var(--color-muted);
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.user-deleted {
+  color: var(--color-muted);
+  text-decoration: line-through;
+  font-style: italic;
+}
+
+.account-history-page .history-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.history-entry {
+  border-left: 2px solid var(--color-border);
+  padding: 0.25rem 0 0.25rem 0.75rem;
+}
+
+.history-meta {
+  font-size: 0.82rem;
+  color: var(--color-muted);
+  display: block;
+}
+
+.history-event {
+  font-weight: 600;
+  font-size: 0.92rem;
+  display: block;
+}
+
+.history-change {
+  font-size: 0.88rem;
+  color: var(--color-text);
+  display: block;
+}
+
 .account-username {
   color: var(--color-muted);
   font-size: 0.95rem;

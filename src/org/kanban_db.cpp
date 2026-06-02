@@ -36,6 +36,11 @@ kanban_db::kanban_db(const std::string& db_path)
 	db::migrator::run(m_dbo, "kanban", kanban_migrations());
 }
 
+user_lookup::info kanban_db::resolve_user(const std::string& username)
+{
+	return user_lookup::resolve(m_dbo, username);
+}
+
 // ---- static helpers ----
 
 team_entry kanban_db::to_entry(const Wt::Dbo::ptr<team_record>& p)

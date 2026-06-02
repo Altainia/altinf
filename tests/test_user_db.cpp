@@ -9,6 +9,7 @@
 
 #include "auth/permission.hpp"
 #include "auth/user_db.hpp"
+#include "auth/user_lookup.hpp"
 
 namespace
 {
@@ -250,6 +251,36 @@ TEST_CASE("user_db - upgrades a v2 auth database and gains the audit tables")
 		CHECK(db.list_users().size() == 1);
 	}
 
+	std::filesystem::remove(path);
+}
+
+TEST_CASE("user_lookup - resolve reads display name and deleted flag across sessions")
+{
+	const auto path = temp_db_path();
+	{
+		user_db db{path};
+		db.create_user("alice", "pw", permission::none, "Alice Smith");
+		db.create_user("bob", "pw", permission::none, ""); // blank display name
+		db.delete_user("bob");
+	}
+	{
+		// A fresh session over the same file, with no classes mapped — exactly how
+		// the org/kanban domains see the user table.
+		Wt::Dbo::Session s;
+		s.setConnection(std::make_unique<Wt::Dbo::backend::Sqlite3>(path));
+
+		const auto alice = user_lookup::resolve(s, "alice");
+		CHECK(alice.display_name == "Alice Smith");
+		CHECK(!alice.deleted);
+
+		const auto bob = user_lookup::resolve(s, "bob");
+		CHECK(bob.display_name == "bob"); // blank display name falls back to username
+		CHECK(bob.deleted);
+
+		const auto none = user_lookup::resolve(s, "nobody");
+		CHECK(none.display_name == "nobody");
+		CHECK(!none.deleted);
+	}
 	std::filesystem::remove(path);
 }
 

@@ -6,12 +6,17 @@
 #include <string>
 #include <vector>
 
+#include "auth/user_lookup.hpp"
 #include "org/kanban.hpp"
 
 class kanban_db
 {
 public:
 	explicit kanban_db(const std::string& db_path);
+
+	// Display name + soft-deleted flag for a username, for rendering member,
+	// assignee, comment-author and history lists.
+	user_lookup::info resolve_user(const std::string& username);
 
 	// Teams
 	long long                 create_team(const std::string& name, long long org_id);

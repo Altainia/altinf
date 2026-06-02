@@ -6,12 +6,17 @@
 #include <string>
 #include <vector>
 
+#include "auth/user_lookup.hpp"
 #include "org.hpp"
 
 class org_db
 {
 public:
 	explicit org_db(const std::string& db_path);
+
+	// Display name + soft-deleted flag for a username, for rendering member and
+	// invite lists.
+	user_lookup::info resolve_user(const std::string& username);
 
 	// Organizations
 	long long                create_org(const std::string& name,

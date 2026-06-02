@@ -30,6 +30,11 @@ org_db::org_db(const std::string& db_path)
 	db::migrator::run(m_dbo, "org", org_migrations());
 }
 
+user_lookup::info org_db::resolve_user(const std::string& username)
+{
+	return user_lookup::resolve(m_dbo, username);
+}
+
 // ---- static helpers ----
 
 org_entry org_db::to_entry(const Wt::Dbo::ptr<org_record>& p)
