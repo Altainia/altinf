@@ -69,9 +69,12 @@ private:
 	// username <-> user_id resolution against the shared user table.
 	long long   uid_of(const std::string& username);
 	std::string username_of(long long user_id);
+	// Batch id -> username for list reads (one query instead of one per row).
+	std::unordered_map<long long, std::string> usernames_of(const std::vector<long long>& ids);
 
 	static org_entry to_entry(const Wt::Dbo::ptr<org_record>&);
-	// Non-static: resolve the member/recipient username from user_id.
-	org_member_entry   to_entry(const Wt::Dbo::ptr<org_member_record>&);
-	notification_entry to_entry(const Wt::Dbo::ptr<notification_record>&);
+
+	// Materialize a member result set and batch-resolve usernames into entries.
+	std::vector<org_member_entry>
+	  members_to_entries(const Wt::Dbo::collection<Wt::Dbo::ptr<org_member_record>>& rows);
 };

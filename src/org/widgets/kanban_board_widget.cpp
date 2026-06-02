@@ -4,6 +4,7 @@
 #include <Wt/WLineEdit.h>
 
 #include <sstream>
+#include <unordered_map>
 
 static std::string escape_json(const std::string& s)
 {
@@ -104,6 +105,18 @@ void kanban_board_widget::refresh(std::vector<kanban_task_entry>          tasks,
 
 std::string kanban_board_widget::serialize_tasks(const std::vector<kanban_task_entry>& tasks) const
 {
+	// Resolve each distinct assignee once per render (the same user appears on many
+	// cards), rather than once per assignee-occurrence.
+	std::unordered_map<std::string, user_lookup::info> resolved;
+	auto                                               info_for = [&](const std::string& u) -> const user_lookup::info& {
+    auto it = resolved.find(u);
+    if(it == resolved.end())
+    {
+      it = resolved.emplace(u, m_resolve_user(u)).first;
+    }
+    return it->second;
+	};
+
 	std::ostringstream ss;
 	ss << '[';
 	bool first = true;
@@ -129,8 +142,8 @@ std::string kanban_board_widget::serialize_tasks(const std::vector<kanban_task_e
 				{
 					ss << ',';
 				}
-				first_a         = false;
-				const auto info = m_resolve_user(a);
+				first_a          = false;
+				const auto& info = info_for(a);
 				ss << "{\"name\":\"" << escape_json(info.display_name) << "\",\"deleted\":"
 				   << (info.deleted ? "true" : "false") << '}';
 			}

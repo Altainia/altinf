@@ -71,13 +71,32 @@ user_lookup::info org_db::resolve_user(const std::string& username)
 
 long long org_db::uid_of(const std::string& username)
 {
-	return user_lookup::user_id_for(m_dbo, username);
+	const long long id = user_lookup::user_id_for(m_dbo, username);
+	// An unknown username must match no row. Real user ids are >= 1 and orphaned
+	// rows (users hard-deleted before soft-delete) hold user_id 0, so binding 0
+	// would wrongly match those orphans; map "not found" to a no-match sentinel.
+	return id == 0 ? -1 : id;
 }
 
 std::string org_db::username_of(long long user_id)
 {
 	return user_lookup::username_for_id(m_dbo, user_id);
 }
+
+std::unordered_map<long long, std::string> org_db::usernames_of(const std::vector<long long>& ids)
+{
+	return user_lookup::usernames_for_ids(m_dbo, ids);
+}
+
+namespace
+{
+	// Username for an id from a pre-resolved batch map, or "" for unknown/orphan.
+	std::string name_or_empty(const std::unordered_map<long long, std::string>& names, long long id)
+	{
+		const auto it = names.find(id);
+		return it != names.end() ? it->second : std::string{};
+	}
+} // namespace
 
 // ---- helpers ----
 
@@ -86,27 +105,28 @@ org_entry org_db::to_entry(const Wt::Dbo::ptr<org_record>& p)
 	return {.id = p.id(), .name = p->name, .is_archived = p->is_archived != 0};
 }
 
-org_member_entry org_db::to_entry(const Wt::Dbo::ptr<org_member_record>& p)
+std::vector<org_member_entry>
+  org_db::members_to_entries(const Wt::Dbo::collection<Wt::Dbo::ptr<org_member_record>>& rows)
 {
-	return {
-	  .id       = p.id(),
-	  .org_id   = p->org_id,
-	  .username = username_of(p->user_id),
-	  .is_lead  = p->is_lead != 0,
-	  .status   = p->status,
-	};
-}
-
-notification_entry org_db::to_entry(const Wt::Dbo::ptr<notification_record>& p)
-{
-	return {
-	  .id         = p.id(),
-	  .username   = username_of(p->user_id),
-	  .type       = p->type,
-	  .payload    = p->payload,
-	  .is_read    = p->is_read != 0,
-	  .created_at = p->created_at,
-	};
+	// Materialize once — Wt::Dbo collections are single-pass — then resolve every
+	// member's username in one query.
+	const std::vector<Wt::Dbo::ptr<org_member_record>> v(rows.begin(), rows.end());
+	std::vector<long long>                             ids;
+	for(const auto& p: v)
+	{
+		ids.push_back(p->user_id);
+	}
+	const auto                    names = usernames_of(ids);
+	std::vector<org_member_entry> out;
+	for(const auto& p: v)
+	{
+		out.push_back({.id       = p.id(),
+		               .org_id   = p->org_id,
+		               .username = name_or_empty(names, p->user_id),
+		               .is_lead  = p->is_lead != 0,
+		               .status   = p->status});
+	}
+	return out;
 }
 
 // ---- Organizations ----
@@ -300,7 +320,7 @@ void org_db::remove_user_from_all_orgs(const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const long long      uid = uid_of(username);
-	if(uid == 0)
+	if(uid <= 0)
 	{
 		return;
 	}
@@ -383,12 +403,7 @@ std::vector<org_member_entry> org_db::org_members(long long org_id)
 	    .bind(org_id)
 	    .orderBy("user_id")
 	    .resultList();
-	std::vector<org_member_entry> out;
-	for(const auto& p: results)
-	{
-		out.push_back(to_entry(p));
-	}
-	return out;
+	return members_to_entries(results);
 }
 
 std::vector<org_member_entry> org_db::org_pending(long long org_id)
@@ -400,12 +415,7 @@ std::vector<org_member_entry> org_db::org_pending(long long org_id)
 	    .bind(org_id)
 	    .orderBy("user_id")
 	    .resultList();
-	std::vector<org_member_entry> out;
-	for(const auto& p: results)
-	{
-		out.push_back(to_entry(p));
-	}
-	return out;
+	return members_to_entries(results);
 }
 
 std::vector<org_entry> org_db::orgs_for_user(const std::string& username)
@@ -473,16 +483,24 @@ int org_db::unread_count(const std::string& username)
 std::vector<notification_entry> org_db::notifications_for_user(const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};
+	const long long      uid = uid_of(username);
 	const auto           results =
 	  m_dbo.find<notification_record>()
 	    .where("user_id = ?")
-	    .bind(uid_of(username))
+	    .bind(uid)
 	    .orderBy("id DESC")
 	    .resultList();
+	// Every row belongs to the same (queried) user, so resolve the name once.
+	const std::string               name = username_of(uid);
 	std::vector<notification_entry> out;
 	for(const auto& p: results)
 	{
-		out.push_back(to_entry(p));
+		out.push_back({.id         = p.id(),
+		               .username   = name,
+		               .type       = p->type,
+		               .payload    = p->payload,
+		               .is_read    = p->is_read != 0,
+		               .created_at = p->created_at});
 	}
 	return out;
 }

@@ -99,6 +99,8 @@ private:
 	// username <-> user_id resolution against the shared user table.
 	long long   uid_of(const std::string& username);
 	std::string username_of(long long user_id);
+	// Batch id -> username for list reads (one query instead of one per row).
+	std::unordered_map<long long, std::string> usernames_of(const std::vector<long long>& ids);
 
 	static team_entry        to_entry(const Wt::Dbo::ptr<team_record>& p);
 	static kanban_task_entry to_entry(const Wt::Dbo::ptr<kanban_task_record>& p);

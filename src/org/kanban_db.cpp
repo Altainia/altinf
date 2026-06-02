@@ -92,13 +92,32 @@ user_lookup::info kanban_db::resolve_user(const std::string& username)
 
 long long kanban_db::uid_of(const std::string& username)
 {
-	return user_lookup::user_id_for(m_dbo, username);
+	const long long id = user_lookup::user_id_for(m_dbo, username);
+	// An unknown username must match no row. Real user ids are >= 1 and orphaned
+	// rows (users hard-deleted before soft-delete) hold user_id 0, so binding 0
+	// would wrongly match those orphans; map "not found" to a no-match sentinel.
+	return id == 0 ? -1 : id;
 }
 
 std::string kanban_db::username_of(long long user_id)
 {
 	return user_lookup::username_for_id(m_dbo, user_id);
 }
+
+std::unordered_map<long long, std::string> kanban_db::usernames_of(const std::vector<long long>& ids)
+{
+	return user_lookup::usernames_for_ids(m_dbo, ids);
+}
+
+namespace
+{
+	// Username for an id from a pre-resolved batch map, or "" for unknown/orphan.
+	std::string name_or_empty(const std::unordered_map<long long, std::string>& names, long long id)
+	{
+		const auto it = names.find(id);
+		return it != names.end() ? it->second : std::string{};
+	}
+} // namespace
 
 // ---- static helpers ----
 
@@ -305,7 +324,7 @@ void kanban_db::remove_member_from_all_teams(const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const long long      uid = uid_of(username);
-	if(uid == 0)
+	if(uid <= 0)
 	{
 		return;
 	}
@@ -353,10 +372,18 @@ std::vector<std::string> kanban_db::members_for_team(long long team_id)
 	                       .bind(team_id)
 	                       .orderBy("user_id")
 	                       .resultList();
-	std::vector<std::string> out;
-	for(const auto& p: results)
+	// Materialize once — Wt::Dbo collections are single-pass — then batch-resolve.
+	const std::vector<Wt::Dbo::ptr<team_member_record>> rows(results.begin(), results.end());
+	std::vector<long long>                              ids;
+	for(const auto& p: rows)
 	{
-		out.push_back(username_of(p->user_id));
+		ids.push_back(p->user_id);
+	}
+	const auto               names = usernames_of(ids);
+	std::vector<std::string> out;
+	for(const auto& p: rows)
+	{
+		out.push_back(name_or_empty(names, p->user_id));
 	}
 	return out;
 }
@@ -369,10 +396,17 @@ std::vector<team_member_entry> kanban_db::team_member_entries(long long team_id)
 	                       .bind(team_id)
 	                       .orderBy("user_id")
 	                       .resultList();
-	std::vector<team_member_entry> out;
-	for(const auto& p: results)
+	const std::vector<Wt::Dbo::ptr<team_member_record>> rows(results.begin(), results.end());
+	std::vector<long long>                              ids;
+	for(const auto& p: rows)
 	{
-		out.push_back({.username = username_of(p->user_id), .is_lead = p->is_lead != 0});
+		ids.push_back(p->user_id);
+	}
+	const auto                     names = usernames_of(ids);
+	std::vector<team_member_entry> out;
+	for(const auto& p: rows)
+	{
+		out.push_back({.username = name_or_empty(names, p->user_id), .is_lead = p->is_lead != 0});
 	}
 	return out;
 }
@@ -599,10 +633,17 @@ std::vector<std::string> kanban_db::assignees_for_task(long long task_id)
 	    .bind(task_id)
 	    .orderBy("user_id")
 	    .resultList();
-	std::vector<std::string> out;
-	for(const auto& r: rows)
+	const std::vector<Wt::Dbo::ptr<task_assignee_record>> rows_v(rows.begin(), rows.end());
+	std::vector<long long>                                ids;
+	for(const auto& r: rows_v)
 	{
-		out.push_back(username_of(r->user_id));
+		ids.push_back(r->user_id);
+	}
+	const auto               names = usernames_of(ids);
+	std::vector<std::string> out;
+	for(const auto& r: rows_v)
+	{
+		out.push_back(name_or_empty(names, r->user_id));
 	}
 	return out;
 }
@@ -623,9 +664,16 @@ std::optional<kanban_task_entry> kanban_db::find_task(long long id)
 	    .bind(id)
 	    .orderBy("user_id")
 	    .resultList();
-	for(const auto& r: arows)
+	const std::vector<Wt::Dbo::ptr<task_assignee_record>> arows_v(arows.begin(), arows.end());
+	std::vector<long long>                                ids;
+	for(const auto& r: arows_v)
 	{
-		entry.assignees.push_back(username_of(r->user_id));
+		ids.push_back(r->user_id);
+	}
+	const auto names = usernames_of(ids);
+	for(const auto& r: arows_v)
+	{
+		entry.assignees.push_back(name_or_empty(names, r->user_id));
 	}
 	return entry;
 }
@@ -638,21 +686,35 @@ std::vector<kanban_task_entry> kanban_db::tasks_for_team(long long team_id)
 	                       .bind(team_id)
 	                       .orderBy("sort_order, id")
 	                       .resultList();
-	std::vector<kanban_task_entry> out;
+
+	// Build entries first, collecting every assignee id, then resolve all names in
+	// one query (rather than one query per assignee across the whole board).
+	std::vector<kanban_task_entry>      out;
+	std::vector<std::vector<long long>> per_task_ids;
+	std::vector<long long>              all_ids;
 	for(const auto& p: results)
 	{
-		auto       entry = to_entry(p);
-		const auto arows =
-		  m_dbo.find<task_assignee_record>()
-		    .where("task_id = ?")
-		    .bind(p.id())
-		    .orderBy("user_id")
-		    .resultList();
+		out.push_back(to_entry(p));
+		const auto arows = m_dbo.find<task_assignee_record>()
+		                     .where("task_id = ?")
+		                     .bind(p.id())
+		                     .orderBy("user_id")
+		                     .resultList();
+		std::vector<long long> ids;
 		for(const auto& r: arows)
 		{
-			entry.assignees.push_back(username_of(r->user_id));
+			ids.push_back(r->user_id);
+			all_ids.push_back(r->user_id);
 		}
-		out.push_back(std::move(entry));
+		per_task_ids.push_back(std::move(ids));
+	}
+	const auto names = usernames_of(all_ids);
+	for(std::size_t i = 0; i < out.size(); ++i)
+	{
+		for(const long long id: per_task_ids[i])
+		{
+			out[i].assignees.push_back(name_or_empty(names, id));
+		}
 	}
 	return out;
 }
@@ -665,21 +727,33 @@ std::vector<kanban_task_entry> kanban_db::archived_tasks_for_team(long long team
 	                       .bind(team_id)
 	                       .orderBy("sort_order, id")
 	                       .resultList();
-	std::vector<kanban_task_entry> out;
+
+	std::vector<kanban_task_entry>      out;
+	std::vector<std::vector<long long>> per_task_ids;
+	std::vector<long long>              all_ids;
 	for(const auto& p: results)
 	{
-		auto       entry = to_entry(p);
-		const auto arows =
-		  m_dbo.find<task_assignee_record>()
-		    .where("task_id = ?")
-		    .bind(p.id())
-		    .orderBy("user_id")
-		    .resultList();
+		out.push_back(to_entry(p));
+		const auto arows = m_dbo.find<task_assignee_record>()
+		                     .where("task_id = ?")
+		                     .bind(p.id())
+		                     .orderBy("user_id")
+		                     .resultList();
+		std::vector<long long> ids;
 		for(const auto& r: arows)
 		{
-			entry.assignees.push_back(username_of(r->user_id));
+			ids.push_back(r->user_id);
+			all_ids.push_back(r->user_id);
 		}
-		out.push_back(std::move(entry));
+		per_task_ids.push_back(std::move(ids));
+	}
+	const auto names = usernames_of(all_ids);
+	for(std::size_t i = 0; i < out.size(); ++i)
+	{
+		for(const long long id: per_task_ids[i])
+		{
+			out[i].assignees.push_back(name_or_empty(names, id));
+		}
 	}
 	return out;
 }
@@ -729,14 +803,15 @@ std::vector<task_event_entry> kanban_db::history_for_task(long long task_id)
 	                      .orderBy("id DESC")
 	                      .resultList();
 	std::vector<task_event_entry> out;
+	std::vector<long long>        actor_ids;
 	for(const auto& ev: events)
 	{
 		task_event_entry entry;
 		entry.id          = ev.id();
 		entry.task_id     = ev->task_id;
-		entry.actor       = username_of(ev->actor_id);
 		entry.occurred_at = ev->occurred_at;
 		entry.event_type  = ev->event_type;
+		actor_ids.push_back(ev->actor_id);
 
 		const auto changes = m_dbo.find<task_field_change_record>()
 		                       .where("event_id = ?")
@@ -748,6 +823,12 @@ std::vector<task_event_entry> kanban_db::history_for_task(long long task_id)
 			  {.field_name = ch->field_name, .old_value = ch->old_value, .new_value = ch->new_value});
 		}
 		out.push_back(std::move(entry));
+	}
+	// Resolve every actor in one query, then fill (out and actor_ids are parallel).
+	const auto names = usernames_of(actor_ids);
+	for(std::size_t i = 0; i < out.size(); ++i)
+	{
+		out[i].actor = name_or_empty(names, actor_ids[i]);
 	}
 	return out;
 }
@@ -1146,17 +1227,26 @@ std::vector<task_comment_entry> kanban_db::comments_for_task(long long task_id)
 	                    .orderBy("id")
 	                    .resultList();
 
+	// author + last-editor + deleter ids per comment, resolved in one batch query.
+	struct actor_ids
+	{
+		long long author{0};
+		long long edited{0};
+		long long deleted{0};
+	};
 	std::vector<task_comment_entry> out;
+	std::vector<actor_ids>          per;
+	std::vector<long long>          all_ids;
 	for(const auto& c: rows)
 	{
 		task_comment_entry e;
 		e.id         = c.id();
 		e.task_id    = c->task_id;
-		e.author     = username_of(c->author_id);
 		e.created_at = c->created_at;
 		e.is_deleted = c->is_deleted != 0;
 		e.body       = e.is_deleted ? "" : c->body;
 
+		actor_ids  cur{.author = c->author_id};
 		const auto events = m_dbo.find<task_comment_event_record>()
 		                      .where("comment_id = ?")
 		                      .bind(c.id())
@@ -1166,16 +1256,34 @@ std::vector<task_comment_entry> kanban_db::comments_for_task(long long task_id)
 		{
 			if(ev->event_type == "edited")
 			{
-				e.last_edited_by = username_of(ev->actor_id);
+				cur.edited       = ev->actor_id;
 				e.last_edited_at = ev->occurred_at;
 			}
 			else if(ev->event_type == "deleted")
 			{
-				e.deleted_by = username_of(ev->actor_id);
+				cur.deleted  = ev->actor_id;
 				e.deleted_at = ev->occurred_at;
 			}
 		}
+		all_ids.push_back(cur.author);
+		all_ids.push_back(cur.edited);
+		all_ids.push_back(cur.deleted);
+		per.push_back(cur);
 		out.push_back(std::move(e));
+	}
+
+	const auto names = usernames_of(all_ids);
+	for(std::size_t i = 0; i < out.size(); ++i)
+	{
+		out[i].author = name_or_empty(names, per[i].author);
+		if(per[i].edited != 0)
+		{
+			out[i].last_edited_by = name_or_empty(names, per[i].edited);
+		}
+		if(per[i].deleted != 0)
+		{
+			out[i].deleted_by = name_or_empty(names, per[i].deleted);
+		}
 	}
 	return out;
 }

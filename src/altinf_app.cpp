@@ -763,14 +763,18 @@ void altinf_app::handle_admin(std::string_view rem)
 	const auto domain = paths::take_segment(rem);
 	if(domain == "account")
 	{
-		if(!m_session.permissions.has_any(permission::admin | permission::manage_users))
-		{
-			show_forbidden();
-			return;
-		}
-		const auto seg = paths::take_segment(rem);
+		// Each sub-route enforces its own permission: list/new/edit require user
+		// management; history is also reachable with the dedicated audit
+		// permission alone (audit without edit).
+		const auto seg        = paths::take_segment(rem);
+		const bool can_manage = m_session.permissions.has_any(permission::admin | permission::manage_users);
 		if(seg == paths::list_seg)
 		{
+			if(!can_manage)
+			{
+				show_forbidden();
+				return;
+			}
 			auto* p = m_content->addNew<account_list_page>(*m_user_db, m_session);
 			p->deleted.connect([this](const std::string& username) {
 				if(username == m_session.username)
@@ -796,11 +800,21 @@ void altinf_app::handle_admin(std::string_view rem)
 		}
 		else if(seg == paths::new_seg)
 		{
+			if(!can_manage)
+			{
+				show_forbidden();
+				return;
+			}
 			auto* p = m_content->addNew<account_edit_page>(m_user_db.get(), m_session, nullptr);
 			p->saved.connect([this] { setInternalPath(paths::account_list(), true); });
 		}
 		else if(seg == paths::edit_seg)
 		{
+			if(!can_manage)
+			{
+				show_forbidden();
+				return;
+			}
 			const auto users = m_user_db->list_users(/*include_deleted=*/true);
 			const auto it    = std::ranges::find(users, rem, &user_entry::username);
 			if(it == users.end())
@@ -814,7 +828,8 @@ void altinf_app::handle_admin(std::string_view rem)
 		}
 		else if(seg == paths::history_seg)
 		{
-			if(!m_session.permissions.has_any(permission::view_user_history))
+			if(!m_session.permissions.has_any(permission::admin | permission::manage_users |
+			                                  permission::view_user_history))
 			{
 				show_forbidden();
 				return;

@@ -91,6 +91,32 @@ TEST_CASE("org_db - create_org makes creator an active lead")
 	CHECK(db.is_org_lead(oid, "alice"));
 }
 
+TEST_CASE("org_db - an unknown username does not match orphan (user_id 0) rows")
+{
+	const auto      path = seeded_db_path();
+	org_db          db{path};
+	const long long oid = db.create_org("Acme", "alice");
+
+	// Simulate an orphaned membership left by a pre-soft-delete hard delete: an
+	// active row whose user no longer exists, backfilled to user_id 0.
+	{
+		Wt::Dbo::Session s;
+		s.setConnection(std::make_unique<Wt::Dbo::backend::Sqlite3>(path));
+		Wt::Dbo::Transaction t{s};
+		s.execute(
+		   "INSERT INTO \"org_member\" (version, org_id, user_id, is_lead, status) "
+		   "VALUES (0, ?, 0, 0, 'active')")
+		  .bind(oid);
+		t.commit();
+	}
+
+	// A username that does not resolve must not be reported as a member just
+	// because an orphan row happens to carry user_id 0.
+	CHECK(!db.is_org_member(oid, "ghost"));
+	CHECK(!db.is_org_lead(oid, "ghost"));
+	CHECK(db.orgs_for_user("ghost").empty());
+}
+
 TEST_CASE("org_db - find_org")
 {
 	org_db          db{seeded_db_path()};

@@ -5,6 +5,7 @@
 #include <alt/functional.hpp>
 #include <ranges>
 #include <sstream>
+#include <unordered_map>
 
 static std::string escape_json_gv(const std::string& s)
 {
@@ -98,6 +99,21 @@ void gantt_view_widget::refresh(std::vector<kanban_task_entry>          tasks,
 
 std::string gantt_view_widget::serialize_tasks(const std::vector<kanban_task_entry>& tasks) const
 {
+	// Resolve each distinct assignee once per render.
+	std::unordered_map<std::string, user_lookup::info> resolved;
+	auto                                               info_for = [&](const std::string& u) -> user_lookup::info {
+    if(u.empty())
+    {
+      return {};
+    }
+    auto it = resolved.find(u);
+    if(it == resolved.end())
+    {
+      it = resolved.emplace(u, m_resolve_user(u)).first;
+    }
+    return it->second;
+	};
+
 	std::ostringstream ss;
 	ss << '[';
 	bool first = true;
@@ -111,7 +127,7 @@ std::string gantt_view_widget::serialize_tasks(const std::vector<kanban_task_ent
 		const auto        it       = m_type_colors.find(t.type_id);
 		const std::string color    = (it != m_type_colors.end()) ? it->second : "#cccccc";
 		const std::string assignee = t.assignees.empty() ? "" : t.assignees[0];
-		const auto        info     = assignee.empty() ? user_lookup::info{} : m_resolve_user(assignee);
+		const auto        info     = info_for(assignee);
 		ss << '{'
 		   << "\"id\":" << t.id << ','
 		   << "\"title\":\"" << escape_json_gv(t.title) << "\","

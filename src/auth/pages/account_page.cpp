@@ -72,8 +72,11 @@ void account_page::render_password_section()
 	m_password_section->clear();
 	m_password_section->addNew<Wt::WText>("<h2>Password</h2>", Wt::TextFormat::UnsafeXHTML);
 
-	const bool has_pw     = m_db.has_password(m_session.username);
-	const bool has_google = m_db.google_email_for(m_session.username).has_value();
+	const bool has_pw = m_db.has_password(m_session.username);
+	// Only treat Google as a usable fallback when sign-in is actually configured
+	// on this server — otherwise removing the password would lock the user out.
+	const bool has_google =
+	  m_google != nullptr && m_db.google_email_for(m_session.username).has_value();
 
 	auto* status = m_password_section->addNew<Wt::WText>("", Wt::TextFormat::Plain);
 	status->setStyleClass("editor-status");

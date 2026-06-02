@@ -4,6 +4,7 @@
 #include <Wt/Dbo/Transaction.h>
 
 #include <tuple>
+#include <unordered_set>
 
 namespace
 {
@@ -84,24 +85,40 @@ namespace user_lookup
 	  usernames_for_ids(Wt::Dbo::Session& session, const std::vector<long long>& user_ids)
 	{
 		std::unordered_map<long long, std::string> out;
-		Wt::Dbo::Transaction                       t{session};
+
+		// Build a distinct, positive id list and resolve it in a single query.
+		// ids are integers, so inlining them is injection-safe.
+		std::string                   in_list;
+		std::unordered_set<long long> seen;
+		for(const auto id: user_ids)
+		{
+			if(id <= 0 || !seen.insert(id).second)
+			{
+				continue;
+			}
+			if(!in_list.empty())
+			{
+				in_list += ',';
+			}
+			in_list += std::to_string(id);
+		}
+		if(in_list.empty())
+		{
+			return out;
+		}
+
+		Wt::Dbo::Transaction t{session};
 		if(!user_table_exists(session))
 		{
 			return out;
 		}
-		for(const auto id: user_ids)
+		const auto rows = session
+		                    .query<std::tuple<long long, std::string>>(
+		                      "select id, username from \"user\" where id in (" + in_list + ")")
+		                    .resultList();
+		for(const auto& [id, name]: rows)
 		{
-			if(id == 0 || out.contains(id))
-			{
-				continue;
-			}
-			const auto rows = session.query<std::string>("select username from \"user\" where id = ?")
-			                    .bind(id)
-			                    .resultList();
-			if(!rows.empty())
-			{
-				out.emplace(id, *rows.begin());
-			}
+			out.emplace(id, name);
 		}
 		return out;
 	}
