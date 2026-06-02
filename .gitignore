@@ -12,3 +12,6 @@ test-results/
 playwright-report/
 .superpowers/
 .claude/worktrees/
+# Live Wt config; commit wt_config.template.xml instead. Local and production
+# each keep their own untracked copy.
+wt_config.xml

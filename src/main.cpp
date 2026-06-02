@@ -100,7 +100,7 @@ int main(int argc, char** argv)
 
 	// Shared, read-only auth services (server lifetime). Google sign-in is an
 	// opt-in feature: only enabled when the google-oauth2-* config properties are
-	// present (injected from ALTINF_GOOGLE_* env vars at deploy time).
+	// present in wt_config.xml.
 	const Wt::Auth::AuthService              auth_service;
 	std::unique_ptr<Wt::Auth::GoogleService> google_service;
 	if(Wt::Auth::GoogleService::configured())
