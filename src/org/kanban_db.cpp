@@ -678,6 +678,53 @@ std::optional<kanban_task_entry> kanban_db::find_task(long long id)
 	return entry;
 }
 
+std::vector<kanban_task_entry>
+  kanban_db::attach_assignees(const std::vector<Wt::Dbo::ptr<kanban_task_record>>& tasks)
+{
+	// One query for every task's assignees (task ids are integers, so inlining the
+	// IN list is injection-safe), grouped by task, then all names resolved at once.
+	std::string in_list;
+	for(const auto& p: tasks)
+	{
+		if(!in_list.empty())
+		{
+			in_list += ',';
+		}
+		in_list += std::to_string(p.id());
+	}
+
+	std::unordered_map<long long, std::vector<long long>> by_task;
+	std::vector<long long>                                all_ids;
+	if(!in_list.empty())
+	{
+		const auto arows = m_dbo.find<task_assignee_record>()
+		                     .where("task_id in (" + in_list + ")")
+		                     .orderBy("task_id, user_id")
+		                     .resultList();
+		for(const auto& r: arows)
+		{
+			by_task[r->task_id].push_back(r->user_id);
+			all_ids.push_back(r->user_id);
+		}
+	}
+	const auto names = usernames_of(all_ids);
+
+	std::vector<kanban_task_entry> out;
+	for(const auto& p: tasks)
+	{
+		auto entry = to_entry(p);
+		if(const auto it = by_task.find(p.id()); it != by_task.end())
+		{
+			for(const long long uid: it->second)
+			{
+				entry.assignees.push_back(name_or_empty(names, uid));
+			}
+		}
+		out.push_back(std::move(entry));
+	}
+	return out;
+}
+
 std::vector<kanban_task_entry> kanban_db::tasks_for_team(long long team_id)
 {
 	Wt::Dbo::Transaction t{m_dbo};
@@ -686,37 +733,7 @@ std::vector<kanban_task_entry> kanban_db::tasks_for_team(long long team_id)
 	                       .bind(team_id)
 	                       .orderBy("sort_order, id")
 	                       .resultList();
-
-	// Build entries first, collecting every assignee id, then resolve all names in
-	// one query (rather than one query per assignee across the whole board).
-	std::vector<kanban_task_entry>      out;
-	std::vector<std::vector<long long>> per_task_ids;
-	std::vector<long long>              all_ids;
-	for(const auto& p: results)
-	{
-		out.push_back(to_entry(p));
-		const auto arows = m_dbo.find<task_assignee_record>()
-		                     .where("task_id = ?")
-		                     .bind(p.id())
-		                     .orderBy("user_id")
-		                     .resultList();
-		std::vector<long long> ids;
-		for(const auto& r: arows)
-		{
-			ids.push_back(r->user_id);
-			all_ids.push_back(r->user_id);
-		}
-		per_task_ids.push_back(std::move(ids));
-	}
-	const auto names = usernames_of(all_ids);
-	for(std::size_t i = 0; i < out.size(); ++i)
-	{
-		for(const long long id: per_task_ids[i])
-		{
-			out[i].assignees.push_back(name_or_empty(names, id));
-		}
-	}
-	return out;
+	return attach_assignees({results.begin(), results.end()});
 }
 
 std::vector<kanban_task_entry> kanban_db::archived_tasks_for_team(long long team_id)
@@ -727,35 +744,7 @@ std::vector<kanban_task_entry> kanban_db::archived_tasks_for_team(long long team
 	                       .bind(team_id)
 	                       .orderBy("sort_order, id")
 	                       .resultList();
-
-	std::vector<kanban_task_entry>      out;
-	std::vector<std::vector<long long>> per_task_ids;
-	std::vector<long long>              all_ids;
-	for(const auto& p: results)
-	{
-		out.push_back(to_entry(p));
-		const auto arows = m_dbo.find<task_assignee_record>()
-		                     .where("task_id = ?")
-		                     .bind(p.id())
-		                     .orderBy("user_id")
-		                     .resultList();
-		std::vector<long long> ids;
-		for(const auto& r: arows)
-		{
-			ids.push_back(r->user_id);
-			all_ids.push_back(r->user_id);
-		}
-		per_task_ids.push_back(std::move(ids));
-	}
-	const auto names = usernames_of(all_ids);
-	for(std::size_t i = 0; i < out.size(); ++i)
-	{
-		for(const long long id: per_task_ids[i])
-		{
-			out[i].assignees.push_back(name_or_empty(names, id));
-		}
-	}
-	return out;
+	return attach_assignees({results.begin(), results.end()});
 }
 
 void kanban_db::archive_task(long long id, const std::string& actor)

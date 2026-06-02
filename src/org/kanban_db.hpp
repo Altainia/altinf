@@ -106,6 +106,11 @@ private:
 	static kanban_task_entry to_entry(const Wt::Dbo::ptr<kanban_task_record>& p);
 	static task_type_entry   to_entry(const Wt::Dbo::ptr<task_type_record>& p);
 
+	// Build task entries and fill their assignees, fetching every task's assignees
+	// in one query and resolving all names in one more (instead of per task/row).
+	std::vector<kanban_task_entry>
+	  attach_assignees(const std::vector<Wt::Dbo::ptr<kanban_task_record>>& tasks);
+
 	void record_event(long long                                   task_id,
 	                  const std::string&                          actor,
 	                  const std::string&                          event_type,
