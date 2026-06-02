@@ -3,6 +3,7 @@
 #include <Wt/Auth/HashFunction.h>
 #include <Wt/Dbo/Transaction.h>
 #include <Wt/Dbo/backend/Sqlite3.h>
+#include <Wt/WDateTime.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
@@ -34,6 +35,29 @@ namespace
 		    "\"username\" text not null, "
 		    "\"google_sub\" text not null, "
 		    "\"email\" text not null)"),
+		  // v3: user audit trail. Two tables created together; DDL mirrors what
+		  // createTables() generates for user_event_record / user_field_change_record.
+		  db::migrator::migration{
+		    3,
+		    "add user audit tables",
+		    [](Wt::Dbo::Session& session) {
+			    session.execute(
+			      "CREATE TABLE \"user_event\" ("
+			      "\"id\" integer primary key autoincrement, "
+			      "\"version\" integer not null, "
+			      "\"user_id\" bigint not null, "
+			      "\"actor_id\" bigint not null, "
+			      "\"occurred_at\" text not null, "
+			      "\"event_type\" text not null)");
+			    session.execute(
+			      "CREATE TABLE \"user_field_change\" ("
+			      "\"id\" integer primary key autoincrement, "
+			      "\"version\" integer not null, "
+			      "\"event_id\" bigint not null, "
+			      "\"field_name\" text not null, "
+			      "\"old_value\" text not null, "
+			      "\"new_value\" text not null)");
+		    }},
 		};
 		return migrations;
 	}
@@ -82,6 +106,8 @@ user_db::user_db(const std::string& db_path)
 	m_dbo.mapClass<api_token>("api_token");
 	m_dbo.mapClass<session_token>("session_token");
 	m_dbo.mapClass<google_identity>("google_identity");
+	m_dbo.mapClass<user_event_record>("user_event");
+	m_dbo.mapClass<user_field_change_record>("user_field_change");
 
 	db::migrator::run(m_dbo, "auth", auth_migrations());
 }
@@ -111,6 +137,7 @@ bool user_db::authenticate(const std::string& uname,
 	}
 
 	out.logged_in    = true;
+	out.user_id      = found.id();
 	out.username     = uname;
 	out.display_name = found->display_name;
 	out.permissions  = found->permissions;
@@ -132,6 +159,7 @@ bool user_db::load_session(const std::string& uname, session_data& out)
 	const Wt::Dbo::ptr<user> found = *results.begin();
 
 	out.logged_in    = true;
+	out.user_id      = found.id();
 	out.username     = uname;
 	out.display_name = found->display_name;
 	out.permissions  = found->permissions;
@@ -142,7 +170,8 @@ bool user_db::load_session(const std::string& uname, session_data& out)
 void user_db::create_user(const std::string& uname,
                           const std::string& password,
                           permission::flags  perms,
-                          const std::string& display_name)
+                          const std::string& display_name,
+                          long long          actor_id)
 {
 	const Wt::Auth::BCryptHashFunction bcrypt{12};
 	const std::string                  hash = bcrypt.compute(password, "");
@@ -153,6 +182,9 @@ void user_db::create_user(const std::string& uname,
 	new_user.modify()->display_name  = display_name;
 	new_user.modify()->password_hash = hash;
 	new_user.modify()->permissions   = perms;
+	m_dbo.flush();
+
+	record_user_event(new_user.id(), actor_id, "created");
 }
 
 bool user_db::has_users()
@@ -183,6 +215,18 @@ bool user_db::username_exists(const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	return !m_dbo.find<user>().where("username = ?").bind(username).resultList().empty();
+}
+
+std::optional<long long> user_db::user_id_for(const std::string& username)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results =
+	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
+	if(results.empty())
+	{
+		return std::nullopt;
+	}
+	return results.begin()->id();
 }
 
 void user_db::delete_user(const std::string& username)
@@ -337,6 +381,7 @@ bool user_db::verify_api_token(const std::string& raw_token, session_data& out)
 
 	const auto found = *users.begin();
 	out.logged_in    = true;
+	out.user_id      = found.id();
 	out.username     = tok_username;
 	out.display_name = found->display_name;
 	out.permissions  = found->permissions;
@@ -389,6 +434,7 @@ bool user_db::verify_session_token(const std::string& raw_token, session_data& o
 
 	const auto found = *users.begin();
 	out.logged_in    = true;
+	out.user_id      = found.id();
 	out.username     = tok_username;
 	out.display_name = found->display_name;
 	out.permissions  = found->permissions;
@@ -470,4 +516,64 @@ std::optional<std::string>
 		return std::nullopt;
 	}
 	return (*results.begin())->username;
+}
+
+// ── Audit trail ──────────────────────────────────────────────────────────────
+
+void user_db::record_user_event(long long                                   user_id,
+                                long long                                   actor_id,
+                                const std::string&                          event_type,
+                                const std::vector<user_field_change_entry>& changes)
+{
+	const std::string ts =
+	  Wt::WDateTime::currentDateTime().toString("yyyy-MM-ddThh:mm:ssZ").toUTF8();
+
+	auto ev                  = m_dbo.add(std::make_unique<user_event_record>());
+	ev.modify()->user_id     = user_id;
+	ev.modify()->actor_id    = actor_id;
+	ev.modify()->occurred_at = ts;
+	ev.modify()->event_type  = event_type;
+	m_dbo.flush();
+
+	for(const auto& ch: changes)
+	{
+		auto fc                 = m_dbo.add(std::make_unique<user_field_change_record>());
+		fc.modify()->event_id   = ev.id();
+		fc.modify()->field_name = ch.field_name;
+		fc.modify()->old_value  = ch.old_value;
+		fc.modify()->new_value  = ch.new_value;
+	}
+}
+
+std::vector<user_event_entry> user_db::history_for_user(long long user_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           events = m_dbo.find<user_event_record>()
+	                      .where("user_id = ?")
+	                      .bind(user_id)
+	                      .orderBy("id DESC")
+	                      .resultList();
+	std::vector<user_event_entry> out;
+	for(const auto& ev: events)
+	{
+		user_event_entry entry;
+		entry.id          = ev.id();
+		entry.user_id     = ev->user_id;
+		entry.actor_id    = ev->actor_id;
+		entry.occurred_at = ev->occurred_at;
+		entry.event_type  = ev->event_type;
+
+		const auto changes = m_dbo.find<user_field_change_record>()
+		                       .where("event_id = ?")
+		                       .bind(ev.id())
+		                       .resultList();
+		for(const auto& ch: changes)
+		{
+			entry.changes.push_back({.field_name = ch->field_name,
+			                         .old_value  = ch->old_value,
+			                         .new_value  = ch->new_value});
+		}
+		out.push_back(std::move(entry));
+	}
+	return out;
 }

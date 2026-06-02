@@ -80,7 +80,8 @@ altinf_app::altinf_app(const Wt::WEnvironment& env, const Wt::Auth::OAuthService
 		}
 
 		constexpr auto all_perms = permission::admin | permission::post_write |
-		                           permission::org_create | permission::manage_users;
+		                           permission::org_create | permission::manage_users |
+		                           permission::api_token | permission::view_user_history;
 		m_user_db->create_user("admin", pw, all_perms);
 	}
 

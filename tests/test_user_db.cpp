@@ -1,7 +1,73 @@
+#include <Wt/Dbo/Dbo.h>
+#include <Wt/Dbo/Transaction.h>
+#include <Wt/Dbo/backend/Sqlite3.h>
+#include <unistd.h>
+
 #include <catch2/catch_test_macros.hpp>
+#include <filesystem>
 
 #include "auth/permission.hpp"
 #include "auth/user_db.hpp"
+
+namespace
+{
+	// A unique temp file path for a file-backed (non-:memory:) SQLite DB.
+	std::string temp_db_path()
+	{
+		static int n = 0;
+		return (std::filesystem::temp_directory_path() /
+		        ("altinf_userdb_test_" + std::to_string(::getpid()) + "_" +
+		         std::to_string(++n) + ".db"))
+		  .string();
+	}
+
+	// Build a frozen "v2 auth" schema by hand — the state of the auth domain
+	// before any of this feature's deltas — so opening user_db on it exercises the
+	// real migration path (not the createTables() shortcut). DDL is the historical
+	// v1 baseline plus the v2 google_identity table.
+	void make_v2_auth_db(const std::string& path)
+	{
+		Wt::Dbo::Session s;
+		s.setConnection(std::make_unique<Wt::Dbo::backend::Sqlite3>(path));
+		Wt::Dbo::Transaction t{s};
+		s.execute(
+		  "CREATE TABLE \"user\" ("
+		  "\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, "
+		  "\"username\" text not null, "
+		  "\"display_name\" text not null, "
+		  "\"password_hash\" text not null, "
+		  "\"permissions\" bigint not null)");
+		s.execute(
+		  "CREATE TABLE \"api_token\" ("
+		  "\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, "
+		  "\"token_hash\" text not null, "
+		  "\"username\" text not null)");
+		s.execute(
+		  "CREATE TABLE \"session_token\" ("
+		  "\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, "
+		  "\"token_hash\" text not null, "
+		  "\"username\" text not null)");
+		s.execute(
+		  "CREATE TABLE \"google_identity\" ("
+		  "\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, "
+		  "\"username\" text not null, "
+		  "\"google_sub\" text not null, "
+		  "\"email\" text not null)");
+		s.execute(
+		  "CREATE TABLE schema_version ("
+		  "domain text primary key, version integer not null)");
+		s.execute("INSERT INTO schema_version (domain, version) VALUES ('auth', 2)");
+		s.execute(
+		  "INSERT INTO \"user\" "
+		  "(version, username, display_name, password_hash, permissions) "
+		  "VALUES (0, 'legacy', 'Legacy User', '', 8)");
+		t.commit();
+	}
+} // namespace
 
 // bcrypt cost 12 (~300 ms/call) — each TEST_CASE uses its own DB to stay isolated,
 // but the total call count is kept low to avoid a painfully slow suite.
@@ -76,6 +142,83 @@ TEST_CASE("user_db - authenticate populates session_data")
 	CHECK(out.username == "alice");
 	CHECK(out.display_name == "Alice Smith");
 	CHECK(out.permissions == perms);
+}
+
+TEST_CASE("user_db - session_data carries a stable user_id")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none, "Alice");
+	db.create_user("bob", "pw", permission::none, "Bob");
+
+	session_data alice_auth;
+	REQUIRE(db.authenticate("alice", "pw", alice_auth));
+	CHECK(alice_auth.user_id != 0);
+
+	session_data alice_load;
+	REQUIRE(db.load_session("alice", alice_load));
+	CHECK(alice_load.user_id == alice_auth.user_id);
+
+	session_data bob_load;
+	REQUIRE(db.load_session("bob", bob_load));
+	CHECK(bob_load.user_id != alice_auth.user_id);
+}
+
+TEST_CASE("user_db - user_id_for returns the user's id or nullopt")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none);
+	const auto id = db.user_id_for("alice");
+	REQUIRE(id);
+	CHECK(*id != 0);
+	CHECK(!db.user_id_for("nobody"));
+}
+
+TEST_CASE("user_db - create_user records a created event")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none, "Alice", /*actor_id=*/0);
+
+	const auto id = db.user_id_for("alice");
+	REQUIRE(id);
+
+	const auto hist = db.history_for_user(*id);
+	REQUIRE(hist.size() == 1);
+	CHECK(hist[0].user_id == *id);
+	CHECK(hist[0].event_type == "created");
+	CHECK(hist[0].actor_id == 0);
+}
+
+TEST_CASE("user_db - history_for_user is empty for a user with no events")
+{
+	user_db db{":memory:"};
+	CHECK(db.history_for_user(424242).empty());
+}
+
+TEST_CASE("user_db - upgrades a v2 auth database and gains the audit tables")
+{
+	const auto path = temp_db_path();
+	make_v2_auth_db(path);
+
+	{
+		user_db db{path}; // runs v3+ migrations on the existing DB
+
+		// The legacy user survives the upgrade.
+		REQUIRE(db.username_exists("legacy"));
+		const auto legacy_id = db.user_id_for("legacy");
+		REQUIRE(legacy_id);
+
+		// The audit tables exist and are usable: a new user records an event.
+		CHECK(db.history_for_user(*legacy_id).empty());
+		db.create_user("fresh", "pw", permission::none, "Fresh", *legacy_id);
+		const auto fresh_id = db.user_id_for("fresh");
+		REQUIRE(fresh_id);
+		const auto hist = db.history_for_user(*fresh_id);
+		REQUIRE(hist.size() == 1);
+		CHECK(hist[0].event_type == "created");
+		CHECK(hist[0].actor_id == *legacy_id);
+	}
+
+	std::filesystem::remove(path);
 }
 
 TEST_CASE("user_db - delete user")

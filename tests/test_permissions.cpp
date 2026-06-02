@@ -50,3 +50,21 @@ TEST_CASE("permission::flags - operator|= is idempotent on already-set bit")
 	same |= permission::admin;
 	CHECK(mask == same);
 }
+
+TEST_CASE("permission::flags - api_token and view_user_history are distinct bits")
+{
+	const auto mask = permission::api_token | permission::view_user_history;
+	CHECK(mask.has_any(permission::api_token));
+	CHECK(mask.has_any(permission::view_user_history));
+	CHECK(!mask.has_any(permission::admin));
+	CHECK(!mask.has_any(permission::manage_users));
+
+	// Each new permission is its own bit, distinct from the existing four.
+	CHECK(!permission::api_token.has_any(permission::view_user_history));
+	CHECK(!permission::view_user_history.has_any(permission::api_token));
+	for(const auto existing: {permission::admin, permission::post_write, permission::org_create, permission::manage_users})
+	{
+		CHECK(!permission::api_token.has_any(existing));
+		CHECK(!permission::view_user_history.has_any(existing));
+	}
+}
