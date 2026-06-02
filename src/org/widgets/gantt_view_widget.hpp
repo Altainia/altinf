@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "auth/user_lookup.hpp"
 #include "org/kanban.hpp"
 
 // Read-only Gantt timeline rendered client-side as an SVG.
@@ -16,8 +17,9 @@
 class gantt_view_widget: public Wt::WContainerWidget
 {
 public:
-	explicit gantt_view_widget(std::vector<kanban_task_entry>          tasks,
-	                           const std::map<long long, std::string>& type_colors);
+	gantt_view_widget(std::vector<kanban_task_entry>          tasks,
+	                  const std::map<long long, std::string>& type_colors,
+	                  user_lookup::resolver                   resolve_user);
 
 	void refresh(std::vector<kanban_task_entry>          tasks,
 	             const std::map<long long, std::string>& type_colors);
@@ -29,6 +31,7 @@ public:
 
 private:
 	std::map<long long, std::string> m_type_colors;
+	user_lookup::resolver            m_resolve_user;
 	std::string                      m_mount_id;
 	std::string                      m_cb_id;
 

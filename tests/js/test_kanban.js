@@ -41,9 +41,9 @@ function makeBoardDOM(width, cbId) {
 
 function tasks() {
   return [
-    { id: 1, status: 'todo',        title: 'A', assignees: ['ana'], color: '#7aa2d4' },
-    { id: 2, status: 'in_progress', title: 'B', assignees: [],      color: '#e6b800' },
-    { id: 3, status: 'todo',        title: 'C', assignees: ['sam'], color: '#93c47d' },
+    { id: 1, status: 'todo',        title: 'A', assignees: [{ name: 'Ana', deleted: false }], color: '#7aa2d4' },
+    { id: 2, status: 'in_progress', title: 'B', assignees: [],                                  color: '#e6b800' },
+    { id: 3, status: 'todo',        title: 'C', assignees: [{ name: 'Sam', deleted: false }], color: '#93c47d' },
   ];
 }
 
@@ -69,6 +69,22 @@ test('desktop card click fires EDIT', function () {
   const card = dom.window.document.querySelector('.kb-card');
   card.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
   assertEq(fired, 'EDIT:1', 'desktop card click');
+});
+
+test('card shows assignee display names; deleted users are struck through', function () {
+  const dom = makeBoardDOM(1200);
+  const custom = [
+    { id: 1, status: 'todo', title: 'A',
+      assignees: [{ name: 'Ana', deleted: false }, { name: 'Old Bob', deleted: true }],
+      color: '#7aa2d4' },
+  ];
+  dom.window.initKanban('mount', custom, null, true, true);
+  const cell = dom.window.document.querySelector('.kb-card-assignee');
+  assert(cell, 'assignee cell present');
+  assert(cell.textContent.indexOf('Ana') !== -1, 'shows display name Ana');
+  assert(cell.textContent.indexOf('Old Bob') !== -1, 'shows display name Old Bob');
+  const deleted = cell.querySelector('.user-deleted');
+  assert(deleted && deleted.textContent === 'Old Bob', 'deleted assignee marked .user-deleted');
 });
 
 test('desktop cards are draggable; no quick-move button', function () {

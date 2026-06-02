@@ -96,7 +96,8 @@ team_kanban_page::team_kanban_page(kanban_db&          db,
 
 	if(show_gantt)
 	{
-		m_gantt_widget = addNew<gantt_view_widget>(tasks, m_type_colors);
+		m_gantt_widget = addNew<gantt_view_widget>(
+		  tasks, m_type_colors, [this](const std::string& u) { return m_db.resolve_user(u); });
 		m_gantt_widget->edit_requested.connect([this](long long tid) {
 			new task_popup_widget(
 			  m_db, m_odb, tid, m_session, m_caps, m_settings, m_team_id);
@@ -108,7 +109,7 @@ team_kanban_page::team_kanban_page(kanban_db&          db,
 	else
 	{
 		m_board_widget = addNew<kanban_board_widget>(
-		  tasks, can_move_columns, can_move_done, m_type_colors);
+		  tasks, can_move_columns, can_move_done, m_type_colors, [this](const std::string& u) { return m_db.resolve_user(u); });
 		m_board_widget->moved.connect(
 		  [this, can_move_columns, can_move_done](long long tid, const std::string& status, int sort) {
 			  const auto task = m_db.find_task(tid);

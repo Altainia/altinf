@@ -44,8 +44,10 @@ kanban_board_widget::kanban_board_widget(
   std::vector<kanban_task_entry>          tasks,
   bool                                    can_move_columns,
   bool                                    can_move_done,
-  const std::map<long long, std::string>& type_colors):
-  m_type_colors{type_colors}
+  const std::map<long long, std::string>& type_colors,
+  user_lookup::resolver                   resolve_user):
+  m_type_colors{type_colors},
+  m_resolve_user{std::move(resolve_user)}
 {
 	Wt::WApplication::instance()->require("js/kanban.js?v=" BUILD_VERSION);
 
@@ -127,8 +129,10 @@ std::string kanban_board_widget::serialize_tasks(const std::vector<kanban_task_e
 				{
 					ss << ',';
 				}
-				first_a = false;
-				ss << '"' << escape_json(a) << '"';
+				first_a         = false;
+				const auto info = m_resolve_user(a);
+				ss << "{\"name\":\"" << escape_json(info.display_name) << "\",\"deleted\":"
+				   << (info.deleted ? "true" : "false") << '}';
 			}
 		}
 		ss << "],"

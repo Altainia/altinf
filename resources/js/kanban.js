@@ -137,7 +137,13 @@
     if (task.assignees && task.assignees.length > 0) {
       var assignee = document.createElement('div');
       assignee.className = 'kb-card-assignee';
-      assignee.textContent = task.assignees.join(', ');
+      task.assignees.forEach(function (a, i) {
+        if (i > 0) assignee.appendChild(document.createTextNode(', '));
+        var span = document.createElement('span');
+        span.textContent = a.name;
+        if (a.deleted) span.className = 'user-deleted';
+        assignee.appendChild(span);
+      });
       card.appendChild(assignee);
     }
 

@@ -186,11 +186,15 @@
       return;
     }
 
-    var seen = {}, assignees = [];
+    var seen = {}, assignees = [], displayOf = {};
     renderTasks.forEach(function (t) {
       if (t.assigned_to && !seen[t.assigned_to]) {
         seen[t.assigned_to] = true;
         assignees.push(t.assigned_to);
+        displayOf[t.assigned_to] = {
+          name: t.assigned_to_display || t.assigned_to,
+          deleted: !!t.assigned_to_deleted
+        };
       }
     });
     var hasUnassigned = renderTasks.some(function (t) { return !t.assigned_to; });
@@ -260,9 +264,12 @@
     assignees.forEach(function (assignee) {
       var gy = HDR_H + rowIdx * ROW_H;
       svg.appendChild(svgRect(0, gy, svgW, ROW_H, 'fill:var(--color-surface)'));
+      var info = displayOf[assignee] || { name: assignee || 'Unassigned', deleted: false };
+      var labelStyle = info.deleted
+        ? 'fill:var(--color-muted);font-size:11px;font-weight:700;letter-spacing:0.05em;text-decoration:line-through;font-style:italic'
+        : 'fill:var(--color-accent);font-size:11px;font-weight:700;letter-spacing:0.05em';
       svg.appendChild(svgText(8, gy + ROW_H * 0.65,
-        assignee || 'Unassigned',
-        'fill:var(--color-accent);font-size:11px;font-weight:700;letter-spacing:0.05em'));
+        assignee ? info.name : 'Unassigned', labelStyle));
       rowIdx++;
 
       byAssignee[assignee].forEach(function (task) {

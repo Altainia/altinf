@@ -42,8 +42,10 @@ static std::string date_str_gv(const Wt::WDate& d)
 }
 
 gantt_view_widget::gantt_view_widget(std::vector<kanban_task_entry>          tasks,
-                                     const std::map<long long, std::string>& type_colors):
-  m_type_colors{type_colors}
+                                     const std::map<long long, std::string>& type_colors,
+                                     user_lookup::resolver                   resolve_user):
+  m_type_colors{type_colors},
+  m_resolve_user{std::move(resolve_user)}
 {
 	Wt::WApplication::instance()->require("js/gantt.js?v=" BUILD_VERSION);
 	setStyleClass("gv-wrap");
@@ -105,13 +107,17 @@ std::string gantt_view_widget::serialize_tasks(const std::vector<kanban_task_ent
 		{
 			ss << ',';
 		}
-		first                   = false;
-		const auto        it    = m_type_colors.find(t.type_id);
-		const std::string color = (it != m_type_colors.end()) ? it->second : "#cccccc";
+		first                      = false;
+		const auto        it       = m_type_colors.find(t.type_id);
+		const std::string color    = (it != m_type_colors.end()) ? it->second : "#cccccc";
+		const std::string assignee = t.assignees.empty() ? "" : t.assignees[0];
+		const auto        info     = assignee.empty() ? user_lookup::info{} : m_resolve_user(assignee);
 		ss << '{'
 		   << "\"id\":" << t.id << ','
 		   << "\"title\":\"" << escape_json_gv(t.title) << "\","
-		   << "\"assigned_to\":\"" << escape_json_gv(t.assignees.empty() ? "" : t.assignees[0]) << "\","
+		   << "\"assigned_to\":\"" << escape_json_gv(assignee) << "\","
+		   << "\"assigned_to_display\":\"" << escape_json_gv(info.display_name) << "\","
+		   << "\"assigned_to_deleted\":" << (info.deleted ? "true" : "false") << ','
 		   << "\"color\":\"" << escape_json_gv(color) << "\","
 		   << "\"start_date\":\"" << date_str_gv(t.start_date) << "\","
 		   << "\"end_date\":\"" << date_str_gv(t.end_date) << "\""

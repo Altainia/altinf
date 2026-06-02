@@ -24,10 +24,13 @@ function addDays(d, n) {
 function makeTask(id, startOffset, endOffset, assignee) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const who = assignee || 'alice';
   return {
     id,
     title: 'Task ' + id,
-    assigned_to: assignee || 'alice',
+    assigned_to: who,
+    assigned_to_display: who.charAt(0).toUpperCase() + who.slice(1),
+    assigned_to_deleted: false,
     color: '#7aa2d4',
     start_date: startOffset != null ? isoDate(addDays(today, startOffset)) : '',
     end_date:   endOffset   != null ? isoDate(addDays(today, endOffset))   : '',
@@ -504,6 +507,32 @@ test('agenda item tap fires NAV callback (full-page editor on mobile)', function
   assert(item, 'expected an agenda item');
   item.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
   assertEq(fired, 'NAV:42', 'agenda tap should fire NAV');
+});
+
+// ── Assignee labels: display name + soft-deleted styling ─────────────────────
+
+console.log('\nAssignee row labels');
+
+test('desktop assignee row shows display name', function () {
+  const dom = makeGanttDOM(WIDE);
+  dom.window.initGantt('mount', [makeTask(1, -2, 4, 'bob')]); // display 'Bob'
+  const labels = Array.from(dom.window.document.querySelectorAll('#mount svg text'))
+    .map(function (t) { return t.textContent; });
+  assert(labels.indexOf('Bob') !== -1, 'row label uses display name Bob');
+  assert(labels.indexOf('bob') === -1, 'username not shown');
+});
+
+test('desktop deleted assignee row label is struck through', function () {
+  const dom = makeGanttDOM(WIDE);
+  const t = makeTask(1, -2, 4, 'carol');
+  t.assigned_to_display = 'Carol';
+  t.assigned_to_deleted = true;
+  dom.window.initGantt('mount', [t]);
+  const label = Array.from(dom.window.document.querySelectorAll('#mount svg text'))
+    .find(function (n) { return n.textContent === 'Carol'; });
+  assert(label, 'Carol label present');
+  assert((label.getAttribute('style') || '').indexOf('line-through') !== -1,
+    'deleted assignee label struck through');
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────

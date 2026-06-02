@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "auth/user_lookup.hpp"
 #include "org/kanban.hpp"
 
 // Renders an interactive Kanban board via client-side JavaScript.
@@ -18,7 +19,8 @@ public:
 	kanban_board_widget(std::vector<kanban_task_entry>          tasks,
 	                    bool                                    can_move_columns,
 	                    bool                                    can_move_done,
-	                    const std::map<long long, std::string>& type_colors);
+	                    const std::map<long long, std::string>& type_colors,
+	                    user_lookup::resolver                   resolve_user);
 
 	void refresh(std::vector<kanban_task_entry>          tasks,
 	             bool                                    can_move_columns,
@@ -36,6 +38,7 @@ private:
 	std::string                      m_cb_id;
 	Wt::WContainerWidget*            m_mount{nullptr};
 	std::map<long long, std::string> m_type_colors;
+	user_lookup::resolver            m_resolve_user;
 
 	std::string serialize_tasks(const std::vector<kanban_task_entry>& tasks) const;
 	void        init_js(const std::string& json, bool can_move_columns, bool can_move_done);
