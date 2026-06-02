@@ -62,4 +62,47 @@ namespace user_lookup
 		    .resultList();
 		return rows.empty() ? 0 : *rows.begin();
 	}
+
+	std::string username_for_id(Wt::Dbo::Session& session, long long user_id)
+	{
+		if(user_id == 0)
+		{
+			return {};
+		}
+		Wt::Dbo::Transaction t{session};
+		if(!user_table_exists(session))
+		{
+			return {};
+		}
+		const auto rows = session.query<std::string>("select username from \"user\" where id = ?")
+		                    .bind(user_id)
+		                    .resultList();
+		return rows.empty() ? std::string{} : *rows.begin();
+	}
+
+	std::unordered_map<long long, std::string>
+	  usernames_for_ids(Wt::Dbo::Session& session, const std::vector<long long>& user_ids)
+	{
+		std::unordered_map<long long, std::string> out;
+		Wt::Dbo::Transaction                       t{session};
+		if(!user_table_exists(session))
+		{
+			return out;
+		}
+		for(const auto id: user_ids)
+		{
+			if(id == 0 || out.contains(id))
+			{
+				continue;
+			}
+			const auto rows = session.query<std::string>("select username from \"user\" where id = ?")
+			                    .bind(id)
+			                    .resultList();
+			if(!rows.empty())
+			{
+				out.emplace(id, *rows.begin());
+			}
+		}
+		return out;
+	}
 }

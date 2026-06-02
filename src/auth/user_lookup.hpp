@@ -4,6 +4,8 @@
 
 #include <functional>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 // Cross-domain user display resolution. The org and kanban domains store user
 // references by username but live in their own Wt::Dbo sessions, which do not
@@ -29,4 +31,13 @@ namespace user_lookup
 	// The user's surrogate id for a username, or 0 if there is no such user. Used
 	// to populate user_id foreign keys from a username at write time.
 	long long user_id_for(Wt::Dbo::Session& session, const std::string& username);
+
+	// The username for a user id, or "" for id 0 / a missing user. Used to render
+	// the username at read time now that the FK is the canonical store.
+	std::string username_for_id(Wt::Dbo::Session& session, long long user_id);
+
+	// Batch username resolution for a set of ids (0 omitted), for list reads that
+	// would otherwise issue one query per row.
+	std::unordered_map<long long, std::string>
+	  usernames_for_ids(Wt::Dbo::Session& session, const std::vector<long long>& user_ids);
 }

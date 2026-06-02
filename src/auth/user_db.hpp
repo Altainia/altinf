@@ -137,6 +137,10 @@ private:
 	// user_id lookup that assumes the caller already holds a transaction.
 	std::optional<long long> user_id_for_locked(const std::string& username);
 
+	// Reverse lookup: username for a user id ("" for 0 / missing). Assumes the
+	// caller holds a transaction.
+	std::string username_for_id_locked(long long user_id);
+
 	// Populate a session by loading the user via its id (the canonical FK target).
 	// Returns false for id 0, a missing row, or a soft-deleted user. Assumes the
 	// caller holds a transaction.
@@ -144,7 +148,7 @@ private:
 
 	// Remove any Google identity row for the user, unconditionally (no guard, no
 	// audit). Assumes the caller holds a transaction. Used by delete_user.
-	void clear_google_link_locked(const std::string& username);
+	void clear_google_link_locked(long long user_id);
 
 	// Append one audit event (plus its field changes) for a user. Must be called
 	// inside an open transaction; mirrors kanban_db::record_event.
