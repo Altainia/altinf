@@ -3,6 +3,7 @@
 #include <Wt/Auth/Identity.h>
 #include <Wt/Auth/OAuthService.h>
 #include <Wt/WLineEdit.h>
+#include <Wt/WPasswordEdit.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
@@ -85,12 +86,11 @@ void account_page::render_password_section()
 		  ->addNew<Wt::WText>("No password is set; you sign in with Google.", Wt::TextFormat::Plain)
 		  ->setStyleClass("account-note");
 
-		auto* new_pw     = m_password_section->addNew<Wt::WLineEdit>();
-		auto* confirm_pw = m_password_section->addNew<Wt::WLineEdit>();
+		auto* new_pw     = m_password_section->addNew<Wt::WPasswordEdit>();
+		auto* confirm_pw = m_password_section->addNew<Wt::WPasswordEdit>();
 		for(auto* f: {new_pw, confirm_pw})
 		{
 			f->setStyleClass("editor-field");
-			f->setEchoMode(Wt::EchoMode::Password);
 		}
 		new_pw->setPlaceholderText("New password");
 		confirm_pw->setPlaceholderText("Confirm password");
@@ -118,13 +118,12 @@ void account_page::render_password_section()
 
 	// Has a password: change it (current password required) and, if Google
 	// remains as a fallback, allow removing it.
-	auto* current_pw = m_password_section->addNew<Wt::WLineEdit>();
-	auto* new_pw     = m_password_section->addNew<Wt::WLineEdit>();
-	auto* confirm_pw = m_password_section->addNew<Wt::WLineEdit>();
+	auto* current_pw = m_password_section->addNew<Wt::WPasswordEdit>();
+	auto* new_pw     = m_password_section->addNew<Wt::WPasswordEdit>();
+	auto* confirm_pw = m_password_section->addNew<Wt::WPasswordEdit>();
 	for(auto* f: {current_pw, new_pw, confirm_pw})
 	{
 		f->setStyleClass("editor-field");
-		f->setEchoMode(Wt::EchoMode::Password);
 	}
 	current_pw->setPlaceholderText("Current password");
 	new_pw->setPlaceholderText("New password");
