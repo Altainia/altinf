@@ -13,7 +13,28 @@ namespace
 	// member, notification and preference structs.
 	const std::vector<db::migrator::migration>& org_migrations()
 	{
-		static const std::vector<db::migrator::migration> migrations{};
+		static const std::vector<db::migrator::migration> migrations{
+		  // v2: link org child tables to the user by id. Add user_id and backfill
+		  // from the username via the user table (same SQLite file; auth migrations
+		  // have already run). Orphaned usernames map to 0. Username columns are
+		  // retained denormalized during the transition.
+		  db::migrator::migration{
+		    2,
+		    "add user_id to org_member/notification/user_pref/user_org_pref",
+		    [](Wt::Dbo::Session& session) {
+			    for(const char* table:
+			        {"org_member", "notification", "user_pref", "user_org_pref"})
+			    {
+				    session.execute(std::string{"ALTER TABLE \""} + table +
+				                    "\" ADD COLUMN \"user_id\" bigint not null default 0");
+				    session.execute(
+				      std::string{"UPDATE \""} + table +
+				      "\" SET \"user_id\" = COALESCE("
+				      "(SELECT id FROM \"user\" WHERE \"user\".username = \"" +
+				      table + "\".username), 0)");
+			    }
+		    }},
+		};
 		return migrations;
 	}
 } // namespace
@@ -80,6 +101,7 @@ long long org_db::create_org(const std::string& name, const std::string& creator
 	auto m               = m_dbo.add(std::make_unique<org_member_record>());
 	m.modify()->org_id   = org_id;
 	m.modify()->username = creator_username;
+	m.modify()->user_id  = user_lookup::user_id_for(m_dbo, creator_username);
 	m.modify()->is_lead  = 1;
 	m.modify()->status   = "active";
 
@@ -149,6 +171,7 @@ void org_db::invite_to_org(long long org_id, const std::string& username, bool a
 		auto row               = m_dbo.add(std::make_unique<org_member_record>());
 		row.modify()->org_id   = org_id;
 		row.modify()->username = username;
+		row.modify()->user_id  = user_lookup::user_id_for(m_dbo, username);
 		row.modify()->is_lead  = as_lead ? 1 : 0;
 		row.modify()->status   = "pending";
 	}
@@ -161,6 +184,7 @@ void org_db::invite_to_org(long long org_id, const std::string& username, bool a
 
 	auto n               = m_dbo.add(std::make_unique<notification_record>());
 	n.modify()->username = username;
+	n.modify()->user_id  = user_lookup::user_id_for(m_dbo, username);
 	n.modify()->type     = "org_invite";
 	n.modify()->payload  = make_org_invite_payload(org_id, org_name);
 	n.modify()->is_read  = 0;
@@ -391,6 +415,7 @@ void org_db::push_notification(const std::string& username,
 	Wt::Dbo::Transaction t{m_dbo};
 	auto                 n = m_dbo.add(std::make_unique<notification_record>());
 	n.modify()->username   = username;
+	n.modify()->user_id    = user_lookup::user_id_for(m_dbo, username);
 	n.modify()->type       = type;
 	n.modify()->payload    = payload_json;
 	n.modify()->is_read    = 0;
@@ -448,6 +473,7 @@ void org_db::set_last_org(const std::string& username, long long org_id)
 	{
 		auto p                  = m_dbo.add(std::make_unique<user_pref_record>());
 		p.modify()->username    = username;
+		p.modify()->user_id     = user_lookup::user_id_for(m_dbo, username);
 		p.modify()->last_org_id = org_id;
 	}
 	else
@@ -542,6 +568,7 @@ void org_db::set_user_org_pref(const user_org_pref_entry& pref)
 	{
 		auto r                                = m_dbo.add(std::make_unique<user_org_pref_record>());
 		r.modify()->username                  = pref.username;
+		r.modify()->user_id                   = user_lookup::user_id_for(m_dbo, pref.username);
 		r.modify()->org_id                    = pref.org_id;
 		r.modify()->notify_task_available     = pref.notify_task_available ? 1 : 0;
 		r.modify()->notify_task_unassigned    = pref.notify_task_unassigned ? 1 : 0;

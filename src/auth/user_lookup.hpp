@@ -20,4 +20,8 @@ namespace user_lookup
 	// Resolve display info for a username. Opens its own (possibly nested)
 	// transaction; safe to call from within another transaction.
 	info resolve(Wt::Dbo::Session& session, const std::string& username);
+
+	// The user's surrogate id for a username, or 0 if there is no such user. Used
+	// to populate user_id foreign keys from a username at write time.
+	long long user_id_for(Wt::Dbo::Session& session, const std::string& username);
 }

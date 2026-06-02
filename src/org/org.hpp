@@ -22,7 +22,8 @@ struct org_record
 struct org_member_record
 {
 	long long   org_id{0};
-	std::string username;
+	std::string username; // retained denormalized; user_id is the canonical link
+	long long   user_id{0};
 	int         is_lead{0};
 	std::string status; // "pending" | "active" | "declined"
 
@@ -31,6 +32,7 @@ struct org_member_record
 	{
 		Wt::Dbo::field(a, org_id, "org_id");
 		Wt::Dbo::field(a, username, "username");
+		Wt::Dbo::field(a, user_id, "user_id");
 		Wt::Dbo::field(a, is_lead, "is_lead");
 		Wt::Dbo::field(a, status, "status");
 	}
@@ -38,7 +40,8 @@ struct org_member_record
 
 struct notification_record
 {
-	std::string username;
+	std::string username; // retained denormalized; user_id is the canonical link
+	long long   user_id{0};
 	std::string type;    // "org_invite" | "task_assigned"
 	std::string payload; // JSON string
 	int         is_read{0};
@@ -48,6 +51,7 @@ struct notification_record
 	void persist(Action& a)
 	{
 		Wt::Dbo::field(a, username, "username");
+		Wt::Dbo::field(a, user_id, "user_id");
 		Wt::Dbo::field(a, type, "type");
 		Wt::Dbo::field(a, payload, "payload");
 		Wt::Dbo::field(a, is_read, "is_read");
@@ -57,20 +61,23 @@ struct notification_record
 
 struct user_pref_record
 {
-	std::string username;
+	std::string username; // retained denormalized; user_id is the canonical link
+	long long   user_id{0};
 	long long   last_org_id{0}; // 0 = not set
 
 	template<class Action>
 	void persist(Action& a)
 	{
 		Wt::Dbo::field(a, username, "username");
+		Wt::Dbo::field(a, user_id, "user_id");
 		Wt::Dbo::field(a, last_org_id, "last_org_id");
 	}
 };
 
 struct user_org_pref_record
 {
-	std::string username;
+	std::string username; // retained denormalized; user_id is the canonical link
+	long long   user_id{0};
 	long long   org_id{0};
 	int         notify_task_available{1};
 	int         notify_task_unassigned{1};
@@ -81,6 +88,7 @@ struct user_org_pref_record
 	void persist(Action& a)
 	{
 		Wt::Dbo::field(a, username, "username");
+		Wt::Dbo::field(a, user_id, "user_id");
 		Wt::Dbo::field(a, org_id, "org_id");
 		Wt::Dbo::field(a, notify_task_available, "notify_task_available");
 		Wt::Dbo::field(a, notify_task_unassigned, "notify_task_unassigned");

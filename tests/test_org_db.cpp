@@ -1,8 +1,85 @@
+#include <Wt/Dbo/Dbo.h>
+#include <Wt/Dbo/Transaction.h>
+#include <Wt/Dbo/backend/Sqlite3.h>
+#include <unistd.h>
+
 #include <catch2/catch_test_macros.hpp>
+#include <filesystem>
 
 #include "org/org_db.hpp"
 
 // ---- organizations ----
+
+TEST_CASE("org_db - v2 migration backfills user_id from username")
+{
+	const auto path = (std::filesystem::temp_directory_path() /
+	                   ("altinf_orgdb_mig_" + std::to_string(::getpid()) + ".db"))
+	                    .string();
+	std::filesystem::remove(path);
+
+	// Hand-build a pre-v2 org schema (org_member has username, no user_id) plus a
+	// minimal user table (owned by the auth domain in the live app) so the
+	// backfill subquery can resolve. Stamp org at the baseline.
+	{
+		Wt::Dbo::Session s;
+		s.setConnection(std::make_unique<Wt::Dbo::backend::Sqlite3>(path));
+		Wt::Dbo::Transaction t{s};
+		s.execute(
+		  "CREATE TABLE \"user\" ("
+		  "\"id\" integer primary key autoincrement, \"version\" integer not null, "
+		  "\"username\" text not null, \"display_name\" text not null, "
+		  "\"password_hash\" text not null, \"permissions\" bigint not null, "
+		  "\"deleted_at\" text not null default '')");
+		s.execute(
+		  "INSERT INTO \"user\" (version, username, display_name, password_hash, "
+		  "permissions, deleted_at) VALUES (0, 'alice', 'Alice', '', 0, '')");
+		s.execute(
+		  "CREATE TABLE \"organization\" (\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, \"name\" text not null, \"is_archived\" integer not null)");
+		s.execute(
+		  "CREATE TABLE \"org_member\" (\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, \"org_id\" bigint not null, \"username\" text not null, "
+		  "\"is_lead\" integer not null, \"status\" text not null)");
+		s.execute(
+		  "CREATE TABLE \"notification\" (\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, \"username\" text not null, \"type\" text not null, "
+		  "\"payload\" text not null, \"is_read\" integer not null, \"created_at\" text not null)");
+		s.execute(
+		  "CREATE TABLE \"user_pref\" (\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, \"username\" text not null, \"last_org_id\" bigint not null)");
+		s.execute(
+		  "CREATE TABLE \"user_org_pref\" (\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, \"username\" text not null, \"org_id\" bigint not null, "
+		  "\"notify_task_available\" integer not null, \"notify_task_unassigned\" integer not null, "
+		  "\"notify_coassignee_changed\" integer not null, \"notify_task_abandoned\" integer not null)");
+		s.execute("CREATE TABLE schema_version (domain text primary key, version integer not null)");
+		s.execute("INSERT INTO schema_version (domain, version) VALUES ('org', 1)");
+		s.execute(
+		  "INSERT INTO \"org_member\" (version, org_id, username, is_lead, status) "
+		  "VALUES (0, 1, 'alice', 1, 'active')");
+		t.commit();
+	}
+
+	// Constructing org_db runs the org v2 migration (ALTER + backfill).
+	{
+		org_db db{path};
+	}
+
+	// The org_member row now carries alice's user id.
+	{
+		Wt::Dbo::Session s;
+		s.setConnection(std::make_unique<Wt::Dbo::backend::Sqlite3>(path));
+		Wt::Dbo::Transaction t{s};
+		const auto           user_id = s.query<long long>("select id from \"user\" where username='alice'")
+		                       .resultValue();
+		const auto member_user_id =
+		  s.query<long long>("select user_id from \"org_member\" where username='alice'")
+		    .resultValue();
+		CHECK(member_user_id == user_id);
+	}
+
+	std::filesystem::remove(path);
+}
 
 TEST_CASE("org_db - create_org makes creator an active lead")
 {
