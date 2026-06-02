@@ -96,6 +96,10 @@ public:
 private:
 	Wt::Dbo::Session m_dbo;
 
+	// username <-> user_id resolution against the shared user table.
+	long long   uid_of(const std::string& username);
+	std::string username_of(long long user_id);
+
 	static team_entry        to_entry(const Wt::Dbo::ptr<team_record>& p);
 	static kanban_task_entry to_entry(const Wt::Dbo::ptr<kanban_task_record>& p);
 	static task_type_entry   to_entry(const Wt::Dbo::ptr<task_type_record>& p);

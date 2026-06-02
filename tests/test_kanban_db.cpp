@@ -9,6 +9,7 @@
 #include <filesystem>
 
 #include "org/kanban_db.hpp"
+#include "seed_users.hpp"
 
 TEST_CASE("kanban_db - v2 migration backfills user/actor/author id columns")
 {
@@ -81,10 +82,12 @@ TEST_CASE("kanban_db - v2 migration backfills user/actor/author id columns")
 		Wt::Dbo::Session s;
 		s.setConnection(std::make_unique<Wt::Dbo::backend::Sqlite3>(path));
 		Wt::Dbo::Transaction t{s};
-		const auto           uid = s.query<long long>("select id from \"user\" where username='alice'").resultValue();
-		CHECK(s.query<long long>("select user_id from \"team_member\" where username='alice'").resultValue() == uid);
-		CHECK(s.query<long long>("select actor_id from \"task_event\" where actor='alice'").resultValue() == uid);
-		CHECK(s.query<long long>("select author_id from \"task_comment\" where author='alice'").resultValue() == uid);
+		// the text columns were dropped by the v3 contract migration; rows are
+		// keyed by id now.
+		const auto uid = s.query<long long>("select id from \"user\" where username='alice'").resultValue();
+		CHECK(s.query<long long>("select user_id from \"team_member\" where team_id=1").resultValue() == uid);
+		CHECK(s.query<long long>("select actor_id from \"task_event\" where task_id=1").resultValue() == uid);
+		CHECK(s.query<long long>("select author_id from \"task_comment\" where task_id=1").resultValue() == uid);
 	}
 
 	std::filesystem::remove(path);
@@ -109,7 +112,7 @@ static kanban_task_entry make_task(long long          team_id,
 
 TEST_CASE("kanban_db - create team with org_id")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("Engineering", 1);
 	CHECK(tid > 0);
 	const auto t = db.find_team(tid);
@@ -120,7 +123,7 @@ TEST_CASE("kanban_db - create team with org_id")
 
 TEST_CASE("kanban_db - teams_for_org")
 {
-	kanban_db db{":memory:"};
+	kanban_db db{seeded_db_path()};
 	db.create_team("Alpha", 10);
 	db.create_team("Beta", 10);
 	db.create_team("Gamma", 20);
@@ -132,7 +135,7 @@ TEST_CASE("kanban_db - teams_for_org")
 
 TEST_CASE("kanban_db - rename team")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("Old", 1);
 	db.rename_team(tid, "New");
 	CHECK(db.find_team(tid)->name == "New");
@@ -140,7 +143,7 @@ TEST_CASE("kanban_db - rename team")
 
 TEST_CASE("kanban_db - set_team_org")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.set_team_org(tid, 99);
 	CHECK(db.find_team(tid)->org_id == 99);
@@ -148,13 +151,13 @@ TEST_CASE("kanban_db - set_team_org")
 
 TEST_CASE("kanban_db - find_team missing returns nullopt")
 {
-	kanban_db db{":memory:"};
+	kanban_db db{seeded_db_path()};
 	CHECK(!db.find_team(9999).has_value());
 }
 
 TEST_CASE("kanban_db - archive_team hides team and archives its tasks")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	db.add_task(make_task(tid, "Chore"), "alice");
@@ -171,7 +174,7 @@ TEST_CASE("kanban_db - archive_team hides team and archives its tasks")
 
 TEST_CASE("kanban_db - add and list members")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	db.add_member(tid, "bob");
@@ -180,7 +183,7 @@ TEST_CASE("kanban_db - add and list members")
 
 TEST_CASE("kanban_db - add_member is idempotent")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	db.add_member(tid, "alice");
@@ -189,7 +192,7 @@ TEST_CASE("kanban_db - add_member is idempotent")
 
 TEST_CASE("kanban_db - remove member")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	db.add_member(tid, "bob");
@@ -201,7 +204,7 @@ TEST_CASE("kanban_db - remove member")
 
 TEST_CASE("kanban_db - is_member")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	CHECK(db.is_member(tid, "alice"));
@@ -210,7 +213,7 @@ TEST_CASE("kanban_db - is_member")
 
 TEST_CASE("kanban_db - team lead role")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	CHECK(!db.is_team_lead(tid, "alice"));
@@ -222,7 +225,7 @@ TEST_CASE("kanban_db - team lead role")
 
 TEST_CASE("kanban_db - team_member_entries includes is_lead flag")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	db.add_member(tid, "bob");
@@ -243,7 +246,7 @@ TEST_CASE("kanban_db - team_member_entries includes is_lead flag")
 
 TEST_CASE("kanban_db - add task and retrieve for team")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_task(make_task(tid, "Alpha", "todo", 1), "test");
 	db.add_task(make_task(tid, "Beta", "todo", 0), "test");
@@ -255,7 +258,7 @@ TEST_CASE("kanban_db - add task and retrieve for team")
 
 TEST_CASE("kanban_db - find_task")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	const long long id  = db.add_task(make_task(tid, "My Task"), "test");
 	const auto      opt = db.find_task(id);
@@ -266,13 +269,13 @@ TEST_CASE("kanban_db - find_task")
 
 TEST_CASE("kanban_db - find_task missing returns nullopt")
 {
-	kanban_db db{":memory:"};
+	kanban_db db{seeded_db_path()};
 	CHECK(!db.find_task(9999).has_value());
 }
 
 TEST_CASE("kanban_db - update task")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid  = db.create_team("T", 1);
 	const long long id   = db.add_task(make_task(tid, "Original"), "test");
 	auto            task = *db.find_task(id);
@@ -284,7 +287,7 @@ TEST_CASE("kanban_db - update task")
 
 TEST_CASE("kanban_db - update_task_status")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	const long long id  = db.add_task(make_task(tid, "T", "todo"), "test");
 	db.update_task_status(id, "done", 5, "test");
@@ -296,7 +299,7 @@ TEST_CASE("kanban_db - update_task_status")
 
 TEST_CASE("kanban_db - archive_task hides task from tasks_for_team")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	const long long id  = db.add_task(make_task(tid, "To Archive"), "alice");
 	db.add_task(make_task(tid, "To Keep"), "alice");
@@ -311,7 +314,7 @@ TEST_CASE("kanban_db - archive_task hides task from tasks_for_team")
 
 TEST_CASE("kanban_db - tasks_for_team empty when no tasks")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	CHECK(db.tasks_for_team(tid).empty());
 }
@@ -320,7 +323,7 @@ TEST_CASE("kanban_db - tasks_for_team empty when no tasks")
 
 TEST_CASE("kanban_db - add_assignee: success on unassigned task")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	const long long id = db.add_task(make_task(tid, "Work"), "alice");
@@ -333,7 +336,7 @@ TEST_CASE("kanban_db - add_assignee: success on unassigned task")
 
 TEST_CASE("kanban_db - add_assignee: two users")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	db.add_member(tid, "bob");
@@ -347,7 +350,7 @@ TEST_CASE("kanban_db - add_assignee: two users")
 
 TEST_CASE("kanban_db - add_assignee: idempotent")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	const long long id = db.add_task(make_task(tid, "Work"), "alice");
@@ -359,7 +362,7 @@ TEST_CASE("kanban_db - add_assignee: idempotent")
 
 TEST_CASE("kanban_db - add_assignee: rejects done task")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	const long long id = db.add_task(make_task(tid, "Work", "done"), "alice");
@@ -369,7 +372,7 @@ TEST_CASE("kanban_db - add_assignee: rejects done task")
 
 TEST_CASE("kanban_db - remove_assignee: success")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	db.add_member(tid, "bob");
@@ -385,7 +388,7 @@ TEST_CASE("kanban_db - remove_assignee: success")
 
 TEST_CASE("kanban_db - remove_assignee: false when not assigned")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	const long long id  = db.add_task(make_task(tid, "Work"), "alice");
 
@@ -394,7 +397,7 @@ TEST_CASE("kanban_db - remove_assignee: false when not assigned")
 
 TEST_CASE("kanban_db - tasks_for_team populates assignees")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	db.add_member(tid, "bob");
@@ -409,7 +412,7 @@ TEST_CASE("kanban_db - tasks_for_team populates assignees")
 
 TEST_CASE("kanban_db - find_task populates assignees")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	const long long id = db.add_task(make_task(tid, "Work"), "alice");
@@ -423,7 +426,7 @@ TEST_CASE("kanban_db - find_task populates assignees")
 
 TEST_CASE("kanban_db - add_assignee records history event")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	const long long id = db.add_task(make_task(tid, "Work"), "alice");
@@ -442,7 +445,7 @@ TEST_CASE("kanban_db - add_assignee records history event")
 
 TEST_CASE("kanban_db - add_assignee: fails on archived task")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	const long long id = db.add_task(make_task(tid, "Work"), "alice");
@@ -453,7 +456,7 @@ TEST_CASE("kanban_db - add_assignee: fails on archived task")
 
 TEST_CASE("kanban_db - add_assignee: fails for non-member")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	// "alice" is NOT added as a member
 	const long long id = db.add_task(make_task(tid, "Work"), "alice");
@@ -463,7 +466,7 @@ TEST_CASE("kanban_db - add_assignee: fails for non-member")
 
 TEST_CASE("kanban_db - archived_tasks_for_team populates assignees")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	const long long id = db.add_task(make_task(tid, "Work"), "alice");
@@ -480,7 +483,7 @@ TEST_CASE("kanban_db - archived_tasks_for_team populates assignees")
 
 TEST_CASE("kanban_db - remove_member_from_org_teams removes from all org teams")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid1 = db.create_team("T1", 1);
 	const long long tid2 = db.create_team("T2", 1);
 	db.add_member(tid1, "bob");
@@ -496,7 +499,7 @@ TEST_CASE("kanban_db - remove_member_from_org_teams removes from all org teams")
 
 TEST_CASE("kanban_db - remove_member_from_org_teams does not touch other orgs")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid_org1 = db.create_team("T1", 1);
 	const long long tid_org2 = db.create_team("T2", 2);
 	db.add_member(tid_org1, "bob");
@@ -512,7 +515,7 @@ TEST_CASE("kanban_db - remove_member_from_org_teams does not touch other orgs")
 
 TEST_CASE("kanban_db - remove_member_from_all_teams removes from every team")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid1 = db.create_team("T1", 1);
 	const long long tid2 = db.create_team("T2", 2);
 	db.add_member(tid1, "bob");
@@ -528,7 +531,7 @@ TEST_CASE("kanban_db - remove_member_from_all_teams removes from every team")
 
 TEST_CASE("kanban_db - remove_member_from_all_teams on non-member is a no-op")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 
@@ -541,7 +544,7 @@ TEST_CASE("kanban_db - remove_member_from_all_teams on non-member is a no-op")
 
 TEST_CASE("kanban_db - create and retrieve task type")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long id = db.create_task_type(1, "Bug Fix", "#e07b54");
 	CHECK(id > 0);
 	const auto t = db.find_task_type(id);
@@ -553,7 +556,7 @@ TEST_CASE("kanban_db - create and retrieve task type")
 
 TEST_CASE("kanban_db - types_for_org returns only org types")
 {
-	kanban_db db{":memory:"};
+	kanban_db db{seeded_db_path()};
 	db.create_task_type(1, "Bug Fix", "#e07b54");
 	db.create_task_type(1, "Feature", "#5a9e6f");
 	db.create_task_type(2, "Other", "#7aa2d4");
@@ -565,13 +568,13 @@ TEST_CASE("kanban_db - types_for_org returns only org types")
 
 TEST_CASE("kanban_db - types_for_org empty when no types")
 {
-	kanban_db db{":memory:"};
+	kanban_db db{seeded_db_path()};
 	CHECK(db.types_for_org(99).empty());
 }
 
 TEST_CASE("kanban_db - update_task_type changes name and color")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long id = db.create_task_type(1, "Old", "#aaaaaa");
 	db.update_task_type(id, "New", "#bbbbbb");
 	const auto t = db.find_task_type(id);
@@ -582,7 +585,7 @@ TEST_CASE("kanban_db - update_task_type changes name and color")
 
 TEST_CASE("kanban_db - delete_task_type zeroes out affected tasks")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long team_id = db.create_team("T", 1);
 	const long long type_id = db.create_task_type(1, "Bug Fix", "#e07b54");
 
@@ -600,13 +603,13 @@ TEST_CASE("kanban_db - delete_task_type zeroes out affected tasks")
 
 TEST_CASE("kanban_db - find_task_type missing returns nullopt")
 {
-	kanban_db db{":memory:"};
+	kanban_db db{seeded_db_path()};
 	CHECK(!db.find_task_type(9999).has_value());
 }
 
 TEST_CASE("kanban_db - task type_id persists through add and find")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long team_id = db.create_team("T", 1);
 	const long long type_id = db.create_task_type(1, "Feature", "#5a9e6f");
 
@@ -623,7 +626,7 @@ TEST_CASE("kanban_db - task type_id persists through add and find")
 
 TEST_CASE("kanban_db - update_task preserves type_id change")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long team_id = db.create_team("T", 1);
 	const long long type_id = db.create_task_type(1, "Feature", "#5a9e6f");
 
@@ -642,7 +645,7 @@ TEST_CASE("kanban_db - update_task preserves type_id change")
 
 TEST_CASE("kanban_db - add_task records created event")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid     = db.create_team("T", 1);
 	const long long id      = db.add_task(make_task(tid, "My Task"), "alice");
 	const auto      history = db.history_for_task(id);
@@ -654,7 +657,7 @@ TEST_CASE("kanban_db - add_task records created event")
 
 TEST_CASE("kanban_db - update_task records field changes")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid  = db.create_team("T", 1);
 	const long long id   = db.add_task(make_task(tid, "Original"), "alice");
 	auto            task = *db.find_task(id);
@@ -671,7 +674,7 @@ TEST_CASE("kanban_db - update_task records field changes")
 
 TEST_CASE("kanban_db - update_task with no changes writes no event")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid  = db.create_team("T", 1);
 	const long long id   = db.add_task(make_task(tid, "Same"), "alice");
 	auto            task = *db.find_task(id);
@@ -683,7 +686,7 @@ TEST_CASE("kanban_db - update_task with no changes writes no event")
 
 TEST_CASE("kanban_db - update_task_status records status change")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	const long long id  = db.add_task(make_task(tid, "T", "todo"), "alice");
 	db.update_task_status(id, "done", 5, "alice");
@@ -698,7 +701,7 @@ TEST_CASE("kanban_db - update_task_status records status change")
 
 TEST_CASE("kanban_db - update_task_status with same status writes no event")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	const long long id  = db.add_task(make_task(tid, "T", "todo"), "alice");
 	db.update_task_status(id, "todo", 0, "alice"); // same status
@@ -709,7 +712,7 @@ TEST_CASE("kanban_db - update_task_status with same status writes no event")
 
 TEST_CASE("kanban_db - archive_task records archived event")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	const long long id  = db.add_task(make_task(tid, "Work"), "alice");
 	db.archive_task(id, "bob");
@@ -721,7 +724,7 @@ TEST_CASE("kanban_db - archive_task records archived event")
 
 TEST_CASE("kanban_db - unarchive_task records unarchived event")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	const long long id  = db.add_task(make_task(tid, "Work"), "alice");
 	db.archive_task(id, "alice");
@@ -736,7 +739,7 @@ TEST_CASE("kanban_db - unarchive_task records unarchived event")
 
 TEST_CASE("kanban_db - update_task records type change by name")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid    = db.create_team("T", 1);
 	const long long bug_id = db.create_task_type(1, "Bug", "#ff0000");
 	const long long fix_id = db.create_task_type(1, "Fix", "#00ff00");
@@ -760,7 +763,7 @@ TEST_CASE("kanban_db - update_task records type change by name")
 
 TEST_CASE("kanban_db - archive_team cascades archived event to each task")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_task(make_task(tid, "A"), "alice");
 	db.add_task(make_task(tid, "B"), "alice");
@@ -780,7 +783,7 @@ TEST_CASE("kanban_db - archive_team cascades archived event to each task")
 
 TEST_CASE("kanban_db - add_comment returns id and is retrievable")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid  = db.create_team("T", 1);
 	const long long task = db.add_task(make_task(tid, "Work"), "creator");
 	const long long cid  = db.add_comment(task, "alice", "Hello **world**");
@@ -798,7 +801,7 @@ TEST_CASE("kanban_db - add_comment returns id and is retrievable")
 
 TEST_CASE("kanban_db - comments_for_task returns in chronological order")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid  = db.create_team("T", 1);
 	const long long task = db.add_task(make_task(tid, "Work"), "creator");
 	db.add_comment(task, "alice", "First");
@@ -813,7 +816,7 @@ TEST_CASE("kanban_db - comments_for_task returns in chronological order")
 
 TEST_CASE("kanban_db - edit_comment updates body and records edited event")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid  = db.create_team("T", 1);
 	const long long task = db.add_task(make_task(tid, "Work"), "creator");
 	const long long cid  = db.add_comment(task, "alice", "Original");
@@ -827,7 +830,7 @@ TEST_CASE("kanban_db - edit_comment updates body and records edited event")
 
 TEST_CASE("kanban_db - edit_comment reflects most recent editor when edited twice")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid  = db.create_team("T", 1);
 	const long long task = db.add_task(make_task(tid, "Work"), "creator");
 	const long long cid  = db.add_comment(task, "alice", "v1");
@@ -841,7 +844,7 @@ TEST_CASE("kanban_db - edit_comment reflects most recent editor when edited twic
 
 TEST_CASE("kanban_db - edit_comment is a no-op on deleted comment")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid  = db.create_team("T", 1);
 	const long long task = db.add_task(make_task(tid, "Work"), "creator");
 	const long long cid  = db.add_comment(task, "alice", "Original");
@@ -855,7 +858,7 @@ TEST_CASE("kanban_db - edit_comment is a no-op on deleted comment")
 
 TEST_CASE("kanban_db - delete_comment sets is_deleted and clears body in entry")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid  = db.create_team("T", 1);
 	const long long task = db.add_task(make_task(tid, "Work"), "creator");
 	const long long cid  = db.add_comment(task, "alice", "Goodbye");
@@ -870,7 +873,7 @@ TEST_CASE("kanban_db - delete_comment sets is_deleted and clears body in entry")
 
 TEST_CASE("kanban_db - delete_comment is a no-op if already deleted")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid  = db.create_team("T", 1);
 	const long long task = db.add_task(make_task(tid, "Work"), "creator");
 	const long long cid  = db.add_comment(task, "alice", "Hello");
@@ -883,7 +886,7 @@ TEST_CASE("kanban_db - delete_comment is a no-op if already deleted")
 
 TEST_CASE("kanban_db - comments_for_task includes deleted comments as placeholders")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid  = db.create_team("T", 1);
 	const long long task = db.add_task(make_task(tid, "Work"), "creator");
 	db.add_comment(task, "alice", "Keep me");
@@ -901,7 +904,7 @@ TEST_CASE("kanban_db - comments_for_task includes deleted comments as placeholde
 
 TEST_CASE("kanban_db - update_task_status to done clears assignees")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	db.add_member(tid, "bob");
@@ -915,7 +918,7 @@ TEST_CASE("kanban_db - update_task_status to done clears assignees")
 
 TEST_CASE("kanban_db - update_task_status to done records assignee-cleared event")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	const long long id = db.add_task(make_task(tid, "Work"), "alice");
@@ -936,7 +939,7 @@ TEST_CASE("kanban_db - update_task_status to done records assignee-cleared event
 
 TEST_CASE("kanban_db - update_task_status non-done does not clear assignees")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	const long long id = db.add_task(make_task(tid, "Work"), "alice");
@@ -948,7 +951,7 @@ TEST_CASE("kanban_db - update_task_status non-done does not clear assignees")
 
 TEST_CASE("kanban_db - add_assignee rejects task already in done status")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 1);
 	db.add_member(tid, "alice");
 	const long long id = db.add_task(make_task(tid, "Work", "done"), "alice");
@@ -960,7 +963,7 @@ TEST_CASE("kanban_db - add_assignee rejects task already in done status")
 
 TEST_CASE("kanban_db - settings_for_team returns all-true defaults when no row exists")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 42);
 
 	const auto s = db.settings_for_team(tid);
@@ -972,7 +975,7 @@ TEST_CASE("kanban_db - settings_for_team returns all-true defaults when no row e
 
 TEST_CASE("kanban_db - set_team_settings persists team-specific override")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 42);
 
 	team_settings_entry s;
@@ -991,7 +994,7 @@ TEST_CASE("kanban_db - set_team_settings persists team-specific override")
 
 TEST_CASE("kanban_db - org-wide default applies when no team row")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 42);
 
 	team_settings_entry org_default;
@@ -1009,7 +1012,7 @@ TEST_CASE("kanban_db - org-wide default applies when no team row")
 
 TEST_CASE("kanban_db - team-specific row overrides org default")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 42);
 
 	team_settings_entry org_default;
@@ -1037,7 +1040,7 @@ TEST_CASE("kanban_db - team-specific row overrides org default")
 
 TEST_CASE("kanban_db - set_team_settings records audit event")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("T", 42);
 
 	team_settings_entry s;
@@ -1061,7 +1064,7 @@ TEST_CASE("kanban_db - set_team_settings records audit event")
 
 TEST_CASE("kanban_db - allow_member_edit_details round-trips and is audited")
 {
-	kanban_db       db{":memory:"};
+	kanban_db       db{seeded_db_path()};
 	const long long tid = db.create_team("Engineering", 1);
 
 	// Defaults to true (members allowed) when no row exists.

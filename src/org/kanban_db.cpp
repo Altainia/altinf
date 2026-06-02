@@ -42,6 +42,26 @@ namespace
 				                    table + "\".\"" + src + "\"), 0)");
 			    }
 		    }},
+		  // v3: contract phase — the *_id columns are now the sole link, drop the
+		  // denormalized username/actor/author text columns.
+		  db::migrator::migration{
+		    3,
+		    "drop username/actor/author from kanban user-reference tables",
+		    [](Wt::Dbo::Session& session) {
+			    const std::tuple<const char*, const char*> drops[] = {
+			      {"team_member", "username"},
+			      {"task_assignee", "username"},
+			      {"task_event", "actor"},
+			      {"task_comment", "author"},
+			      {"task_comment_event", "actor"},
+			      {"team_settings_event", "actor"},
+			    };
+			    for(const auto& [table, col]: drops)
+			    {
+				    session.execute(std::string{"ALTER TABLE \""} + table +
+				                    "\" DROP COLUMN \"" + col + "\"");
+			    }
+		    }},
 		};
 		return migrations;
 	}
@@ -68,6 +88,16 @@ kanban_db::kanban_db(const std::string& db_path)
 user_lookup::info kanban_db::resolve_user(const std::string& username)
 {
 	return user_lookup::resolve(m_dbo, username);
+}
+
+long long kanban_db::uid_of(const std::string& username)
+{
+	return user_lookup::user_id_for(m_dbo, username);
+}
+
+std::string kanban_db::username_of(long long user_id)
+{
+	return user_lookup::username_for_id(m_dbo, user_id);
 }
 
 // ---- static helpers ----
@@ -232,20 +262,19 @@ void kanban_db::add_member(long long team_id, const std::string& username)
 	{
 		return;
 	}
-	auto p               = m_dbo.add(std::make_unique<team_member_record>());
-	p.modify()->team_id  = team_id;
-	p.modify()->username = username;
-	p.modify()->user_id  = user_lookup::user_id_for(m_dbo, username);
-	p.modify()->is_lead  = 0;
+	auto p              = m_dbo.add(std::make_unique<team_member_record>());
+	p.modify()->team_id = team_id;
+	p.modify()->user_id = uid_of(username);
+	p.modify()->is_lead = 0;
 }
 
 void kanban_db::remove_member(long long team_id, const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results = m_dbo.find<team_member_record>()
-	                       .where("team_id = ? AND username = ?")
+	                       .where("team_id = ? AND user_id = ?")
 	                       .bind(team_id)
-	                       .bind(username)
+	                       .bind(uid_of(username))
 	                       .resultList();
 	if(!results.empty())
 	{
@@ -261,9 +290,9 @@ void kanban_db::remove_member_from_org_teams(long long org_id, const std::string
 	for(const auto& team: teams)
 	{
 		const auto rows = m_dbo.find<team_member_record>()
-		                    .where("team_id = ? AND username = ?")
+		                    .where("team_id = ? AND user_id = ?")
 		                    .bind(team.id())
-		                    .bind(username)
+		                    .bind(uid_of(username))
 		                    .resultList();
 		if(!rows.empty())
 		{
@@ -275,9 +304,14 @@ void kanban_db::remove_member_from_org_teams(long long org_id, const std::string
 void kanban_db::remove_member_from_all_teams(const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};
-	const auto           rows = m_dbo.find<team_member_record>()
-	                    .where("username = ?")
-	                    .bind(username)
+	const long long      uid = uid_of(username);
+	if(uid == 0)
+	{
+		return;
+	}
+	const auto rows = m_dbo.find<team_member_record>()
+	                    .where("user_id = ?")
+	                    .bind(uid)
 	                    .resultList();
 	for(const auto& r: rows)
 	{
@@ -290,9 +324,9 @@ void kanban_db::set_team_lead(long long team_id, const std::string& username, bo
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results = m_dbo.find<team_member_record>()
-	                       .where("team_id = ? AND username = ?")
+	                       .where("team_id = ? AND user_id = ?")
 	                       .bind(team_id)
-	                       .bind(username)
+	                       .bind(uid_of(username))
 	                       .resultList();
 	if(!results.empty())
 	{
@@ -304,9 +338,9 @@ bool kanban_db::is_team_lead(long long team_id, const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results = m_dbo.find<team_member_record>()
-	                       .where("team_id = ? AND username = ? AND is_lead = 1")
+	                       .where("team_id = ? AND user_id = ? AND is_lead = 1")
 	                       .bind(team_id)
-	                       .bind(username)
+	                       .bind(uid_of(username))
 	                       .resultList();
 	return !results.empty();
 }
@@ -317,12 +351,12 @@ std::vector<std::string> kanban_db::members_for_team(long long team_id)
 	const auto           results = m_dbo.find<team_member_record>()
 	                       .where("team_id = ?")
 	                       .bind(team_id)
-	                       .orderBy("username")
+	                       .orderBy("user_id")
 	                       .resultList();
 	std::vector<std::string> out;
 	for(const auto& p: results)
 	{
-		out.push_back(p->username);
+		out.push_back(username_of(p->user_id));
 	}
 	return out;
 }
@@ -333,12 +367,12 @@ std::vector<team_member_entry> kanban_db::team_member_entries(long long team_id)
 	const auto           results = m_dbo.find<team_member_record>()
 	                       .where("team_id = ?")
 	                       .bind(team_id)
-	                       .orderBy("username")
+	                       .orderBy("user_id")
 	                       .resultList();
 	std::vector<team_member_entry> out;
 	for(const auto& p: results)
 	{
-		out.push_back({.username = p->username, .is_lead = p->is_lead != 0});
+		out.push_back({.username = username_of(p->user_id), .is_lead = p->is_lead != 0});
 	}
 	return out;
 }
@@ -347,9 +381,9 @@ bool kanban_db::is_member(long long team_id, const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results = m_dbo.find<team_member_record>()
-	                       .where("team_id = ? AND username = ?")
+	                       .where("team_id = ? AND user_id = ?")
 	                       .bind(team_id)
-	                       .bind(username)
+	                       .bind(uid_of(username))
 	                       .resultList();
 	return !results.empty();
 }
@@ -358,8 +392,8 @@ std::vector<long long> kanban_db::team_ids_for_user(const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results = m_dbo.find<team_member_record>()
-	                       .where("username = ?")
-	                       .bind(username)
+	                       .where("user_id = ?")
+	                       .bind(uid_of(username))
 	                       .resultList();
 	std::vector<long long> out;
 	for(const auto& r: results)
@@ -491,12 +525,14 @@ bool kanban_db::add_assignee(long long          task_id,
 		return false;
 	}
 
+	const long long uid = uid_of(username);
+
 	// Inline member check (same transaction as the outer add_assignee):
 	const auto member_rows =
 	  m_dbo.find<team_member_record>()
-	    .where("team_id = ? AND username = ?")
+	    .where("team_id = ? AND user_id = ?")
 	    .bind(task_ptr->team_id)
-	    .bind(username)
+	    .bind(uid)
 	    .resultList();
 	if(member_rows.empty())
 	{
@@ -505,19 +541,18 @@ bool kanban_db::add_assignee(long long          task_id,
 
 	const auto existing =
 	  m_dbo.find<task_assignee_record>()
-	    .where("task_id = ? AND username = ?")
+	    .where("task_id = ? AND user_id = ?")
 	    .bind(task_id)
-	    .bind(username)
+	    .bind(uid)
 	    .resultList();
 	if(!existing.empty())
 	{
 		return false; // already assigned
 	}
 
-	auto r               = m_dbo.add(std::make_unique<task_assignee_record>());
-	r.modify()->task_id  = task_id;
-	r.modify()->username = username;
-	r.modify()->user_id  = user_lookup::user_id_for(m_dbo, username);
+	auto r              = m_dbo.add(std::make_unique<task_assignee_record>());
+	r.modify()->task_id = task_id;
+	r.modify()->user_id = uid;
 
 	record_event(task_id, actor, "updated", {{"assignees", {}, username + " added"}});
 	return true;
@@ -541,9 +576,9 @@ bool kanban_db::remove_assignee(long long          task_id,
 
 	const auto rows =
 	  m_dbo.find<task_assignee_record>()
-	    .where("task_id = ? AND username = ?")
+	    .where("task_id = ? AND user_id = ?")
 	    .bind(task_id)
-	    .bind(username)
+	    .bind(uid_of(username))
 	    .resultList();
 	if(rows.empty())
 	{
@@ -562,12 +597,12 @@ std::vector<std::string> kanban_db::assignees_for_task(long long task_id)
 	  m_dbo.find<task_assignee_record>()
 	    .where("task_id = ?")
 	    .bind(task_id)
-	    .orderBy("username")
+	    .orderBy("user_id")
 	    .resultList();
 	std::vector<std::string> out;
 	for(const auto& r: rows)
 	{
-		out.push_back(r->username);
+		out.push_back(username_of(r->user_id));
 	}
 	return out;
 }
@@ -586,11 +621,11 @@ std::optional<kanban_task_entry> kanban_db::find_task(long long id)
 	  m_dbo.find<task_assignee_record>()
 	    .where("task_id = ?")
 	    .bind(id)
-	    .orderBy("username")
+	    .orderBy("user_id")
 	    .resultList();
 	for(const auto& r: arows)
 	{
-		entry.assignees.push_back(r->username);
+		entry.assignees.push_back(username_of(r->user_id));
 	}
 	return entry;
 }
@@ -611,11 +646,11 @@ std::vector<kanban_task_entry> kanban_db::tasks_for_team(long long team_id)
 		  m_dbo.find<task_assignee_record>()
 		    .where("task_id = ?")
 		    .bind(p.id())
-		    .orderBy("username")
+		    .orderBy("user_id")
 		    .resultList();
 		for(const auto& r: arows)
 		{
-			entry.assignees.push_back(r->username);
+			entry.assignees.push_back(username_of(r->user_id));
 		}
 		out.push_back(std::move(entry));
 	}
@@ -638,11 +673,11 @@ std::vector<kanban_task_entry> kanban_db::archived_tasks_for_team(long long team
 		  m_dbo.find<task_assignee_record>()
 		    .where("task_id = ?")
 		    .bind(p.id())
-		    .orderBy("username")
+		    .orderBy("user_id")
 		    .resultList();
 		for(const auto& r: arows)
 		{
-			entry.assignees.push_back(r->username);
+			entry.assignees.push_back(username_of(r->user_id));
 		}
 		out.push_back(std::move(entry));
 	}
@@ -699,7 +734,7 @@ std::vector<task_event_entry> kanban_db::history_for_task(long long task_id)
 		task_event_entry entry;
 		entry.id          = ev.id();
 		entry.task_id     = ev->task_id;
-		entry.actor       = ev->actor;
+		entry.actor       = username_of(ev->actor_id);
 		entry.occurred_at = ev->occurred_at;
 		entry.event_type  = ev->event_type;
 
@@ -793,8 +828,7 @@ void kanban_db::record_event(long long                                   task_id
 
 	auto ev                  = m_dbo.add(std::make_unique<task_event_record>());
 	ev.modify()->task_id     = task_id;
-	ev.modify()->actor       = actor;
-	ev.modify()->actor_id    = user_lookup::user_id_for(m_dbo, actor);
+	ev.modify()->actor_id    = uid_of(actor);
 	ev.modify()->occurred_at = ts;
 	ev.modify()->event_type  = event_type;
 	m_dbo.flush();
@@ -819,8 +853,7 @@ void kanban_db::record_comment_event(long long          comment_id,
 
 	auto ev                    = m_dbo.add(std::make_unique<task_comment_event_record>());
 	ev.modify()->comment_id    = comment_id;
-	ev.modify()->actor         = actor;
-	ev.modify()->actor_id      = user_lookup::user_id_for(m_dbo, actor);
+	ev.modify()->actor_id      = uid_of(actor);
 	ev.modify()->occurred_at   = ts;
 	ev.modify()->event_type    = event_type;
 	ev.modify()->body_snapshot = body_snapshot;
@@ -849,7 +882,7 @@ void kanban_db::maybe_clear_assignees_for_done(long long          task_id,
 		{
 			removed_names += ", ";
 		}
-		removed_names += r->username;
+		removed_names += username_of(r->user_id);
 		to_remove.push_back(r);
 	}
 	if(to_remove.empty())
@@ -957,8 +990,7 @@ void kanban_db::set_team_settings(const team_settings_entry& s,
 		auto ev                  = m_dbo.add(std::make_unique<team_settings_event_record>());
 		ev.modify()->org_id      = s.org_id;
 		ev.modify()->team_id     = s.team_id;
-		ev.modify()->actor       = actor;
-		ev.modify()->actor_id    = user_lookup::user_id_for(m_dbo, actor);
+		ev.modify()->actor_id    = uid_of(actor);
 		ev.modify()->occurred_at = now;
 		ev.modify()->field_name  = field;
 		ev.modify()->old_value   = old_v;
@@ -1029,7 +1061,7 @@ std::vector<team_settings_event_entry>
 		e.id          = r.id();
 		e.org_id      = r->org_id;
 		e.team_id     = r->team_id;
-		e.actor       = r->actor;
+		e.actor       = username_of(r->actor_id);
 		e.occurred_at = r->occurred_at;
 		e.field_name  = r->field_name;
 		e.old_value   = r->old_value;
@@ -1051,8 +1083,7 @@ long long kanban_db::add_comment(long long          task_id,
 
 	auto p                 = m_dbo.add(std::make_unique<task_comment_record>());
 	p.modify()->task_id    = task_id;
-	p.modify()->author     = author;
-	p.modify()->author_id  = user_lookup::user_id_for(m_dbo, author);
+	p.modify()->author_id  = uid_of(author);
 	p.modify()->body       = body;
 	p.modify()->created_at = ts;
 	p.modify()->is_deleted = 0;
@@ -1121,7 +1152,7 @@ std::vector<task_comment_entry> kanban_db::comments_for_task(long long task_id)
 		task_comment_entry e;
 		e.id         = c.id();
 		e.task_id    = c->task_id;
-		e.author     = c->author;
+		e.author     = username_of(c->author_id);
 		e.created_at = c->created_at;
 		e.is_deleted = c->is_deleted != 0;
 		e.body       = e.is_deleted ? "" : c->body;
@@ -1135,12 +1166,12 @@ std::vector<task_comment_entry> kanban_db::comments_for_task(long long task_id)
 		{
 			if(ev->event_type == "edited")
 			{
-				e.last_edited_by = ev->actor;
+				e.last_edited_by = username_of(ev->actor_id);
 				e.last_edited_at = ev->occurred_at;
 			}
 			else if(ev->event_type == "deleted")
 			{
-				e.deleted_by = ev->actor;
+				e.deleted_by = username_of(ev->actor_id);
 				e.deleted_at = ev->occurred_at;
 			}
 		}

@@ -5,6 +5,7 @@
 #include "org/kanban_notifications.hpp"
 #include "org/org.hpp"
 #include "org/org_db.hpp"
+#include "seed_users.hpp"
 
 static kanban_task_entry make_task(long long team_id, const std::string& title)
 {
@@ -20,8 +21,9 @@ static kanban_task_entry make_task(long long team_id, const std::string& title)
 
 TEST_CASE("notify_assignee_added: task_assigned fires when lead adds member")
 {
-	kanban_db       kdb{":memory:"};
-	org_db          odb{":memory:"};
+	const auto      seed = seeded_db_path();
+	kanban_db       kdb{seed};
+	org_db          odb{seed};
 	const long long org_id  = 1;
 	const long long team_id = kdb.create_team("T", org_id);
 	kdb.add_member(team_id, "alice");
@@ -38,8 +40,9 @@ TEST_CASE("notify_assignee_added: task_assigned fires when lead adds member")
 
 TEST_CASE("notify_assignee_added: no task_assigned when self-assigning")
 {
-	kanban_db       kdb{":memory:"};
-	org_db          odb{":memory:"};
+	const auto      seed = seeded_db_path();
+	kanban_db       kdb{seed};
+	org_db          odb{seed};
 	const long long org_id  = 1;
 	const long long team_id = kdb.create_team("T", org_id);
 	kdb.add_member(team_id, "alice");
@@ -53,8 +56,9 @@ TEST_CASE("notify_assignee_added: no task_assigned when self-assigning")
 
 TEST_CASE("notify_assignee_added: coassignee_changed fires to other current assignees")
 {
-	kanban_db       kdb{":memory:"};
-	org_db          odb{":memory:"};
+	const auto      seed = seeded_db_path();
+	kanban_db       kdb{seed};
+	org_db          odb{seed};
 	const long long org_id  = 1;
 	const long long team_id = kdb.create_team("T", org_id);
 	kdb.add_member(team_id, "alice");
@@ -82,8 +86,9 @@ TEST_CASE("notify_assignee_added: coassignee_changed fires to other current assi
 
 TEST_CASE("notify_assignee_added: pref disabled suppresses coassignee_changed")
 {
-	kanban_db       kdb{":memory:"};
-	org_db          odb{":memory:"};
+	const auto      seed = seeded_db_path();
+	kanban_db       kdb{seed};
+	org_db          odb{seed};
 	const long long org_id  = 1;
 	const long long team_id = kdb.create_team("T", org_id);
 	kdb.add_member(team_id, "alice");
@@ -112,8 +117,9 @@ TEST_CASE("notify_assignee_added: pref disabled suppresses coassignee_changed")
 
 TEST_CASE("notify_assignee_removed: task_unassigned fires when lead removes member")
 {
-	kanban_db       kdb{":memory:"};
-	org_db          odb{":memory:"};
+	const auto      seed = seeded_db_path();
+	kanban_db       kdb{seed};
+	org_db          odb{seed};
 	const long long org_id  = 1;
 	const long long team_id = kdb.create_team("T", org_id);
 	kdb.add_member(team_id, "alice");
@@ -133,8 +139,9 @@ TEST_CASE("notify_assignee_removed: task_unassigned fires when lead removes memb
 
 TEST_CASE("notify_assignee_removed: no task_unassigned on self-remove")
 {
-	kanban_db       kdb{":memory:"};
-	org_db          odb{":memory:"};
+	const auto      seed = seeded_db_path();
+	kanban_db       kdb{seed};
+	org_db          odb{seed};
 	const long long org_id  = 1;
 	const long long team_id = kdb.create_team("T", org_id);
 	kdb.add_member(team_id, "alice");
@@ -154,8 +161,9 @@ TEST_CASE("notify_assignee_removed: no task_unassigned on self-remove")
 
 TEST_CASE("notify_assignee_removed: task_unassigned pref disabled suppresses it")
 {
-	kanban_db       kdb{":memory:"};
-	org_db          odb{":memory:"};
+	const auto      seed = seeded_db_path();
+	kanban_db       kdb{seed};
+	org_db          odb{seed};
 	const long long org_id  = 1;
 	const long long team_id = kdb.create_team("T", org_id);
 	kdb.add_member(team_id, "alice");
@@ -184,8 +192,9 @@ TEST_CASE("notify_assignee_removed: task_unassigned pref disabled suppresses it"
 
 TEST_CASE("notify_assignee_removed: task_available fires when last assignee removed by lead")
 {
-	kanban_db       kdb{":memory:"};
-	org_db          odb{":memory:"};
+	const auto      seed = seeded_db_path();
+	kanban_db       kdb{seed};
+	org_db          odb{seed};
 	const long long org_id  = 1;
 	const long long team_id = kdb.create_team("T", org_id);
 	kdb.add_member(team_id, "alice");
@@ -204,8 +213,9 @@ TEST_CASE("notify_assignee_removed: task_available fires when last assignee remo
 
 TEST_CASE("notify_assignee_removed: task_abandoned + task_available on self-remove as sole assignee")
 {
-	kanban_db       kdb{":memory:"};
-	org_db          odb{":memory:"};
+	const auto      seed = seeded_db_path();
+	kanban_db       kdb{seed};
+	org_db          odb{seed};
 	const long long org_id  = 1;
 	const long long team_id = kdb.create_team("T", org_id);
 	kdb.add_member(team_id, "alice");
@@ -226,8 +236,9 @@ TEST_CASE("notify_assignee_removed: task_abandoned + task_available on self-remo
 
 TEST_CASE("notify_assignee_removed: no task_abandoned when lead removes sole assignee")
 {
-	kanban_db       kdb{":memory:"};
-	org_db          odb{":memory:"};
+	const auto      seed = seeded_db_path();
+	kanban_db       kdb{seed};
+	org_db          odb{seed};
 	const long long org_id  = 1;
 	const long long team_id = kdb.create_team("T", org_id);
 	kdb.add_member(team_id, "alice");
@@ -246,8 +257,9 @@ TEST_CASE("notify_assignee_removed: no task_abandoned when lead removes sole ass
 
 TEST_CASE("notify_assignee_removed: task_available pref disabled suppresses it")
 {
-	kanban_db       kdb{":memory:"};
-	org_db          odb{":memory:"};
+	const auto      seed = seeded_db_path();
+	kanban_db       kdb{seed};
+	org_db          odb{seed};
 	const long long org_id  = 1;
 	const long long team_id = kdb.create_team("T", org_id);
 	kdb.add_member(team_id, "alice");
@@ -275,8 +287,9 @@ TEST_CASE("notify_assignee_removed: task_available pref disabled suppresses it")
 
 TEST_CASE("notify_assignee_removed: coassignee_changed fires to remaining assignees")
 {
-	kanban_db       kdb{":memory:"};
-	org_db          odb{":memory:"};
+	const auto      seed = seeded_db_path();
+	kanban_db       kdb{seed};
+	org_db          odb{seed};
 	const long long org_id  = 1;
 	const long long team_id = kdb.create_team("T", org_id);
 	kdb.add_member(team_id, "alice");
@@ -296,8 +309,9 @@ TEST_CASE("notify_assignee_removed: coassignee_changed fires to remaining assign
 
 TEST_CASE("notify_assignee_removed: excluded from self-notification")
 {
-	kanban_db       kdb{":memory:"};
-	org_db          odb{":memory:"};
+	const auto      seed = seeded_db_path();
+	kanban_db       kdb{seed};
+	org_db          odb{seed};
 	const long long org_id  = 1;
 	const long long team_id = kdb.create_team("T", org_id);
 	kdb.add_member(team_id, "alice");
