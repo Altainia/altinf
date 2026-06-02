@@ -8,7 +8,8 @@
 // `sub` claim) is the join key used at sign-in; email is kept for display only.
 struct google_identity
 {
-	std::string username;
+	std::string username; // retained denormalized; user_id is the canonical link
+	long long   user_id{0};
 	std::string google_sub;
 	std::string email;
 
@@ -16,6 +17,7 @@ struct google_identity
 	void persist(Action& a)
 	{
 		Wt::Dbo::field(a, username, "username");
+		Wt::Dbo::field(a, user_id, "user_id");
 		Wt::Dbo::field(a, google_sub, "google_sub");
 		Wt::Dbo::field(a, email, "email");
 	}

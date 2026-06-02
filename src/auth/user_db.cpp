@@ -74,6 +74,25 @@ namespace
 		    5,
 		    "add user.deleted_at column",
 		    "ALTER TABLE \"user\" ADD COLUMN \"deleted_at\" text not null default ''"),
+		  // v6: link auth child tables to the user by id. Add user_id and backfill
+		  // from the username; usernames with no surviving user row (orphans from
+		  // pre-soft-delete hard deletes) map to 0 ("unknown"). Username columns are
+		  // retained denormalized during the transition.
+		  db::migrator::migration{
+		    6,
+		    "add user_id to api_token/session_token/google_identity",
+		    [](Wt::Dbo::Session& session) {
+			    for(const char* table: {"api_token", "session_token", "google_identity"})
+			    {
+				    session.execute(std::string{"ALTER TABLE \""} + table +
+				                    "\" ADD COLUMN \"user_id\" bigint not null default 0");
+				    session.execute(
+				      std::string{"UPDATE \""} + table +
+				      "\" SET \"user_id\" = COALESCE("
+				      "(SELECT id FROM \"user\" WHERE \"user\".username = \"" +
+				      table + "\".username), 0)");
+			    }
+		    }},
 		};
 		return migrations;
 	}
@@ -487,13 +506,13 @@ void user_db::delete_token(long long token_id, long long actor_id)
 	  m_dbo.find<api_token>().where("id = ?").bind(token_id).resultList();
 	for(const auto& tok: results)
 	{
-		const auto              owner_id = user_id_for_locked(tok->username);
+		const auto              owner_id = tok->user_id;
 		const auto              name     = tok->name;
 		Wt::Dbo::ptr<api_token> p        = tok;
 		p.remove();
-		if(owner_id)
+		if(owner_id != 0)
 		{
-			record_user_event(*owner_id, actor_id, "token_revoked", {{.field_name = "token", .old_value = name, .new_value = ""}});
+			record_user_event(owner_id, actor_id, "token_revoked", {{.field_name = "token", .old_value = name, .new_value = ""}});
 		}
 	}
 }
@@ -514,12 +533,14 @@ std::string user_db::create_api_token(const std::string& username,
 	const auto raw_token = generate_raw_token();
 	const auto hash      = sha256_hex(raw_token);
 
-	auto tok                 = m_dbo.add(std::make_unique<api_token>());
+	const auto owner_id      = users.begin()->id();
+	auto       tok           = m_dbo.add(std::make_unique<api_token>());
 	tok.modify()->token_hash = hash;
 	tok.modify()->username   = username;
+	tok.modify()->user_id    = owner_id;
 	tok.modify()->name       = name;
 
-	record_user_event(users.begin()->id(), actor_id, "token_created", {{.field_name = "token", .old_value = "", .new_value = name}});
+	record_user_event(owner_id, actor_id, "token_created", {{.field_name = "token", .old_value = "", .new_value = name}});
 
 	return raw_token;
 }
@@ -537,12 +558,38 @@ void user_db::rename_api_token(long long token_id, const std::string& new_name, 
 
 	const auto tok      = *results.begin();
 	const auto old_name = tok->name;
-	const auto owner_id = user_id_for_locked(tok->username);
+	const auto owner_id = tok->user_id;
 	tok.modify()->name  = new_name;
 
-	if(owner_id)
+	if(owner_id != 0)
 	{
-		record_user_event(*owner_id, actor_id, "token_renamed", {{.field_name = "token", .old_value = old_name, .new_value = new_name}});
+		record_user_event(owner_id, actor_id, "token_renamed", {{.field_name = "token", .old_value = old_name, .new_value = new_name}});
+	}
+}
+
+bool user_db::fill_session_by_id(long long user_id, session_data& out)
+{
+	if(user_id == 0)
+	{
+		return false;
+	}
+	try
+	{
+		const Wt::Dbo::ptr<user> u = m_dbo.load<user>(user_id);
+		if(!u->deleted_at.empty())
+		{
+			return false;
+		}
+		out.logged_in    = true;
+		out.user_id      = u.id();
+		out.username     = u->username;
+		out.display_name = u->display_name;
+		out.permissions  = u->permissions;
+		return true;
+	}
+	catch(const Wt::Dbo::ObjectNotFoundException&)
+	{
+		return false;
 	}
 }
 
@@ -558,24 +605,7 @@ bool user_db::verify_api_token(const std::string& raw_token, session_data& out)
 	{
 		return false;
 	}
-
-	const auto tok_username = (*tokens.begin())->username;
-
-	const auto users =
-	  m_dbo.find<user>().where("username = ? and deleted_at = ''").bind(tok_username).resultList();
-	if(users.empty())
-	{
-		return false;
-	}
-
-	const auto found = *users.begin();
-	out.logged_in    = true;
-	out.user_id      = found.id();
-	out.username     = tok_username;
-	out.display_name = found->display_name;
-	out.permissions  = found->permissions;
-
-	return true;
+	return fill_session_by_id((*tokens.begin())->user_id, out);
 }
 
 std::string user_db::create_session_token(const std::string& username)
@@ -595,6 +625,7 @@ std::string user_db::create_session_token(const std::string& username)
 	auto tok                 = m_dbo.add(std::make_unique<session_token>());
 	tok.modify()->token_hash = hash;
 	tok.modify()->username   = username;
+	tok.modify()->user_id    = users.begin()->id();
 
 	return raw_token;
 }
@@ -611,24 +642,7 @@ bool user_db::verify_session_token(const std::string& raw_token, session_data& o
 	{
 		return false;
 	}
-
-	const auto tok_username = (*tokens.begin())->username;
-
-	const auto users =
-	  m_dbo.find<user>().where("username = ? and deleted_at = ''").bind(tok_username).resultList();
-	if(users.empty())
-	{
-		return false;
-	}
-
-	const auto found = *users.begin();
-	out.logged_in    = true;
-	out.user_id      = found.id();
-	out.username     = tok_username;
-	out.display_name = found->display_name;
-	out.permissions  = found->permissions;
-
-	return true;
+	return fill_session_by_id((*tokens.begin())->user_id, out);
 }
 
 void user_db::delete_session_token(const std::string& raw_token)
@@ -656,12 +670,14 @@ void user_db::link_google(const std::string& username,
 	// One link per user: drop any existing row before adding the new one.
 	clear_google_link_locked(username);
 
-	auto link                 = m_dbo.add(std::make_unique<google_identity>());
+	const auto uid            = user_id_for_locked(username);
+	auto       link           = m_dbo.add(std::make_unique<google_identity>());
 	link.modify()->username   = username;
+	link.modify()->user_id    = uid.value_or(0);
 	link.modify()->google_sub = google_sub;
 	link.modify()->email      = email;
 
-	if(const auto uid = user_id_for_locked(username))
+	if(uid)
 	{
 		record_user_event(*uid, actor_id, "google_linked", {{.field_name = "google", .old_value = "", .new_value = email}});
 	}

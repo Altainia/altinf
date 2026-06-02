@@ -233,8 +233,18 @@ TEST_CASE("user_db - upgrades a v2 auth database and gains the audit tables")
 		REQUIRE(legacy_tokens.size() == 1);
 		CHECK(legacy_tokens[0].name == "token-" + std::to_string(legacy_tokens[0].id));
 
-		// The audit tables exist and are usable: a new user records an event.
+		// The audit tables exist and are usable: legacy has no events yet.
 		CHECK(db.history_for_user(*legacy_id).empty());
+
+		// The v6 user_id column exists on the migrated DB: a new token created for
+		// the legacy user round-trips through verification (which loads the user by
+		// its id, not username).
+		const auto   raw = db.create_api_token("legacy", "post-upgrade", *legacy_id);
+		session_data tok_session;
+		REQUIRE(db.verify_api_token(raw, tok_session));
+		CHECK(tok_session.user_id == *legacy_id);
+		CHECK(tok_session.username == "legacy");
+
 		db.create_user("fresh", "pw", permission::none, "Fresh", *legacy_id);
 		const auto fresh_id = db.user_id_for("fresh");
 		REQUIRE(fresh_id);

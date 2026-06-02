@@ -137,6 +137,11 @@ private:
 	// user_id lookup that assumes the caller already holds a transaction.
 	std::optional<long long> user_id_for_locked(const std::string& username);
 
+	// Populate a session by loading the user via its id (the canonical FK target).
+	// Returns false for id 0, a missing row, or a soft-deleted user. Assumes the
+	// caller holds a transaction.
+	bool fill_session_by_id(long long user_id, session_data& out);
+
 	// Remove any Google identity row for the user, unconditionally (no guard, no
 	// audit). Assumes the caller holds a transaction. Used by delete_user.
 	void clear_google_link_locked(const std::string& username);
