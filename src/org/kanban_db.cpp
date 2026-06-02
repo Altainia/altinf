@@ -4,6 +4,8 @@
 #include <Wt/Dbo/backend/Sqlite3.h>
 #include <Wt/WDateTime.h>
 
+#include <tuple>
+
 #include "db/migrator.hpp"
 
 namespace
@@ -13,7 +15,34 @@ namespace
 	// task, comment and settings structs.
 	const std::vector<db::migrator::migration>& kanban_migrations()
 	{
-		static const std::vector<db::migrator::migration> migrations{};
+		static const std::vector<db::migrator::migration> migrations{
+		  // v2: link kanban user-reference columns to the user by id. Each table's
+		  // username/actor/author column gains a matching *_id, backfilled from the
+		  // shared user table (auth migrations have already run). Orphans map to 0.
+		  // The text columns are retained denormalized during the transition.
+		  db::migrator::migration{
+		    2,
+		    "add user id columns to kanban user-reference tables",
+		    [](Wt::Dbo::Session& session) {
+			    // {table, source text column, new id column}
+			    const std::tuple<const char*, const char*, const char*> targets[] = {
+			      {"team_member", "username", "user_id"},
+			      {"task_assignee", "username", "user_id"},
+			      {"task_event", "actor", "actor_id"},
+			      {"task_comment", "author", "author_id"},
+			      {"task_comment_event", "actor", "actor_id"},
+			      {"team_settings_event", "actor", "actor_id"},
+			    };
+			    for(const auto& [table, src, id_col]: targets)
+			    {
+				    session.execute(std::string{"ALTER TABLE \""} + table + "\" ADD COLUMN \"" +
+				                    id_col + "\" bigint not null default 0");
+				    session.execute(std::string{"UPDATE \""} + table + "\" SET \"" + id_col +
+				                    "\" = COALESCE((SELECT id FROM \"user\" WHERE \"user\".username = \"" +
+				                    table + "\".\"" + src + "\"), 0)");
+			    }
+		    }},
+		};
 		return migrations;
 	}
 } // namespace
@@ -206,6 +235,7 @@ void kanban_db::add_member(long long team_id, const std::string& username)
 	auto p               = m_dbo.add(std::make_unique<team_member_record>());
 	p.modify()->team_id  = team_id;
 	p.modify()->username = username;
+	p.modify()->user_id  = user_lookup::user_id_for(m_dbo, username);
 	p.modify()->is_lead  = 0;
 }
 
@@ -487,6 +517,7 @@ bool kanban_db::add_assignee(long long          task_id,
 	auto r               = m_dbo.add(std::make_unique<task_assignee_record>());
 	r.modify()->task_id  = task_id;
 	r.modify()->username = username;
+	r.modify()->user_id  = user_lookup::user_id_for(m_dbo, username);
 
 	record_event(task_id, actor, "updated", {{"assignees", {}, username + " added"}});
 	return true;
@@ -763,6 +794,7 @@ void kanban_db::record_event(long long                                   task_id
 	auto ev                  = m_dbo.add(std::make_unique<task_event_record>());
 	ev.modify()->task_id     = task_id;
 	ev.modify()->actor       = actor;
+	ev.modify()->actor_id    = user_lookup::user_id_for(m_dbo, actor);
 	ev.modify()->occurred_at = ts;
 	ev.modify()->event_type  = event_type;
 	m_dbo.flush();
@@ -788,6 +820,7 @@ void kanban_db::record_comment_event(long long          comment_id,
 	auto ev                    = m_dbo.add(std::make_unique<task_comment_event_record>());
 	ev.modify()->comment_id    = comment_id;
 	ev.modify()->actor         = actor;
+	ev.modify()->actor_id      = user_lookup::user_id_for(m_dbo, actor);
 	ev.modify()->occurred_at   = ts;
 	ev.modify()->event_type    = event_type;
 	ev.modify()->body_snapshot = body_snapshot;
@@ -925,6 +958,7 @@ void kanban_db::set_team_settings(const team_settings_entry& s,
 		ev.modify()->org_id      = s.org_id;
 		ev.modify()->team_id     = s.team_id;
 		ev.modify()->actor       = actor;
+		ev.modify()->actor_id    = user_lookup::user_id_for(m_dbo, actor);
 		ev.modify()->occurred_at = now;
 		ev.modify()->field_name  = field;
 		ev.modify()->old_value   = old_v;
@@ -1018,6 +1052,7 @@ long long kanban_db::add_comment(long long          task_id,
 	auto p                 = m_dbo.add(std::make_unique<task_comment_record>());
 	p.modify()->task_id    = task_id;
 	p.modify()->author     = author;
+	p.modify()->author_id  = user_lookup::user_id_for(m_dbo, author);
 	p.modify()->body       = body;
 	p.modify()->created_at = ts;
 	p.modify()->is_deleted = 0;

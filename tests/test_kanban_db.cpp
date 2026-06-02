@@ -1,9 +1,94 @@
+#include <Wt/Dbo/Dbo.h>
+#include <Wt/Dbo/Transaction.h>
+#include <Wt/Dbo/backend/Sqlite3.h>
 #include <Wt/WDate.h>
+#include <unistd.h>
 
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
+#include <filesystem>
 
 #include "org/kanban_db.hpp"
+
+TEST_CASE("kanban_db - v2 migration backfills user/actor/author id columns")
+{
+	const auto path = (std::filesystem::temp_directory_path() /
+	                   ("altinf_kanban_mig_" + std::to_string(::getpid()) + ".db"))
+	                    .string();
+	std::filesystem::remove(path);
+
+	// Hand-build a pre-v2 kanban schema (text user columns, no id columns) plus a
+	// minimal user table, stamp kanban at the baseline.
+	{
+		Wt::Dbo::Session s;
+		s.setConnection(std::make_unique<Wt::Dbo::backend::Sqlite3>(path));
+		Wt::Dbo::Transaction t{s};
+		s.execute(
+		  "CREATE TABLE \"user\" (\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, \"username\" text not null, "
+		  "\"display_name\" text not null, \"password_hash\" text not null, "
+		  "\"permissions\" bigint not null, \"deleted_at\" text not null default '')");
+		s.execute(
+		  "INSERT INTO \"user\" (version, username, display_name, password_hash, "
+		  "permissions, deleted_at) VALUES (0, 'alice', 'Alice', '', 0, '')");
+		s.execute(
+		  "CREATE TABLE \"team_member\" (\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, \"team_id\" bigint not null, "
+		  "\"username\" text not null, \"is_lead\" integer not null)");
+		s.execute(
+		  "CREATE TABLE \"task_event\" (\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, \"task_id\" bigint not null, "
+		  "\"actor\" text not null, \"occurred_at\" text not null, \"event_type\" text not null)");
+		s.execute(
+		  "CREATE TABLE \"task_comment\" (\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, \"task_id\" bigint not null, \"author\" text not null, "
+		  "\"body\" text not null, \"created_at\" text not null, \"is_deleted\" integer not null)");
+		// The other baseline tables the v2 migration also alters (a real v1 DB has
+		// them); created empty here so the ALTERs succeed.
+		s.execute(
+		  "CREATE TABLE \"task_assignee\" (\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, \"task_id\" bigint not null, \"username\" text not null)");
+		s.execute(
+		  "CREATE TABLE \"task_comment_event\" (\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, \"comment_id\" bigint not null, \"actor\" text not null, "
+		  "\"occurred_at\" text not null, \"event_type\" text not null, \"body_snapshot\" text not null)");
+		s.execute(
+		  "CREATE TABLE \"team_settings_event\" (\"id\" integer primary key autoincrement, "
+		  "\"version\" integer not null, \"org_id\" bigint not null, \"team_id\" bigint not null, "
+		  "\"actor\" text not null, \"occurred_at\" text not null, \"field_name\" text not null, "
+		  "\"old_value\" text not null, \"new_value\" text not null)");
+		s.execute(
+		  "INSERT INTO \"team_member\" (version, team_id, username, is_lead) "
+		  "VALUES (0, 1, 'alice', 1)");
+		s.execute(
+		  "INSERT INTO \"task_event\" (version, task_id, actor, occurred_at, event_type) "
+		  "VALUES (0, 1, 'alice', '2026-01-01T00:00:00Z', 'created')");
+		s.execute(
+		  "INSERT INTO \"task_comment\" (version, task_id, author, body, created_at, is_deleted) "
+		  "VALUES (0, 1, 'alice', 'hi', '2026-01-01T00:00:00Z', 0)");
+		s.execute("CREATE TABLE schema_version (domain text primary key, version integer not null)");
+		s.execute("INSERT INTO schema_version (domain, version) VALUES ('kanban', 1)");
+		t.commit();
+	}
+
+	// Constructing kanban_db runs the v2 migration (creates the remaining baseline
+	// tables it maps, and backfills the id columns on the pre-existing rows).
+	{
+		kanban_db db{path};
+	}
+
+	{
+		Wt::Dbo::Session s;
+		s.setConnection(std::make_unique<Wt::Dbo::backend::Sqlite3>(path));
+		Wt::Dbo::Transaction t{s};
+		const auto           uid = s.query<long long>("select id from \"user\" where username='alice'").resultValue();
+		CHECK(s.query<long long>("select user_id from \"team_member\" where username='alice'").resultValue() == uid);
+		CHECK(s.query<long long>("select actor_id from \"task_event\" where actor='alice'").resultValue() == uid);
+		CHECK(s.query<long long>("select author_id from \"task_comment\" where author='alice'").resultValue() == uid);
+	}
+
+	std::filesystem::remove(path);
+}
 
 static kanban_task_entry make_task(long long          team_id,
                                    const std::string& title,

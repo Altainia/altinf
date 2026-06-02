@@ -27,7 +27,8 @@ struct team_record
 struct team_member_record
 {
 	long long   team_id{0};
-	std::string username;
+	std::string username; // retained denormalized; user_id is the canonical link
+	long long   user_id{0};
 	int         is_lead{0};
 
 	template<class Action>
@@ -35,6 +36,7 @@ struct team_member_record
 	{
 		Wt::Dbo::field(a, team_id, "team_id");
 		Wt::Dbo::field(a, username, "username");
+		Wt::Dbo::field(a, user_id, "user_id");
 		Wt::Dbo::field(a, is_lead, "is_lead");
 	}
 };
@@ -85,7 +87,8 @@ struct kanban_task_record
 struct task_event_record
 {
 	long long   task_id{0};
-	std::string actor;
+	std::string actor; // retained denormalized; actor_id is the canonical link
+	long long   actor_id{0};
 	std::string occurred_at;
 	std::string event_type;
 
@@ -94,6 +97,7 @@ struct task_event_record
 	{
 		Wt::Dbo::field(a, task_id, "task_id");
 		Wt::Dbo::field(a, actor, "actor");
+		Wt::Dbo::field(a, actor_id, "actor_id");
 		Wt::Dbo::field(a, occurred_at, "occurred_at");
 		Wt::Dbo::field(a, event_type, "event_type");
 	}
@@ -102,13 +106,15 @@ struct task_event_record
 struct task_assignee_record
 {
 	long long   task_id{0};
-	std::string username;
+	std::string username; // retained denormalized; user_id is the canonical link
+	long long   user_id{0};
 
 	template<class Action>
 	void persist(Action& a)
 	{
 		Wt::Dbo::field(a, task_id, "task_id");
 		Wt::Dbo::field(a, username, "username");
+		Wt::Dbo::field(a, user_id, "user_id");
 	}
 };
 
@@ -167,7 +173,8 @@ struct team_settings_event_record
 {
 	long long   org_id{0};
 	long long   team_id{0};
-	std::string actor;
+	std::string actor; // retained denormalized; actor_id is the canonical link
+	long long   actor_id{0};
 	std::string occurred_at;
 	std::string field_name;
 	std::string old_value;
@@ -179,6 +186,7 @@ struct team_settings_event_record
 		Wt::Dbo::field(a, org_id, "org_id");
 		Wt::Dbo::field(a, team_id, "team_id");
 		Wt::Dbo::field(a, actor, "actor");
+		Wt::Dbo::field(a, actor_id, "actor_id");
 		Wt::Dbo::field(a, occurred_at, "occurred_at");
 		Wt::Dbo::field(a, field_name, "field_name");
 		Wt::Dbo::field(a, old_value, "old_value");
@@ -257,7 +265,8 @@ struct task_event_entry
 struct task_comment_record
 {
 	long long   task_id{0};
-	std::string author;
+	std::string author; // retained denormalized; author_id is the canonical link
+	long long   author_id{0};
 	std::string body;
 	std::string created_at;
 	int         is_deleted{0};
@@ -267,6 +276,7 @@ struct task_comment_record
 	{
 		Wt::Dbo::field(a, task_id, "task_id");
 		Wt::Dbo::field(a, author, "author");
+		Wt::Dbo::field(a, author_id, "author_id");
 		Wt::Dbo::field(a, body, "body");
 		Wt::Dbo::field(a, created_at, "created_at");
 		Wt::Dbo::field(a, is_deleted, "is_deleted");
@@ -276,7 +286,8 @@ struct task_comment_record
 struct task_comment_event_record
 {
 	long long   comment_id{0};
-	std::string actor;
+	std::string actor; // retained denormalized; actor_id is the canonical link
+	long long   actor_id{0};
 	std::string occurred_at;
 	std::string event_type;
 	std::string body_snapshot;
@@ -286,6 +297,7 @@ struct task_comment_event_record
 	{
 		Wt::Dbo::field(a, comment_id, "comment_id");
 		Wt::Dbo::field(a, actor, "actor");
+		Wt::Dbo::field(a, actor_id, "actor_id");
 		Wt::Dbo::field(a, occurred_at, "occurred_at");
 		Wt::Dbo::field(a, event_type, "event_type");
 		Wt::Dbo::field(a, body_snapshot, "body_snapshot");
