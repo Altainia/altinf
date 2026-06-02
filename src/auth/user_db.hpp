@@ -67,6 +67,10 @@ public:
 	// Full audit history for a user, newest first.
 	std::vector<user_event_entry> history_for_user(long long user_id);
 
+	// Display name for a user id, for rendering audit actors: "system" for id 0,
+	// the display name (or username when blank) for a known user, or "(unknown)".
+	std::string display_name_for_id(long long user_id);
+
 	// Soft-delete: the row is retained (so audit/history references resolve and
 	// the username stays taken), but login is disabled and tokens/Google links
 	// are dropped. Records a "deleted" event.

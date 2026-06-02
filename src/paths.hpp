@@ -17,10 +17,11 @@ namespace paths
 	inline constexpr std::string_view admin_prefix = "/admin/";
 
 	// ── Common action segments ────────────────────────────────────────────────
-	inline constexpr std::string_view list_seg = "list";
-	inline constexpr std::string_view view_seg = "view";
-	inline constexpr std::string_view edit_seg = "edit";
-	inline constexpr std::string_view new_seg  = "new";
+	inline constexpr std::string_view list_seg    = "list";
+	inline constexpr std::string_view view_seg    = "view";
+	inline constexpr std::string_view edit_seg    = "edit";
+	inline constexpr std::string_view new_seg     = "new";
+	inline constexpr std::string_view history_seg = "history";
 
 	// ── Fixed paths ───────────────────────────────────────────────────────────
 	inline constexpr std::string_view login_path         = "/login";
@@ -116,6 +117,10 @@ namespace paths
 	inline std::string account_edit(std::string_view username)
 	{
 		return std::format("{}account/{}/{}", admin_prefix, edit_seg, username);
+	}
+	inline std::string account_history(std::string_view username)
+	{
+		return std::format("{}account/{}/{}", admin_prefix, history_seg, username);
 	}
 
 	// Admin — org

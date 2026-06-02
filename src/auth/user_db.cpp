@@ -275,6 +275,24 @@ std::optional<long long> user_db::user_id_for(const std::string& username)
 	return user_id_for_locked(username);
 }
 
+std::string user_db::display_name_for_id(long long user_id)
+{
+	if(user_id == 0)
+	{
+		return "system";
+	}
+	Wt::Dbo::Transaction t{m_dbo};
+	try
+	{
+		const Wt::Dbo::ptr<user> u = m_dbo.load<user>(user_id);
+		return u->display_name.empty() ? u->username : u->display_name;
+	}
+	catch(const Wt::Dbo::ObjectNotFoundException&)
+	{
+		return "(unknown)";
+	}
+}
+
 std::optional<long long> user_db::user_id_for_locked(const std::string& username)
 {
 	const auto results =

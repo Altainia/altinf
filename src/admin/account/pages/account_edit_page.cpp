@@ -1,17 +1,17 @@
 #include "account_edit_page.hpp"
 
 #include <Wt/WApplication.h>
-#include <Wt/WDialog.h>
-#include <Wt/WLineEdit.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WText.h>
 
 #include "auth/permission.hpp"
+#include "auth/widgets/token_manager_widget.hpp"
 #include "paths.hpp"
 #include "widgets/live_hub.hpp"
 
-account_edit_page::account_edit_page(user_db* db, const user_entry* existing):
-  m_db{db}
+account_edit_page::account_edit_page(user_db* db, const session_data& session, const user_entry* existing):
+  m_db{db},
+  m_session{session}
 {
 	if(existing)
 	{
@@ -70,6 +70,12 @@ account_edit_page::account_edit_page(user_db* db, const user_entry* existing):
 	m_perm_org_create = perms_section->addNew<Wt::WCheckBox>("Create Orgs");
 	m_perm_org_create->setChecked(cur_perms.has_any(permission::org_create));
 
+	m_perm_api_token = perms_section->addNew<Wt::WCheckBox>("API Tokens");
+	m_perm_api_token->setChecked(cur_perms.has_any(permission::api_token));
+
+	m_perm_view_history = perms_section->addNew<Wt::WCheckBox>("View History");
+	m_perm_view_history->setChecked(cur_perms.has_any(permission::view_user_history));
+
 	m_status = form->addNew<Wt::WText>("", Wt::TextFormat::Plain);
 	m_status->setStyleClass("editor-status");
 
@@ -88,16 +94,48 @@ account_edit_page::account_edit_page(user_db* db, const user_entry* existing):
 
 	if(m_existing)
 	{
-		auto* tokens_section = addNew<Wt::WContainerWidget>();
-		tokens_section->setStyleClass("account-tokens-section");
-		tokens_section->addNew<Wt::WText>("<h3>API Tokens</h3>", Wt::TextFormat::UnsafeXHTML);
+		const auto target = m_existing->username;
 
-		m_tokens_container = tokens_section->addNew<Wt::WContainerWidget>();
-		build_token_list();
+		// Google: an admin may unset another user's Google link, but only while a
+		// password remains so the user is not locked out.
+		if(m_db->google_email_for(target))
+		{
+			auto* google_section = addNew<Wt::WContainerWidget>();
+			google_section->setStyleClass("vertical-section");
+			google_section->addNew<Wt::WText>("<h3>Google</h3>", Wt::TextFormat::UnsafeXHTML);
 
-		auto* gen_btn = tokens_section->addNew<Wt::WPushButton>("Generate New Token");
-		gen_btn->setStyleClass("editor-btn");
-		gen_btn->clicked().connect(this, &account_edit_page::generate_token);
+			if(m_db->has_password(target))
+			{
+				auto* unset = google_section->addNew<Wt::WPushButton>("Unset Google");
+				unset->setStyleClass("editor-btn editor-btn-danger");
+				unset->clicked().connect([this, target, google_section] {
+					m_db->unlink_google(target, m_session.user_id);
+					live_hub::instance().broadcast("accounts");
+					google_section->hide();
+				});
+			}
+			else
+			{
+				google_section
+				  ->addNew<Wt::WText>(
+				    "This user signs in with Google only; set a password "
+				    "before unsetting it.",
+				    Wt::TextFormat::Plain)
+				  ->setStyleClass("account-note");
+			}
+		}
+
+		// History: visible to admins with the view_user_history permission.
+		if(m_session.permissions.has_any(permission::view_user_history))
+		{
+			auto* hist_btn = addNew<Wt::WPushButton>("View history");
+			hist_btn->setStyleClass("editor-btn");
+			hist_btn->clicked().connect([target] {
+				Wt::WApplication::instance()->setInternalPath(paths::account_history(target), true);
+			});
+		}
+
+		addNew<token_manager_widget>(*m_db, target, m_session.user_id);
 	}
 }
 
@@ -145,13 +183,21 @@ void account_edit_page::save()
 	{
 		perms |= permission::org_create;
 	}
+	if(m_perm_api_token->isChecked())
+	{
+		perms |= permission::api_token;
+	}
+	if(m_perm_view_history->isChecked())
+	{
+		perms |= permission::view_user_history;
+	}
 
 	if(m_existing)
 	{
-		m_db->update_user(username, display_name, perms);
+		m_db->update_user(username, display_name, perms, m_session.user_id);
 		if(!password.empty())
 		{
-			m_db->set_password(username, password);
+			m_db->set_password(username, password, m_session.user_id);
 		}
 	}
 	else
@@ -161,73 +207,9 @@ void account_edit_page::save()
 			m_status->setText("Username already exists.");
 			return;
 		}
-		m_db->create_user(username, password, perms, display_name);
+		m_db->create_user(username, password, perms, display_name, m_session.user_id);
 	}
 
 	live_hub::instance().broadcast("accounts");
 	saved.emit();
-}
-
-void account_edit_page::build_token_list()
-{
-	m_tokens_container->clear();
-
-	const auto tokens = m_db->list_tokens(m_existing->username);
-
-	if(tokens.empty())
-	{
-		auto* empty = m_tokens_container->addNew<Wt::WText>("No tokens.", Wt::TextFormat::Plain);
-		empty->setStyleClass("account-tokens-empty");
-		return;
-	}
-
-	for(const auto& tok: tokens)
-	{
-		auto* row = m_tokens_container->addNew<Wt::WContainerWidget>();
-		row->setStyleClass("account-token-row");
-
-		const auto display   = tok.token_hash.substr(0, 12) + "...";
-		auto*      hash_text = row->addNew<Wt::WText>(display, Wt::TextFormat::Plain);
-		hash_text->setStyleClass("account-token-hash");
-
-		const long long token_id = tok.id;
-		auto*           rev_btn  = row->addNew<Wt::WPushButton>("Revoke");
-		rev_btn->setStyleClass("link-action-btn link-delete-btn");
-		rev_btn->clicked().connect([this, token_id] {
-			auto* d = new Wt::WDialog("Revoke Token");
-			d->contents()->addNew<Wt::WText>("Revoke this API token? This cannot be undone.",
-			                                 Wt::TextFormat::Plain);
-			auto* yes = d->footer()->addNew<Wt::WPushButton>("Revoke");
-			yes->setStyleClass("editor-btn");
-			auto* no = d->footer()->addNew<Wt::WPushButton>("Cancel");
-			no->setStyleClass("editor-btn editor-btn-cancel");
-			yes->clicked().connect([this, d, token_id] {
-				d->accept();
-				m_db->delete_token(token_id);
-				build_token_list();
-			});
-			no->clicked().connect([d] { d->reject(); });
-			d->finished().connect([d](Wt::DialogCode) { delete d; });
-			d->show();
-		});
-	}
-}
-
-void account_edit_page::generate_token()
-{
-	const auto raw_token = m_db->create_api_token(m_existing->username, "token");
-	build_token_list();
-
-	auto* d = new Wt::WDialog("New API Token");
-	d->contents()->addNew<Wt::WText>(
-	  "<p>Copy this token now — it will <strong>not</strong> be shown again.</p>",
-	  Wt::TextFormat::UnsafeXHTML);
-	auto* field = d->contents()->addNew<Wt::WLineEdit>(raw_token);
-	field->setReadOnly(true);
-	field->setStyleClass("editor-field token-display-field");
-	auto* ok = d->footer()->addNew<Wt::WPushButton>("Done");
-	ok->setStyleClass("editor-btn");
-	ok->clicked().connect([d] { d->accept(); });
-	d->finished().connect([d](Wt::DialogCode) { delete d; });
-	d->show();
 }

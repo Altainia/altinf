@@ -11,6 +11,7 @@
 #include <stdexcept>
 
 #include "admin/account/pages/account_edit_page.hpp"
+#include "admin/account/pages/account_history_page.hpp"
 #include "admin/account/pages/account_list_page.hpp"
 #include "auth/pages/account_page.hpp"
 #include "auth/pages/login_page.hpp"
@@ -778,7 +779,7 @@ void altinf_app::handle_admin(std::string_view rem)
 				}
 				const auto del_orgs     = m_org_db->orgs_for_user(username);
 				const auto del_team_ids = m_kanban_db->team_ids_for_user(username);
-				m_user_db->delete_user(username);
+				m_user_db->delete_user(username, m_session.user_id);
 				m_org_db->remove_user_from_all_orgs(username);
 				m_kanban_db->remove_member_from_all_teams(username);
 				live_hub::instance().broadcast("accounts");
@@ -795,12 +796,12 @@ void altinf_app::handle_admin(std::string_view rem)
 		}
 		else if(seg == paths::new_seg)
 		{
-			auto* p = m_content->addNew<account_edit_page>(m_user_db.get(), nullptr);
+			auto* p = m_content->addNew<account_edit_page>(m_user_db.get(), m_session, nullptr);
 			p->saved.connect([this] { setInternalPath(paths::account_list(), true); });
 		}
 		else if(seg == paths::edit_seg)
 		{
-			const auto users = m_user_db->list_users();
+			const auto users = m_user_db->list_users(/*include_deleted=*/true);
 			const auto it    = std::ranges::find(users, rem, &user_entry::username);
 			if(it == users.end())
 			{
@@ -808,8 +809,23 @@ void altinf_app::handle_admin(std::string_view rem)
 				return;
 			}
 			m_edit_user = *it;
-			auto* p     = m_content->addNew<account_edit_page>(m_user_db.get(), &(*m_edit_user));
+			auto* p     = m_content->addNew<account_edit_page>(m_user_db.get(), m_session, &(*m_edit_user));
 			p->saved.connect([this] { setInternalPath(paths::account_list(), true); });
+		}
+		else if(seg == paths::history_seg)
+		{
+			if(!m_session.permissions.has_any(permission::view_user_history))
+			{
+				show_forbidden();
+				return;
+			}
+			const std::string history_user{rem};
+			if(!m_user_db->user_id_for(history_user))
+			{
+				show_not_found("User not found.");
+				return;
+			}
+			m_content->addNew<account_history_page>(*m_user_db, history_user);
 		}
 		else
 		{

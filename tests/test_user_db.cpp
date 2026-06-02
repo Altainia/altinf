@@ -192,6 +192,22 @@ TEST_CASE("user_db - create_user records a created event")
 	CHECK(hist[0].actor_id == 0);
 }
 
+TEST_CASE("user_db - display_name_for_id resolves names, system, and unknown")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none, "Alice Smith");
+	db.create_user("bob", "pw", permission::none, ""); // no display name
+	const auto alice_id = db.user_id_for("alice");
+	const auto bob_id   = db.user_id_for("bob");
+	REQUIRE(alice_id);
+	REQUIRE(bob_id);
+
+	CHECK(db.display_name_for_id(*alice_id) == "Alice Smith");
+	CHECK(db.display_name_for_id(*bob_id) == "bob"); // falls back to username
+	CHECK(db.display_name_for_id(0) == "system");
+	CHECK(db.display_name_for_id(999999) == "(unknown)");
+}
+
 TEST_CASE("user_db - history_for_user is empty for a user with no events")
 {
 	user_db db{":memory:"};
