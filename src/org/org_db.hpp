@@ -66,7 +66,12 @@ private:
 
 	int active_lead_count(long long org_id);
 
-	static org_entry          to_entry(const Wt::Dbo::ptr<org_record>&);
-	static org_member_entry   to_entry(const Wt::Dbo::ptr<org_member_record>&);
-	static notification_entry to_entry(const Wt::Dbo::ptr<notification_record>&);
+	// username <-> user_id resolution against the shared user table.
+	long long   uid_of(const std::string& username);
+	std::string username_of(long long user_id);
+
+	static org_entry to_entry(const Wt::Dbo::ptr<org_record>&);
+	// Non-static: resolve the member/recipient username from user_id.
+	org_member_entry   to_entry(const Wt::Dbo::ptr<org_member_record>&);
+	notification_entry to_entry(const Wt::Dbo::ptr<notification_record>&);
 };

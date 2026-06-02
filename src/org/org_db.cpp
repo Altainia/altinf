@@ -34,6 +34,19 @@ namespace
 				      table + "\".username), 0)");
 			    }
 		    }},
+		  // v3: contract phase — user_id is now the sole link, drop the
+		  // denormalized username columns.
+		  db::migrator::migration{
+		    3,
+		    "drop username from org_member/notification/user_pref/user_org_pref",
+		    [](Wt::Dbo::Session& session) {
+			    for(const char* table:
+			        {"org_member", "notification", "user_pref", "user_org_pref"})
+			    {
+				    session.execute(std::string{"ALTER TABLE \""} + table +
+				                    "\" DROP COLUMN \"username\"");
+			    }
+		    }},
 		};
 		return migrations;
 	}
@@ -56,7 +69,17 @@ user_lookup::info org_db::resolve_user(const std::string& username)
 	return user_lookup::resolve(m_dbo, username);
 }
 
-// ---- static helpers ----
+long long org_db::uid_of(const std::string& username)
+{
+	return user_lookup::user_id_for(m_dbo, username);
+}
+
+std::string org_db::username_of(long long user_id)
+{
+	return user_lookup::username_for_id(m_dbo, user_id);
+}
+
+// ---- helpers ----
 
 org_entry org_db::to_entry(const Wt::Dbo::ptr<org_record>& p)
 {
@@ -68,7 +91,7 @@ org_member_entry org_db::to_entry(const Wt::Dbo::ptr<org_member_record>& p)
 	return {
 	  .id       = p.id(),
 	  .org_id   = p->org_id,
-	  .username = p->username,
+	  .username = username_of(p->user_id),
 	  .is_lead  = p->is_lead != 0,
 	  .status   = p->status,
 	};
@@ -78,7 +101,7 @@ notification_entry org_db::to_entry(const Wt::Dbo::ptr<notification_record>& p)
 {
 	return {
 	  .id         = p.id(),
-	  .username   = p->username,
+	  .username   = username_of(p->user_id),
 	  .type       = p->type,
 	  .payload    = p->payload,
 	  .is_read    = p->is_read != 0,
@@ -98,12 +121,11 @@ long long org_db::create_org(const std::string& name, const std::string& creator
 	const long long org_id = p.id();
 
 	// Creator becomes an active lead immediately — no invite needed.
-	auto m               = m_dbo.add(std::make_unique<org_member_record>());
-	m.modify()->org_id   = org_id;
-	m.modify()->username = creator_username;
-	m.modify()->user_id  = user_lookup::user_id_for(m_dbo, creator_username);
-	m.modify()->is_lead  = 1;
-	m.modify()->status   = "active";
+	auto m              = m_dbo.add(std::make_unique<org_member_record>());
+	m.modify()->org_id  = org_id;
+	m.modify()->user_id = uid_of(creator_username);
+	m.modify()->is_lead = 1;
+	m.modify()->status  = "active";
 
 	return org_id;
 }
@@ -148,12 +170,13 @@ int org_db::active_lead_count(long long org_id)
 void org_db::invite_to_org(long long org_id, const std::string& username, bool as_lead)
 {
 	Wt::Dbo::Transaction t{m_dbo};
+	const long long      uid = uid_of(username);
 
 	// If a row already exists (pending or declined), reset it and re-notify.
 	const auto existing = m_dbo.find<org_member_record>()
-	                        .where("org_id = ? AND username = ?")
+	                        .where("org_id = ? AND user_id = ?")
 	                        .bind(org_id)
-	                        .bind(username)
+	                        .bind(uid)
 	                        .resultList();
 
 	if(!existing.empty())
@@ -168,12 +191,11 @@ void org_db::invite_to_org(long long org_id, const std::string& username, bool a
 	}
 	else
 	{
-		auto row               = m_dbo.add(std::make_unique<org_member_record>());
-		row.modify()->org_id   = org_id;
-		row.modify()->username = username;
-		row.modify()->user_id  = user_lookup::user_id_for(m_dbo, username);
-		row.modify()->is_lead  = as_lead ? 1 : 0;
-		row.modify()->status   = "pending";
+		auto row              = m_dbo.add(std::make_unique<org_member_record>());
+		row.modify()->org_id  = org_id;
+		row.modify()->user_id = uid;
+		row.modify()->is_lead = as_lead ? 1 : 0;
+		row.modify()->status  = "pending";
 	}
 
 	// Look up org name for the notification payload.
@@ -182,12 +204,11 @@ void org_db::invite_to_org(long long org_id, const std::string& username, bool a
 	const std::string org_name =
 	  org_results.empty() ? "" : (*org_results.begin())->name;
 
-	auto n               = m_dbo.add(std::make_unique<notification_record>());
-	n.modify()->username = username;
-	n.modify()->user_id  = user_lookup::user_id_for(m_dbo, username);
-	n.modify()->type     = "org_invite";
-	n.modify()->payload  = make_org_invite_payload(org_id, org_name);
-	n.modify()->is_read  = 0;
+	auto n              = m_dbo.add(std::make_unique<notification_record>());
+	n.modify()->user_id = uid;
+	n.modify()->type    = "org_invite";
+	n.modify()->payload = make_org_invite_payload(org_id, org_name);
+	n.modify()->is_read = 0;
 	n.modify()->created_at =
 	  Wt::WDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss").toUTF8();
 }
@@ -196,9 +217,9 @@ void org_db::accept_invite(long long org_id, const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results = m_dbo.find<org_member_record>()
-	                       .where("org_id = ? AND username = ? AND status = 'pending'")
+	                       .where("org_id = ? AND user_id = ? AND status = 'pending'")
 	                       .bind(org_id)
-	                       .bind(username)
+	                       .bind(uid_of(username))
 	                       .resultList();
 	if(results.empty())
 	{
@@ -211,9 +232,9 @@ void org_db::decline_invite(long long org_id, const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results = m_dbo.find<org_member_record>()
-	                       .where("org_id = ? AND username = ? AND status = 'pending'")
+	                       .where("org_id = ? AND user_id = ? AND status = 'pending'")
 	                       .bind(org_id)
-	                       .bind(username)
+	                       .bind(uid_of(username))
 	                       .resultList();
 	if(results.empty())
 	{
@@ -226,9 +247,9 @@ bool org_db::remove_org_member(long long org_id, const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results = m_dbo.find<org_member_record>()
-	                       .where("org_id = ? AND username = ?")
+	                       .where("org_id = ? AND user_id = ?")
 	                       .bind(org_id)
-	                       .bind(username)
+	                       .bind(uid_of(username))
 	                       .resultList();
 	if(results.empty())
 	{
@@ -261,8 +282,8 @@ void org_db::rescind_invite_notification(long long org_id, const std::string& us
 
 	// Find the unread org_invite notification for this user+org and rewrite payload.
 	const auto notifs = m_dbo.find<notification_record>()
-	                      .where("username = ? AND type = 'org_invite' AND is_read = 0")
-	                      .bind(username)
+	                      .where("user_id = ? AND type = 'org_invite' AND is_read = 0")
+	                      .bind(uid_of(username))
 	                      .resultList();
 	for(const auto& n: notifs)
 	{
@@ -278,10 +299,15 @@ void org_db::rescind_invite_notification(long long org_id, const std::string& us
 void org_db::remove_user_from_all_orgs(const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};
+	const long long      uid = uid_of(username);
+	if(uid == 0)
+	{
+		return;
+	}
 
 	const auto memberships = m_dbo.find<org_member_record>()
-	                           .where("username = ?")
-	                           .bind(username)
+	                           .where("user_id = ?")
+	                           .bind(uid)
 	                           .resultList();
 	for(const auto& r: memberships)
 	{
@@ -290,8 +316,8 @@ void org_db::remove_user_from_all_orgs(const std::string& username)
 	}
 
 	const auto notifs = m_dbo.find<notification_record>()
-	                      .where("username = ?")
-	                      .bind(username)
+	                      .where("user_id = ?")
+	                      .bind(uid)
 	                      .resultList();
 	for(const auto& r: notifs)
 	{
@@ -304,9 +330,9 @@ bool org_db::set_org_lead(long long org_id, const std::string& username, bool is
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results = m_dbo.find<org_member_record>()
-	                       .where("org_id = ? AND username = ? AND status = 'active'")
+	                       .where("org_id = ? AND user_id = ? AND status = 'active'")
 	                       .bind(org_id)
-	                       .bind(username)
+	                       .bind(uid_of(username))
 	                       .resultList();
 	if(results.empty())
 	{
@@ -329,9 +355,9 @@ bool org_db::is_org_lead(long long org_id, const std::string& username)
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results =
 	  m_dbo.find<org_member_record>()
-	    .where("org_id = ? AND username = ? AND is_lead = 1 AND status = 'active'")
+	    .where("org_id = ? AND user_id = ? AND is_lead = 1 AND status = 'active'")
 	    .bind(org_id)
-	    .bind(username)
+	    .bind(uid_of(username))
 	    .resultList();
 	return !results.empty();
 }
@@ -341,9 +367,9 @@ bool org_db::is_org_member(long long org_id, const std::string& username)
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results =
 	  m_dbo.find<org_member_record>()
-	    .where("org_id = ? AND username = ? AND status = 'active'")
+	    .where("org_id = ? AND user_id = ? AND status = 'active'")
 	    .bind(org_id)
-	    .bind(username)
+	    .bind(uid_of(username))
 	    .resultList();
 	return !results.empty();
 }
@@ -355,7 +381,7 @@ std::vector<org_member_entry> org_db::org_members(long long org_id)
 	  m_dbo.find<org_member_record>()
 	    .where("org_id = ? AND status = 'active'")
 	    .bind(org_id)
-	    .orderBy("username")
+	    .orderBy("user_id")
 	    .resultList();
 	std::vector<org_member_entry> out;
 	for(const auto& p: results)
@@ -372,7 +398,7 @@ std::vector<org_member_entry> org_db::org_pending(long long org_id)
 	  m_dbo.find<org_member_record>()
 	    .where("org_id = ? AND status = 'pending'")
 	    .bind(org_id)
-	    .orderBy("username")
+	    .orderBy("user_id")
 	    .resultList();
 	std::vector<org_member_entry> out;
 	for(const auto& p: results)
@@ -387,8 +413,8 @@ std::vector<org_entry> org_db::orgs_for_user(const std::string& username)
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           memberships =
 	  m_dbo.find<org_member_record>()
-	    .where("username = ? AND status = 'active'")
-	    .bind(username)
+	    .where("user_id = ? AND status = 'active'")
+	    .bind(uid_of(username))
 	    .resultList();
 
 	std::vector<org_entry> out;
@@ -414,8 +440,7 @@ void org_db::push_notification(const std::string& username,
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	auto                 n = m_dbo.add(std::make_unique<notification_record>());
-	n.modify()->username   = username;
-	n.modify()->user_id    = user_lookup::user_id_for(m_dbo, username);
+	n.modify()->user_id    = uid_of(username);
 	n.modify()->type       = type;
 	n.modify()->payload    = payload_json;
 	n.modify()->is_read    = 0;
@@ -439,8 +464,8 @@ int org_db::unread_count(const std::string& username)
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results =
 	  m_dbo.find<notification_record>()
-	    .where("username = ? AND is_read = 0")
-	    .bind(username)
+	    .where("user_id = ? AND is_read = 0")
+	    .bind(uid_of(username))
 	    .resultList();
 	return static_cast<int>(results.size());
 }
@@ -450,8 +475,8 @@ std::vector<notification_entry> org_db::notifications_for_user(const std::string
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results =
 	  m_dbo.find<notification_record>()
-	    .where("username = ?")
-	    .bind(username)
+	    .where("user_id = ?")
+	    .bind(uid_of(username))
 	    .orderBy("id DESC")
 	    .resultList();
 	std::vector<notification_entry> out;
@@ -467,13 +492,13 @@ std::vector<notification_entry> org_db::notifications_for_user(const std::string
 void org_db::set_last_org(const std::string& username, long long org_id)
 {
 	Wt::Dbo::Transaction t{m_dbo};
+	const long long      uid = uid_of(username);
 	const auto           results =
-	  m_dbo.find<user_pref_record>().where("username = ?").bind(username).resultList();
+	  m_dbo.find<user_pref_record>().where("user_id = ?").bind(uid).resultList();
 	if(results.empty())
 	{
 		auto p                  = m_dbo.add(std::make_unique<user_pref_record>());
-		p.modify()->username    = username;
-		p.modify()->user_id     = user_lookup::user_id_for(m_dbo, username);
+		p.modify()->user_id     = uid;
 		p.modify()->last_org_id = org_id;
 	}
 	else
@@ -486,7 +511,7 @@ std::optional<long long> org_db::get_last_org(const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           results =
-	  m_dbo.find<user_pref_record>().where("username = ?").bind(username).resultList();
+	  m_dbo.find<user_pref_record>().where("user_id = ?").bind(uid_of(username)).resultList();
 	if(results.empty())
 	{
 		return std::nullopt;
@@ -528,8 +553,8 @@ user_org_pref_entry org_db::get_user_org_pref(const std::string& username, long 
 	Wt::Dbo::Transaction t{m_dbo};
 	const auto           rows =
 	  m_dbo.find<user_org_pref_record>()
-	    .where("username = ? AND org_id = ?")
-	    .bind(username)
+	    .where("user_id = ? AND org_id = ?")
+	    .bind(uid_of(username))
 	    .bind(org_id)
 	    .resultList();
 	if(rows.empty())
@@ -541,7 +566,7 @@ user_org_pref_entry org_db::get_user_org_pref(const std::string& username, long 
 	}
 	const auto&         r = *rows.begin();
 	user_org_pref_entry out;
-	out.username                  = r->username;
+	out.username                  = username;
 	out.org_id                    = r->org_id;
 	out.notify_task_available     = r->notify_task_available != 0;
 	out.notify_task_unassigned    = r->notify_task_unassigned != 0;
@@ -553,10 +578,11 @@ user_org_pref_entry org_db::get_user_org_pref(const std::string& username, long 
 void org_db::set_user_org_pref(const user_org_pref_entry& pref)
 {
 	Wt::Dbo::Transaction t{m_dbo};
+	const long long      uid = uid_of(pref.username);
 	const auto           rows =
 	  m_dbo.find<user_org_pref_record>()
-	    .where("username = ? AND org_id = ?")
-	    .bind(pref.username)
+	    .where("user_id = ? AND org_id = ?")
+	    .bind(uid)
 	    .bind(pref.org_id)
 	    .resultList();
 	std::vector<Wt::Dbo::ptr<user_org_pref_record>> existing;
@@ -567,8 +593,7 @@ void org_db::set_user_org_pref(const user_org_pref_entry& pref)
 	if(existing.empty())
 	{
 		auto r                                = m_dbo.add(std::make_unique<user_org_pref_record>());
-		r.modify()->username                  = pref.username;
-		r.modify()->user_id                   = user_lookup::user_id_for(m_dbo, pref.username);
+		r.modify()->user_id                   = uid;
 		r.modify()->org_id                    = pref.org_id;
 		r.modify()->notify_task_available     = pref.notify_task_available ? 1 : 0;
 		r.modify()->notify_task_unassigned    = pref.notify_task_unassigned ? 1 : 0;
