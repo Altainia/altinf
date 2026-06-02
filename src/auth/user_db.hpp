@@ -46,9 +46,19 @@ public:
 
 	bool has_users();
 
-	std::vector<user_entry> list_users();
+	// Active users by default; pass true to also include soft-deleted users.
+	std::vector<user_entry> list_users(bool include_deleted = false);
 
+	// True if a user row with this username exists, including soft-deleted users
+	// (so usernames are never reused).
 	bool username_exists(const std::string& username);
+
+	// True if the user has a usable password set (a non-empty hash).
+	bool has_password(const std::string& username);
+
+	// Check a plaintext password against the stored hash, without touching the
+	// session. False for unknown users or users with no password.
+	bool verify_password(const std::string& username, const std::string& password);
 
 	// The user's surrogate id, or nullopt if no such user (including soft-deleted
 	// users, whose row is retained).
@@ -57,13 +67,27 @@ public:
 	// Full audit history for a user, newest first.
 	std::vector<user_event_entry> history_for_user(long long user_id);
 
-	void delete_user(const std::string& username);
+	// Soft-delete: the row is retained (so audit/history references resolve and
+	// the username stays taken), but login is disabled and tokens/Google links
+	// are dropped. Records a "deleted" event.
+	void delete_user(const std::string& username, long long actor_id = 0);
 
 	void update_user(const std::string& username,
 	                 const std::string& display_name,
-	                 permission::flags  permissions);
+	                 permission::flags  permissions,
+	                 long long          actor_id = 0);
 
-	void set_password(const std::string& username, const std::string& new_password);
+	void set_display_name(const std::string& username,
+	                      const std::string& display_name,
+	                      long long          actor_id = 0);
+
+	void set_password(const std::string& username,
+	                  const std::string& new_password,
+	                  long long          actor_id = 0);
+
+	// Remove the user's password. Refused (returns false) unless the user has a
+	// Google link, so they are never left with no way to sign in.
+	bool unset_password(const std::string& username, long long actor_id = 0);
 
 	std::vector<api_token_entry> list_tokens(const std::string& username);
 
@@ -92,9 +116,12 @@ public:
 	// existing link for this user.
 	void link_google(const std::string& username,
 	                 const std::string& google_sub,
-	                 const std::string& email);
+	                 const std::string& email,
+	                 long long          actor_id = 0);
 
-	void unlink_google(const std::string& username);
+	// Remove the user's Google link. Refused (returns false) unless the user has a
+	// password, so they are never left with no way to sign in.
+	bool unlink_google(const std::string& username, long long actor_id = 0);
 
 	// The linked Google email for a user, if any (for display).
 	std::optional<std::string> google_email_for(const std::string& username);
@@ -105,6 +132,10 @@ public:
 private:
 	// user_id lookup that assumes the caller already holds a transaction.
 	std::optional<long long> user_id_for_locked(const std::string& username);
+
+	// Remove any Google identity row for the user, unconditionally (no guard, no
+	// audit). Assumes the caller holds a transaction. Used by delete_user.
+	void clear_google_link_locked(const std::string& username);
 
 	// Append one audit event (plus its field changes) for a user. Must be called
 	// inside an open transaction; mirrors kanban_db::record_event.

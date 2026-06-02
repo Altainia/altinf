@@ -8,42 +8,9 @@
 #include <Wt/WTable.h>
 #include <Wt/WText.h>
 
-#include <ranges>
-#include <string>
-#include <vector>
-
 #include "auth/permission.hpp"
 #include "paths.hpp"
 #include "widgets/live_hub.hpp"
-
-static std::string permissions_label(permission::flags perms)
-{
-	std::vector<std::string> parts;
-	if(perms.has_any(permission::admin))
-	{
-		parts.emplace_back("Admin");
-	}
-	if(perms.has_any(permission::manage_users))
-	{
-		parts.emplace_back("Manage Users");
-	}
-	if(perms.has_any(permission::post_write))
-	{
-		parts.emplace_back("Write Posts");
-	}
-	if(perms.has_any(permission::org_create))
-	{
-		parts.emplace_back("Create Orgs");
-	}
-	if(parts.empty())
-	{
-		return "None";
-	}
-
-	return parts |
-	       std::views::join_with(std::string(", ")) |
-	       std::ranges::to<std::string>();
-}
 
 account_list_page::account_list_page(user_db& db, const session_data& session):
   m_db{db},
@@ -107,7 +74,7 @@ void account_list_page::render()
 
 		tbl->elementAt(row + 1, 0)->addNew<Wt::WText>(u.username, Wt::TextFormat::Plain);
 		tbl->elementAt(row + 1, 1)->addNew<Wt::WText>(u.display_name.empty() ? "—" : u.display_name, Wt::TextFormat::Plain);
-		tbl->elementAt(row + 1, 2)->addNew<Wt::WText>(permissions_label(u.permissions), Wt::TextFormat::Plain);
+		tbl->elementAt(row + 1, 2)->addNew<Wt::WText>(permission::label(u.permissions), Wt::TextFormat::Plain);
 
 		auto* actions = tbl->elementAt(row + 1, 3)->addNew<Wt::WContainerWidget>();
 		actions->setStyleClass("account-actions");

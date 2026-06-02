@@ -69,6 +69,11 @@ namespace
 			    session.execute(
 			      "UPDATE \"api_token\" SET \"name\" = 'token-' || id WHERE \"name\" = ''");
 		    }},
+		  // v5: soft-delete support. Existing users are active (empty deleted_at).
+		  db::migrator::sql_migration(
+		    5,
+		    "add user.deleted_at column",
+		    "ALTER TABLE \"user\" ADD COLUMN \"deleted_at\" text not null default ''"),
 		};
 		return migrations;
 	}
@@ -130,7 +135,7 @@ bool user_db::authenticate(const std::string& uname,
 	Wt::Dbo::Transaction t{m_dbo};
 
 	const auto results = m_dbo.find<user>()
-	                       .where("username = ?")
+	                       .where("username = ? and deleted_at = ''")
 	                       .bind(uname)
 	                       .resultList();
 
@@ -142,7 +147,7 @@ bool user_db::authenticate(const std::string& uname,
 	const Wt::Dbo::ptr<user> found = *results.begin();
 
 	const Wt::Auth::BCryptHashFunction bcrypt{12};
-	if(!bcrypt.verify(password, "", found->password_hash))
+	if(found->password_hash.empty() || !bcrypt.verify(password, "", found->password_hash))
 	{
 		return false;
 	}
@@ -161,7 +166,7 @@ bool user_db::load_session(const std::string& uname, session_data& out)
 	Wt::Dbo::Transaction t{m_dbo};
 
 	const auto results =
-	  m_dbo.find<user>().where("username = ?").bind(uname).resultList();
+	  m_dbo.find<user>().where("username = ? and deleted_at = ''").bind(uname).resultList();
 	if(results.empty())
 	{
 		return false;
@@ -204,11 +209,16 @@ bool user_db::has_users()
 	return !m_dbo.find<user>().resultList().empty();
 }
 
-std::vector<user_entry> user_db::list_users()
+std::vector<user_entry> user_db::list_users(bool include_deleted)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 
-	const auto results = m_dbo.find<user>().resultList();
+	auto query = m_dbo.find<user>();
+	if(!include_deleted)
+	{
+		query.where("deleted_at = ''");
+	}
+	const auto results = query.resultList();
 
 	std::vector<user_entry> out;
 	for(const auto& u: results)
@@ -220,6 +230,37 @@ std::vector<user_entry> user_db::list_users()
 		out.push_back(std::move(e));
 	}
 	return out;
+}
+
+bool user_db::has_password(const std::string& username)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results =
+	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
+	if(results.empty())
+	{
+		return false;
+	}
+	const Wt::Dbo::ptr<user> u = *results.begin();
+	return !u->password_hash.empty();
+}
+
+bool user_db::verify_password(const std::string& username, const std::string& password)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+	const auto           results =
+	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
+	if(results.empty())
+	{
+		return false;
+	}
+	const Wt::Dbo::ptr<user> u = *results.begin();
+	if(u->password_hash.empty())
+	{
+		return false;
+	}
+	const Wt::Auth::BCryptHashFunction bcrypt{12};
+	return bcrypt.verify(password, "", u->password_hash);
 }
 
 bool user_db::username_exists(const std::string& username)
@@ -245,11 +286,29 @@ std::optional<long long> user_db::user_id_for_locked(const std::string& username
 	return results.begin()->id();
 }
 
-void user_db::delete_user(const std::string& username)
+void user_db::clear_google_link_locked(const std::string& username)
+{
+	const auto google_links =
+	  m_dbo.find<google_identity>().where("username = ?").bind(username).resultList();
+	for(const auto& g: google_links)
+	{
+		Wt::Dbo::ptr<google_identity> p = g;
+		p.remove();
+	}
+}
+
+void user_db::delete_user(const std::string& username, long long actor_id)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 
-	// Remove API tokens first
+	const auto results =
+	  m_dbo.find<user>().where("username = ? and deleted_at = ''").bind(username).resultList();
+	if(results.empty())
+	{
+		return;
+	}
+
+	// Revoke every credential so a deleted account cannot authenticate.
 	const auto tokens =
 	  m_dbo.find<api_token>().where("username = ?").bind(username).resultList();
 	for(const auto& tok: tokens)
@@ -258,7 +317,6 @@ void user_db::delete_user(const std::string& username)
 		p.remove();
 	}
 
-	// Remove session tokens
 	const auto session_toks =
 	  m_dbo.find<session_token>().where("username = ?").bind(username).resultList();
 	for(const auto& tok: session_toks)
@@ -267,27 +325,20 @@ void user_db::delete_user(const std::string& username)
 		p.remove();
 	}
 
-	// Remove any linked Google identity
-	const auto google_links =
-	  m_dbo.find<google_identity>().where("username = ?").bind(username).resultList();
-	for(const auto& g: google_links)
-	{
-		Wt::Dbo::ptr<google_identity> p = g;
-		p.remove();
-	}
+	clear_google_link_locked(username);
 
-	const auto results =
-	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
-	for(const auto& u: results)
-	{
-		Wt::Dbo::ptr<user> p = u;
-		p.remove();
-	}
+	// Soft-delete: retain the row so id->display_name keeps resolving for history.
+	const auto u = *results.begin();
+	u.modify()->deleted_at =
+	  Wt::WDateTime::currentDateTime().toString("yyyy-MM-ddThh:mm:ssZ").toUTF8();
+
+	record_user_event(u.id(), actor_id, "deleted");
 }
 
 void user_db::update_user(const std::string& username,
                           const std::string& display_name,
-                          permission::flags  perms)
+                          permission::flags  perms,
+                          long long          actor_id)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 
@@ -299,11 +350,48 @@ void user_db::update_user(const std::string& username,
 	}
 
 	const auto u             = *results.begin();
+	const auto old_name      = u->display_name;
+	const auto old_perms     = u->permissions;
 	u.modify()->display_name = display_name;
 	u.modify()->permissions  = perms;
+
+	if(old_name != display_name)
+	{
+		record_user_event(u.id(), actor_id, "display_name_changed", {{.field_name = "display_name", .old_value = old_name, .new_value = display_name}});
+	}
+	if(old_perms != perms)
+	{
+		record_user_event(u.id(), actor_id, "permissions_changed", {{.field_name = "permissions", .old_value = permission::label(old_perms), .new_value = permission::label(perms)}});
+	}
 }
 
-void user_db::set_password(const std::string& username, const std::string& new_password)
+void user_db::set_display_name(const std::string& username,
+                               const std::string& display_name,
+                               long long          actor_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto results =
+	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
+	if(results.empty())
+	{
+		return;
+	}
+
+	const auto u        = *results.begin();
+	const auto old_name = u->display_name;
+	if(old_name == display_name)
+	{
+		return;
+	}
+	u.modify()->display_name = display_name;
+
+	record_user_event(u.id(), actor_id, "display_name_changed", {{.field_name = "display_name", .old_value = old_name, .new_value = display_name}});
+}
+
+void user_db::set_password(const std::string& username,
+                           const std::string& new_password,
+                           long long          actor_id)
 {
 	const Wt::Auth::BCryptHashFunction bcrypt{12};
 	const std::string                  hash = bcrypt.compute(new_password, "");
@@ -318,7 +406,40 @@ void user_db::set_password(const std::string& username, const std::string& new_p
 	}
 
 	const auto u              = *results.begin();
+	const bool had_password   = !u->password_hash.empty();
 	u.modify()->password_hash = hash;
+
+	record_user_event(u.id(), actor_id, had_password ? "password_changed" : "password_set");
+}
+
+bool user_db::unset_password(const std::string& username, long long actor_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto results =
+	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
+	if(results.empty())
+	{
+		return false;
+	}
+
+	// Refuse to remove the last sign-in method: a Google link must remain.
+	const auto google =
+	  m_dbo.find<google_identity>().where("username = ?").bind(username).resultList();
+	if(google.empty())
+	{
+		return false;
+	}
+
+	const auto u = *results.begin();
+	if(u->password_hash.empty())
+	{
+		return false; // nothing to unset
+	}
+	u.modify()->password_hash = "";
+
+	record_user_event(u.id(), actor_id, "password_unset");
+	return true;
 }
 
 std::vector<api_token_entry> user_db::list_tokens(const std::string& username)
@@ -423,7 +544,7 @@ bool user_db::verify_api_token(const std::string& raw_token, session_data& out)
 	const auto tok_username = (*tokens.begin())->username;
 
 	const auto users =
-	  m_dbo.find<user>().where("username = ?").bind(tok_username).resultList();
+	  m_dbo.find<user>().where("username = ? and deleted_at = ''").bind(tok_username).resultList();
 	if(users.empty())
 	{
 		return false;
@@ -476,7 +597,7 @@ bool user_db::verify_session_token(const std::string& raw_token, session_data& o
 	const auto tok_username = (*tokens.begin())->username;
 
 	const auto users =
-	  m_dbo.find<user>().where("username = ?").bind(tok_username).resultList();
+	  m_dbo.find<user>().where("username = ? and deleted_at = ''").bind(tok_username).resultList();
 	if(users.empty())
 	{
 		return false;
@@ -509,36 +630,55 @@ void user_db::delete_session_token(const std::string& raw_token)
 
 void user_db::link_google(const std::string& username,
                           const std::string& google_sub,
-                          const std::string& email)
+                          const std::string& email,
+                          long long          actor_id)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 
 	// One link per user: drop any existing row before adding the new one.
-	const auto existing =
-	  m_dbo.find<google_identity>().where("username = ?").bind(username).resultList();
-	for(const auto& g: existing)
-	{
-		Wt::Dbo::ptr<google_identity> p = g;
-		p.remove();
-	}
+	clear_google_link_locked(username);
 
 	auto link                 = m_dbo.add(std::make_unique<google_identity>());
 	link.modify()->username   = username;
 	link.modify()->google_sub = google_sub;
 	link.modify()->email      = email;
+
+	if(const auto uid = user_id_for_locked(username))
+	{
+		record_user_event(*uid, actor_id, "google_linked", {{.field_name = "google", .old_value = "", .new_value = email}});
+	}
 }
 
-void user_db::unlink_google(const std::string& username)
+bool user_db::unlink_google(const std::string& username, long long actor_id)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 
-	const auto results =
+	const auto links =
 	  m_dbo.find<google_identity>().where("username = ?").bind(username).resultList();
-	for(const auto& g: results)
+	if(links.empty())
 	{
-		Wt::Dbo::ptr<google_identity> p = g;
-		p.remove();
+		return false; // nothing linked
 	}
+	const Wt::Dbo::ptr<google_identity> link  = *links.begin();
+	const std::string                   email = link->email;
+
+	// Refuse to remove the last sign-in method: a password must remain.
+	const auto users =
+	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
+	if(users.empty())
+	{
+		return false;
+	}
+	const Wt::Dbo::ptr<user> u = *users.begin();
+	if(u->password_hash.empty())
+	{
+		return false;
+	}
+
+	clear_google_link_locked(username);
+
+	record_user_event(u.id(), actor_id, "google_unlinked", {{.field_name = "google", .old_value = email, .new_value = ""}});
+	return true;
 }
 
 std::optional<std::string> user_db::google_email_for(const std::string& username)

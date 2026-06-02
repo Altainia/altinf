@@ -15,6 +15,7 @@ struct user
 	std::string       display_name;
 	std::string       password_hash;
 	permission::flags permissions;
+	std::string       deleted_at; // empty = active; ISO-8601 UTC when soft-deleted
 
 	template<class Action>
 	void persist(Action& a)
@@ -23,6 +24,7 @@ struct user
 		Wt::Dbo::field(a, display_name, "display_name");
 		Wt::Dbo::field(a, password_hash, "password_hash");
 		Wt::Dbo::field(a, permissions, "permissions");
+		Wt::Dbo::field(a, deleted_at, "deleted_at");
 	}
 };
 

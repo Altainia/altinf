@@ -225,18 +225,43 @@ TEST_CASE("user_db - upgrades a v2 auth database and gains the audit tables")
 		REQUIRE(hist.size() == 1);
 		CHECK(hist[0].event_type == "created");
 		CHECK(hist[0].actor_id == *legacy_id);
+
+		// v5 deleted_at column is present: list_users (which filters on it) works
+		// and soft-delete hides the row while keeping the username taken.
+		REQUIRE(db.list_users().size() == 2); // legacy + fresh
+		db.delete_user("fresh", *legacy_id);
+		CHECK(db.username_exists("fresh"));
+		CHECK(db.list_users().size() == 1);
 	}
 
 	std::filesystem::remove(path);
 }
 
-TEST_CASE("user_db - delete user")
+TEST_CASE("user_db - delete_user soft-deletes: row kept, login blocked, hidden from list")
 {
 	user_db db{":memory:"};
-	db.create_user("alice", "pw", permission::none);
-	db.delete_user("alice");
-	CHECK(!db.username_exists("alice"));
-	CHECK(!db.has_users());
+	db.create_user("alice", "pw", permission::none, "Alice");
+	const auto id = db.user_id_for("alice");
+	REQUIRE(id);
+
+	db.delete_user("alice", /*actor_id=*/*id);
+
+	// The row is retained so its id keeps resolving and the username stays taken.
+	CHECK(db.username_exists("alice"));
+	CHECK(db.user_id_for("alice") == id);
+
+	// But the user can no longer authenticate.
+	session_data out;
+	CHECK(!db.authenticate("alice", "pw", out));
+
+	// Hidden from the default list, visible when explicitly including deleted.
+	CHECK(db.list_users().empty());
+	REQUIRE(db.list_users(/*include_deleted=*/true).size() == 1);
+
+	// The deletion is audited.
+	const auto hist = db.history_for_user(*id);
+	CHECK(std::ranges::any_of(
+	  hist, [](const auto& e) { return e.event_type == "deleted"; }));
 }
 
 TEST_CASE("user_db - delete unknown user is a no-op")
@@ -245,6 +270,95 @@ TEST_CASE("user_db - delete unknown user is a no-op")
 	db.create_user("alice", "pw", permission::none);
 	db.delete_user("nobody");
 	CHECK(db.username_exists("alice"));
+	session_data out;
+	CHECK(db.authenticate("alice", "pw", out));
+}
+
+TEST_CASE("user_db - has_password and verify_password")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "secret", permission::none);
+	CHECK(db.has_password("alice"));
+	CHECK(db.verify_password("alice", "secret"));
+	CHECK(!db.verify_password("alice", "wrong"));
+	CHECK(!db.verify_password("nobody", "secret"));
+}
+
+TEST_CASE("user_db - set_display_name updates and audits")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none, "Old");
+	const auto id = db.user_id_for("alice");
+	REQUIRE(id);
+
+	db.set_display_name("alice", "New", *id);
+	CHECK(db.list_users().at(0).display_name == "New");
+
+	const auto hist = db.history_for_user(*id);
+	REQUIRE(!hist.empty());
+	// newest first
+	CHECK(hist.front().event_type == "display_name_changed");
+	REQUIRE(hist.front().changes.size() == 1);
+	CHECK(hist.front().changes[0].old_value == "Old");
+	CHECK(hist.front().changes[0].new_value == "New");
+}
+
+TEST_CASE("user_db - unset_password only when a Google link exists")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none);
+	const auto id = db.user_id_for("alice");
+	REQUIRE(id);
+
+	// No Google link: refused, password kept.
+	CHECK(!db.unset_password("alice", *id));
+	CHECK(db.has_password("alice"));
+
+	db.link_google("alice", "sub-1", "alice@gmail.com");
+	CHECK(db.unset_password("alice", *id));
+	CHECK(!db.has_password("alice"));
+
+	const auto hist = db.history_for_user(*id);
+	CHECK(std::ranges::any_of(
+	  hist, [](const auto& e) { return e.event_type == "password_unset"; }));
+}
+
+TEST_CASE("user_db - unlink_google only when a password exists")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none);
+	const auto id = db.user_id_for("alice");
+	REQUIRE(id);
+	db.link_google("alice", "sub-1", "alice@gmail.com");
+
+	// Drop the password (allowed, Google remains as a login method).
+	REQUIRE(db.unset_password("alice", *id));
+	CHECK(!db.has_password("alice"));
+
+	// Now unlinking Google would leave no login method: refused.
+	CHECK(!db.unlink_google("alice", *id));
+	CHECK(db.google_email_for("alice"));
+}
+
+TEST_CASE("user_db - set_password audits a change")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "old", permission::none);
+	const auto id = db.user_id_for("alice");
+	REQUIRE(id);
+	db.set_password("alice", "new", *id);
+
+	const auto hist = db.history_for_user(*id);
+	CHECK(std::ranges::any_of(
+	  hist, [](const auto& e) { return e.event_type == "password_changed"; }));
+	// The new value is never recorded.
+	for(const auto& ev: hist)
+	{
+		for(const auto& ch: ev.changes)
+		{
+			CHECK(ch.new_value.find("new") == std::string::npos);
+		}
+	}
 }
 
 TEST_CASE("user_db - update_user changes display_name and permissions")
