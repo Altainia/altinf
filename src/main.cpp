@@ -56,7 +56,7 @@ int main(int argc, char** argv)
 	if(const char* const gen_user = std::getenv("ALTINF_GENERATE_TOKEN"))
 	{
 		user_db    db{db_path};
-		const auto token = db.create_api_token(gen_user);
+		const auto token = db.create_api_token(gen_user, "cli");
 		std::cout << "API token for '" << gen_user << "': " << token << "\n"
 		          << "Store this securely — it will not be shown again.\n";
 		return 0;

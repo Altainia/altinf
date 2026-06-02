@@ -3,6 +3,7 @@
 #include <Wt/Dbo/backend/Sqlite3.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
 
@@ -65,6 +66,9 @@ namespace
 		  "INSERT INTO \"user\" "
 		  "(version, username, display_name, password_hash, permissions) "
 		  "VALUES (0, 'legacy', 'Legacy User', '', 8)");
+		s.execute(
+		  "INSERT INTO \"api_token\" (version, token_hash, username) "
+		  "VALUES (0, 'deadbeef', 'legacy')");
 		t.commit();
 	}
 } // namespace
@@ -207,6 +211,11 @@ TEST_CASE("user_db - upgrades a v2 auth database and gains the audit tables")
 		const auto legacy_id = db.user_id_for("legacy");
 		REQUIRE(legacy_id);
 
+		// The legacy token survives and gains a backfilled name.
+		const auto legacy_tokens = db.list_tokens("legacy");
+		REQUIRE(legacy_tokens.size() == 1);
+		CHECK(legacy_tokens[0].name == "token-" + std::to_string(legacy_tokens[0].id));
+
 		// The audit tables exist and are usable: a new user records an event.
 		CHECK(db.history_for_user(*legacy_id).empty());
 		db.create_user("fresh", "pw", permission::none, "Fresh", *legacy_id);
@@ -265,7 +274,7 @@ TEST_CASE("user_db - API token create and verify")
 	user_db db{":memory:"};
 	db.create_user("alice", "pw", permission::none);
 
-	auto token = db.create_api_token("alice");
+	auto token = db.create_api_token("alice", "laptop");
 	CHECK(!token.empty());
 	CHECK(token.size() == 64); // 32 bytes as hex
 
@@ -279,16 +288,61 @@ TEST_CASE("user_db - API token appears in list_tokens")
 {
 	user_db db{":memory:"};
 	db.create_user("alice", "pw", permission::none);
-	db.create_api_token("alice");
-	db.create_api_token("alice");
+	db.create_api_token("alice", "one");
+	db.create_api_token("alice", "two");
 	CHECK(db.list_tokens("alice").size() == 2);
+}
+
+TEST_CASE("user_db - API token stores and lists its name")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none);
+	db.create_api_token("alice", "ci-bot");
+	auto tokens = db.list_tokens("alice");
+	REQUIRE(tokens.size() == 1);
+	CHECK(tokens[0].name == "ci-bot");
+}
+
+TEST_CASE("user_db - rename_api_token changes the name")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none);
+	db.create_api_token("alice", "old-name");
+	auto tokens = db.list_tokens("alice");
+	REQUIRE(tokens.size() == 1);
+	db.rename_api_token(tokens[0].id, "new-name");
+	auto renamed = db.list_tokens("alice");
+	REQUIRE(renamed.size() == 1);
+	CHECK(renamed[0].name == "new-name");
+}
+
+TEST_CASE("user_db - token create/rename/revoke are audited on the owner")
+{
+	user_db db{":memory:"};
+	db.create_user("alice", "pw", permission::none);
+	const auto alice_id = db.user_id_for("alice");
+	REQUIRE(alice_id);
+
+	db.create_api_token("alice", "first", *alice_id);
+	const auto tok_id = db.list_tokens("alice").at(0).id;
+	db.rename_api_token(tok_id, "renamed", *alice_id);
+	db.delete_token(tok_id, *alice_id);
+
+	const auto hist = db.history_for_user(*alice_id);
+	// created(user) + token_created + token_renamed + token_revoked
+	auto count = [&](const std::string& type) {
+		return std::ranges::count(hist, type, &user_event_entry::event_type);
+	};
+	CHECK(count("token_created") == 1);
+	CHECK(count("token_renamed") == 1);
+	CHECK(count("token_revoked") == 1);
 }
 
 TEST_CASE("user_db - delete_token removes it")
 {
 	user_db db{":memory:"};
 	db.create_user("alice", "pw", permission::none);
-	auto token  = db.create_api_token("alice");
+	auto token  = db.create_api_token("alice", "laptop");
 	auto tokens = db.list_tokens("alice");
 	REQUIRE(tokens.size() == 1);
 	db.delete_token(tokens[0].id);
@@ -308,7 +362,7 @@ TEST_CASE("user_db - verify_api_token bad token returns false")
 TEST_CASE("user_db - create_api_token unknown user throws")
 {
 	user_db db{":memory:"};
-	CHECK_THROWS(db.create_api_token("nobody"));
+	CHECK_THROWS(db.create_api_token("nobody", "x"));
 }
 
 TEST_CASE("user_db - create_session_token returns 64-char hex token")

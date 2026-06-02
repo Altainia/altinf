@@ -215,7 +215,7 @@ void account_edit_page::build_token_list()
 
 void account_edit_page::generate_token()
 {
-	const auto raw_token = m_db->create_api_token(m_existing->username);
+	const auto raw_token = m_db->create_api_token(m_existing->username, "token");
 	build_token_list();
 
 	auto* d = new Wt::WDialog("New API Token");

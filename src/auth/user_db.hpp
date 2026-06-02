@@ -22,6 +22,7 @@ struct api_token_entry
 {
 	long long   id{0};
 	std::string token_hash;
+	std::string name;
 };
 
 class user_db
@@ -66,10 +67,15 @@ public:
 
 	std::vector<api_token_entry> list_tokens(const std::string& username);
 
-	void delete_token(long long token_id);
+	void delete_token(long long token_id, long long actor_id = 0);
 
-	// Returns the raw token to present once; stores only its SHA-256 hash.
-	std::string create_api_token(const std::string& username);
+	// Returns the raw token to present once; stores only its SHA-256 hash. `name`
+	// is a user-chosen label shown in the token list.
+	std::string create_api_token(const std::string& username,
+	                             const std::string& name,
+	                             long long          actor_id = 0);
+
+	void rename_api_token(long long token_id, const std::string& new_name, long long actor_id = 0);
 
 	bool verify_api_token(const std::string& raw_token, session_data& out_session);
 
@@ -97,6 +103,9 @@ public:
 	std::optional<std::string> username_for_google_sub(const std::string& google_sub);
 
 private:
+	// user_id lookup that assumes the caller already holds a transaction.
+	std::optional<long long> user_id_for_locked(const std::string& username);
+
 	// Append one audit event (plus its field changes) for a user. Must be called
 	// inside an open transaction; mirrors kanban_db::record_event.
 	void record_user_event(long long                                   user_id,

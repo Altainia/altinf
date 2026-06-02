@@ -58,6 +58,17 @@ namespace
 			      "\"old_value\" text not null, "
 			      "\"new_value\" text not null)");
 		    }},
+		  // v4: give API tokens a human-readable name. Existing tokens are
+		  // backfilled with a stable placeholder derived from their id.
+		  db::migrator::migration{
+		    4,
+		    "add api_token.name column",
+		    [](Wt::Dbo::Session& session) {
+			    session.execute(
+			      "ALTER TABLE \"api_token\" ADD COLUMN \"name\" text not null default ''");
+			    session.execute(
+			      "UPDATE \"api_token\" SET \"name\" = 'token-' || id WHERE \"name\" = ''");
+		    }},
 		};
 		return migrations;
 	}
@@ -220,7 +231,12 @@ bool user_db::username_exists(const std::string& username)
 std::optional<long long> user_db::user_id_for(const std::string& username)
 {
 	Wt::Dbo::Transaction t{m_dbo};
-	const auto           results =
+	return user_id_for_locked(username);
+}
+
+std::optional<long long> user_db::user_id_for_locked(const std::string& username)
+{
+	const auto results =
 	  m_dbo.find<user>().where("username = ?").bind(username).resultList();
 	if(results.empty())
 	{
@@ -318,12 +334,13 @@ std::vector<api_token_entry> user_db::list_tokens(const std::string& username)
 		api_token_entry e;
 		e.id         = tok.id();
 		e.token_hash = tok->token_hash;
+		e.name       = tok->name;
 		out.push_back(std::move(e));
 	}
 	return out;
 }
 
-void user_db::delete_token(long long token_id)
+void user_db::delete_token(long long token_id, long long actor_id)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 
@@ -331,12 +348,20 @@ void user_db::delete_token(long long token_id)
 	  m_dbo.find<api_token>().where("id = ?").bind(token_id).resultList();
 	for(const auto& tok: results)
 	{
-		Wt::Dbo::ptr<api_token> p = tok;
+		const auto              owner_id = user_id_for_locked(tok->username);
+		const auto              name     = tok->name;
+		Wt::Dbo::ptr<api_token> p        = tok;
 		p.remove();
+		if(owner_id)
+		{
+			record_user_event(*owner_id, actor_id, "token_revoked", {{.field_name = "token", .old_value = name, .new_value = ""}});
+		}
 	}
 }
 
-std::string user_db::create_api_token(const std::string& username)
+std::string user_db::create_api_token(const std::string& username,
+                                      const std::string& name,
+                                      long long          actor_id)
 {
 	Wt::Dbo::Transaction t{m_dbo};
 
@@ -353,8 +378,33 @@ std::string user_db::create_api_token(const std::string& username)
 	auto tok                 = m_dbo.add(std::make_unique<api_token>());
 	tok.modify()->token_hash = hash;
 	tok.modify()->username   = username;
+	tok.modify()->name       = name;
+
+	record_user_event(users.begin()->id(), actor_id, "token_created", {{.field_name = "token", .old_value = "", .new_value = name}});
 
 	return raw_token;
+}
+
+void user_db::rename_api_token(long long token_id, const std::string& new_name, long long actor_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const auto results =
+	  m_dbo.find<api_token>().where("id = ?").bind(token_id).resultList();
+	if(results.empty())
+	{
+		return;
+	}
+
+	const auto tok      = *results.begin();
+	const auto old_name = tok->name;
+	const auto owner_id = user_id_for_locked(tok->username);
+	tok.modify()->name  = new_name;
+
+	if(owner_id)
+	{
+		record_user_event(*owner_id, actor_id, "token_renamed", {{.field_name = "token", .old_value = old_name, .new_value = new_name}});
+	}
 }
 
 bool user_db::verify_api_token(const std::string& raw_token, session_data& out)
