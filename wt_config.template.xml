@@ -18,11 +18,13 @@
       <meta name="viewport" content="width=device-width, initial-scale=1" />
     </head-matter>
     <!-- Google OAuth properties (google-oauth2-redirect-endpoint / -client-id /
-         -client-secret) are intentionally NOT committed here. docker-entrypoint.sh
-         injects a <properties> block from the ALTINF_GOOGLE_* env vars at container
-         start. When those are unset, no properties exist and Google sign-in stays
-         disabled (GoogleService::configured() is false) — note an *empty* property
-         still counts as configured, so it must be absent, not blank.
+         -client-secret) are intentionally absent from this committed baseline.
+         To enable "Sign in with Google", add a <properties> block with those
+         three values to the deployed config: in production that is your
+         bind-mounted wt_config.xml (see docker-compose.yml) — this baked-in
+         template is never edited. When the properties are absent, Google sign-in
+         stays disabled (GoogleService::configured() is false) — note an *empty*
+         property still counts as configured, so omit them rather than blank.
 
          The redirect endpoint MUST include a distinct path (e.g.
          https://your.host/oauth2callback) — NOT the bare application root. Wt

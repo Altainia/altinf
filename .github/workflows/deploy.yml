@@ -31,6 +31,18 @@ jobs:
             ghcr.io/altainia/altinf:latest
             ghcr.io/altainia/altinf:${{ github.sha }}
 
+      # Ship the committed compose file to the host so changes to it (volumes,
+      # services, env) actually take effect on deploy. Without this the host
+      # keeps a stale docker-compose.yml and only the image is updated.
+      - name: Sync compose file to production
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: docker-compose.yml
+          target: /home/admin/altinf
+
       - name: Deploy to production
         uses: appleboy/ssh-action@v1
         with:
