@@ -63,7 +63,11 @@ public:
 	std::optional<kanban_task_entry> find_task(long long id);
 	std::vector<kanban_task_entry>   tasks_for_team(long long team_id);
 	std::vector<kanban_task_entry>   archived_tasks_for_team(long long team_id);
-	std::vector<task_event_entry>    history_for_task(long long task_id);
+	// Active (non-archived) tasks assigned to `username` across all teams of `org_id`,
+	// sorted by end_date ascending (no/invalid end date last), tie-broken by id (creation order).
+	std::vector<kanban_task_entry> assigned_tasks_for_user_in_org(const std::string& username,
+	                                                              long long          org_id);
+	std::vector<task_event_entry>  history_for_task(long long task_id);
 
 	// Comments
 	long long                       add_comment(long long          task_id,

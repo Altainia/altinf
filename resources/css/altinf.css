@@ -2297,6 +2297,37 @@ input[type=color] {
   text-decoration: underline;
 }
 
+.org-tasks-team {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.org-task-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+.org-task-row:hover {
+  color: var(--color-accent);
+}
+
+.org-task-title {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.org-task-due {
+  font-size: 0.78rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
 .org-board-page h1 {
   font-size: 2rem;
   margin-bottom: 1.25rem;

@@ -4,6 +4,7 @@
 #include <Wt/Dbo/backend/Sqlite3.h>
 #include <Wt/WDateTime.h>
 
+#include <algorithm>
 #include <tuple>
 
 #include "db/migrator.hpp"
@@ -116,6 +117,24 @@ namespace
 	{
 		const auto it = names.find(id);
 		return it != names.end() ? it->second : std::string{};
+	}
+
+	// Earliest end date first; tasks with no/invalid end date sort last; ties by id
+	// (creation order). Validity is checked explicitly — operator< is unreliable for
+	// invalid Wt::WDate values.
+	bool task_priority_less(const kanban_task_entry& a, const kanban_task_entry& b)
+	{
+		const bool a_has = a.end_date.isValid();
+		const bool b_has = b.end_date.isValid();
+		if(a_has != b_has)
+		{
+			return a_has; // a valid end date sorts before a missing one
+		}
+		if(a_has && a.end_date != b.end_date)
+		{
+			return a.end_date < b.end_date;
+		}
+		return a.id < b.id;
 	}
 } // namespace
 
@@ -745,6 +764,68 @@ std::vector<kanban_task_entry> kanban_db::archived_tasks_for_team(long long team
 	                       .orderBy("sort_order, id")
 	                       .resultList();
 	return attach_assignees({results.begin(), results.end()});
+}
+
+std::vector<kanban_task_entry>
+  kanban_db::assigned_tasks_for_user_in_org(const std::string& username, long long org_id)
+{
+	Wt::Dbo::Transaction t{m_dbo};
+
+	const long long uid = uid_of(username);
+	if(uid < 0)
+	{
+		return {}; // Unknown user — no assignments.
+	}
+
+	// Active teams of this org. Inlining integer ids into an IN (...) list is the same
+	// injection-safe pattern used by attach_assignees.
+	const auto teams = m_dbo.find<team_record>()
+	                     .where("org_id = ? AND is_archived = 0")
+	                     .bind(org_id)
+	                     .resultList();
+	std::string team_in;
+	for(const auto& tm: teams)
+	{
+		if(!team_in.empty())
+		{
+			team_in += ',';
+		}
+		team_in += std::to_string(tm.id());
+	}
+	if(team_in.empty())
+	{
+		return {}; // Org has no active teams.
+	}
+
+	// Task ids assigned to this user.
+	const auto arows = m_dbo.find<task_assignee_record>()
+	                     .where("user_id = ?")
+	                     .bind(uid)
+	                     .resultList();
+	std::string task_in;
+	for(const auto& r: arows)
+	{
+		if(!task_in.empty())
+		{
+			task_in += ',';
+		}
+		task_in += std::to_string(r->task_id);
+	}
+	if(task_in.empty())
+	{
+		return {}; // User has no assignments.
+	}
+
+	// Active tasks assigned to the user within the org's teams. "Done" tasks never
+	// appear here: moving a task to "done" clears its assignees.
+	const auto results = m_dbo.find<kanban_task_record>()
+	                       .where("is_archived = 0 AND team_id in (" + team_in +
+	                              ") AND id in (" + task_in + ")")
+	                       .resultList();
+
+	auto out = attach_assignees({results.begin(), results.end()});
+	std::ranges::sort(out, task_priority_less);
+	return out;
 }
 
 void kanban_db::archive_task(long long id, const std::string& actor)

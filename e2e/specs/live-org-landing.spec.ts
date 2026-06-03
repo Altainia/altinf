@@ -26,6 +26,31 @@ async function goToManage(page: Page) {
   await expect(page.locator('.kb-team-page')).toBeVisible();
 }
 
+// Create a task on the currently-open board with an optional end date, assigned to
+// `assignee`, then wait for the board to come back.
+async function createTaskAssigned(page: Page, title: string, endDate: string, assignee: string) {
+  await page.locator('.kb-new-btn').click();
+  await expect(page.locator('.kb-editor-page')).toBeVisible();
+  await page.locator('input[placeholder="Task title"]').fill(title);
+  if (endDate) {
+    const endInput = page.locator('.kb-editor-field-wrap').filter({ hasText: 'End date' }).locator('input').first();
+    await endInput.fill(endDate);
+    await endInput.press('Tab');
+  } else {
+    // New-task editor only pre-fills the start date; leave End date empty.
+    const endInput = page.locator('.kb-editor-field-wrap').filter({ hasText: 'End date' }).locator('input').first();
+    await endInput.fill('');
+    await endInput.press('Tab');
+  }
+  const assigneeSection = page.locator('.kb-editor-field-wrap').filter({ hasText: 'Assignees' });
+  await assigneeSection.locator('.kb-assignee-add-row select').selectOption(assignee);
+  await assigneeSection.locator('.kb-assignee-add-row button', { hasText: 'Add' }).click();
+  await expect(assigneeSection.locator('.kb-assignee-chip', { hasText: assignee })).toBeVisible();
+  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+  await page.locator('.editor-btn-row .editor-btn:not(.editor-btn-cancel):not(.editor-btn-danger)').click();
+  await expect(page.locator('.kb-board')).toBeVisible();
+}
+
 test.beforeAll(async ({ browser }) => {
   const page = await browser.newPage();
   await loginAs(page, 'admin', 'testpass');
@@ -202,6 +227,63 @@ test('org landing: removed from team moves row back to Other teams', async ({ br
     .getByRole('button', { name: 'Remove' }).click();
 
   await expect(frankPage.locator('.org-team-row--other', { hasText: 'RenamedLandingTeam' })).toBeVisible();
+
+  await adminCtx.close();
+  await frankCtx.close();
+});
+
+test('org landing: "Your tasks" shows an empty note when the user has no assignments', async ({ browser }) => {
+  const frankCtx = await browser.newContext();
+  const frankPage = await frankCtx.newPage();
+
+  await loginAs(frankPage, 'frank', 'frankpass');
+  await goToLanding(frankPage);
+
+  await expect(frankPage.getByRole('heading', { name: 'Your tasks' })).toBeVisible();
+  await expect(frankPage.locator('.org-empty-note', { hasText: 'no assigned tasks' })).toBeVisible();
+
+  await frankCtx.close();
+});
+
+test('org landing: assigned tasks appear grouped by team, sorted by end date (no end date last)', async ({ browser }) => {
+  const adminCtx = await browser.newContext();
+  const frankCtx = await browser.newContext();
+  const adminPage = await adminCtx.newPage();
+  const frankPage = await frankCtx.newPage();
+
+  await loginAs(adminPage, 'admin', 'testpass');
+  await loginAs(frankPage, 'frank', 'frankpass');
+
+  // Frank must be a team member to be assignable — add him to RenamedLandingTeam.
+  await goToManage(adminPage);
+  const teamBlock = adminPage.locator('.kb-team-block:has(.kb-team-name-label:text-is("RenamedLandingTeam"))');
+  const frankInTeam = await teamBlock.locator('.kb-member-row', { hasText: 'frank' }).isVisible();
+  if (!frankInTeam) {
+    await teamBlock.locator('.gv-range-select').selectOption('frank');
+    await teamBlock.getByRole('button', { name: 'Add to team' }).click();
+    await expect(teamBlock.locator('.kb-member-row', { hasText: 'frank' })).toBeVisible();
+  }
+
+  // Open the team board and create three tasks assigned to frank, out of date order
+  // and including one with no end date.
+  await goToLanding(adminPage);
+  await adminPage.locator('.org-team-link', { hasText: 'RenamedLandingTeam' }).click();
+  await expect(adminPage.locator('.kb-board')).toBeVisible();
+  await createTaskAssigned(adminPage, 'LateTask', '2030-03-01', 'frank');
+  await createTaskAssigned(adminPage, 'NoEndTask', '', 'frank');
+  await createTaskAssigned(adminPage, 'EarlyTask', '2030-01-15', 'frank');
+
+  // Frank's landing page lists them under the team group, earliest end date first,
+  // no end date last.
+  await goToLanding(frankPage);
+  await expect(frankPage.locator('.org-tasks-team', { hasText: 'RenamedLandingTeam' })).toBeVisible();
+  const rows = frankPage.locator('.org-task-row');
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0)).toContainText('EarlyTask');
+  await expect(rows.nth(1)).toContainText('LateTask');
+  await expect(rows.nth(2)).toContainText('NoEndTask');
+  await expect(rows.nth(2).locator('.org-task-due')).toContainText('No end date');
+  await expect(rows.nth(0)).toHaveAttribute('href', /\/task\/edit\/\d+/);
 
   await adminCtx.close();
   await frankCtx.close();

@@ -410,6 +410,118 @@ TEST_CASE("kanban_db - tasks_for_team populates assignees")
 	CHECK(tasks[0].assignees.size() == 2);
 }
 
+// Build a task with an explicit end date (make_task hard-codes one).
+static kanban_task_entry dated_task(long long          team_id,
+                                    const std::string& title,
+                                    const Wt::WDate&   end_date)
+{
+	kanban_task_entry e;
+	e.team_id    = team_id;
+	e.title      = title;
+	e.status     = "todo";
+	e.start_date = Wt::WDate{2024, 1, 1};
+	e.end_date   = end_date;
+	return e;
+}
+
+TEST_CASE("kanban_db - assigned_tasks_for_user_in_org: end date order, no end date last")
+{
+	kanban_db       db{seeded_db_path()};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+
+	// Add out of order; one task has no end date.
+	const long long late  = db.add_task(dated_task(tid, "Late", Wt::WDate{2024, 3, 1}), "alice");
+	const long long none  = db.add_task(dated_task(tid, "NoEnd", Wt::WDate{}), "alice");
+	const long long early = db.add_task(dated_task(tid, "Early", Wt::WDate{2024, 1, 15}), "alice");
+	for(const long long id: {late, none, early})
+	{
+		db.add_assignee(id, "alice", "alice");
+	}
+
+	const auto tasks = db.assigned_tasks_for_user_in_org("alice", 1);
+	REQUIRE(tasks.size() == 3);
+	CHECK(tasks[0].title == "Early");
+	CHECK(tasks[1].title == "Late");
+	CHECK(tasks[2].title == "NoEnd"); // no end date sorts last
+}
+
+TEST_CASE("kanban_db - assigned_tasks_for_user_in_org: equal end dates tie-break by creation order")
+{
+	kanban_db       db{seeded_db_path()};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+
+	const Wt::WDate same{2024, 2, 1};
+	const long long first  = db.add_task(dated_task(tid, "First", same), "alice");
+	const long long second = db.add_task(dated_task(tid, "Second", same), "alice");
+	db.add_assignee(second, "alice", "alice");
+	db.add_assignee(first, "alice", "alice");
+
+	const auto tasks = db.assigned_tasks_for_user_in_org("alice", 1);
+	REQUIRE(tasks.size() == 2);
+	CHECK(tasks[0].title == "First"); // lower id (created earlier) first
+	CHECK(tasks[1].title == "Second");
+}
+
+TEST_CASE("kanban_db - assigned_tasks_for_user_in_org: scoped to the org's teams")
+{
+	kanban_db       db{seeded_db_path()};
+	const long long t_a = db.create_team("A", 10);
+	const long long t_b = db.create_team("B", 20);
+	db.add_member(t_a, "alice");
+	db.add_member(t_b, "alice");
+	const long long a = db.add_task(make_task(t_a, "InOrg10"), "alice");
+	const long long b = db.add_task(make_task(t_b, "InOrg20"), "alice");
+	db.add_assignee(a, "alice", "alice");
+	db.add_assignee(b, "alice", "alice");
+
+	const auto tasks = db.assigned_tasks_for_user_in_org("alice", 10);
+	REQUIRE(tasks.size() == 1);
+	CHECK(tasks[0].title == "InOrg10");
+	CHECK(tasks[0].team_id == t_a);
+}
+
+TEST_CASE("kanban_db - assigned_tasks_for_user_in_org: excludes archived, done and others' tasks")
+{
+	kanban_db       db{seeded_db_path()};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	db.add_member(tid, "bob");
+
+	const long long active = db.add_task(make_task(tid, "Active"), "alice");
+	db.add_assignee(active, "alice", "alice");
+
+	const long long archived = db.add_task(make_task(tid, "Archived"), "alice");
+	db.add_assignee(archived, "alice", "alice");
+	db.archive_task(archived, "alice");
+
+	// Assigned while "todo", then moved to "done" — which clears assignees.
+	const long long done = db.add_task(make_task(tid, "Done"), "alice");
+	db.add_assignee(done, "alice", "alice");
+	db.update_task_status(done, "done", 0, "alice");
+
+	const long long bobs = db.add_task(make_task(tid, "Bobs"), "alice");
+	db.add_assignee(bobs, "bob", "bob");
+
+	const auto tasks = db.assigned_tasks_for_user_in_org("alice", 1);
+	REQUIRE(tasks.size() == 1);
+	CHECK(tasks[0].title == "Active");
+}
+
+TEST_CASE("kanban_db - assigned_tasks_for_user_in_org: empty for unknown user or no assignments")
+{
+	kanban_db       db{seeded_db_path()};
+	const long long tid = db.create_team("T", 1);
+	db.add_member(tid, "alice");
+	const long long id = db.add_task(make_task(tid, "Work"), "alice");
+	db.add_assignee(id, "alice", "alice");
+
+	CHECK(db.assigned_tasks_for_user_in_org("nobody", 1).empty());  // unknown user
+	CHECK(db.assigned_tasks_for_user_in_org("bob", 1).empty());     // no assignments
+	CHECK(db.assigned_tasks_for_user_in_org("alice", 999).empty()); // org with no teams
+}
+
 TEST_CASE("kanban_db - find_task populates assignees")
 {
 	kanban_db       db{seeded_db_path()};

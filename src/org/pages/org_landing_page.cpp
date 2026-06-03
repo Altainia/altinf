@@ -5,7 +5,9 @@
 #include <Wt/WLink.h>
 #include <Wt/WText.h>
 
+#include <algorithm>
 #include <ranges>
+#include <string>
 
 #include "paths.hpp"
 #include "widgets/live_hub.hpp"
@@ -115,6 +117,51 @@ void org_landing_page::render()
 		row->setStyleClass("org-team-row org-team-row--other");
 		row->addNew<Wt::WText>(t.name, Wt::TextFormat::Plain)
 		  ->setStyleClass("org-team-name");
+	}
+
+	render_assigned_tasks(all_teams, username);
+}
+
+void org_landing_page::render_assigned_tasks(const std::vector<team_entry>& all_teams,
+                                             const std::string&             username)
+{
+	addNew<Wt::WText>("<h2>Your tasks</h2>", Wt::TextFormat::UnsafeXHTML);
+
+	// Built from a fresh query inside render(); refresh() re-renders on live_hub
+	// updates, so assignment/date/archival changes appear without extra wiring.
+	const auto my_tasks = m_kdb.assigned_tasks_for_user_in_org(username, m_org_id);
+	if(my_tasks.empty())
+	{
+		addNew<Wt::WText>("You have no assigned tasks.", Wt::TextFormat::Plain)
+		  ->setStyleClass("org-empty-note");
+		return;
+	}
+
+	// Group by team, in the order teams are listed; show only teams with tasks.
+	for(const auto& team: all_teams)
+	{
+		const auto in_team = [&team](const auto& t) { return t.team_id == team.id; };
+		if(std::ranges::none_of(my_tasks, in_team))
+		{
+			continue;
+		}
+
+		addNew<Wt::WText>(team.name, Wt::TextFormat::Plain)
+		  ->setStyleClass("org-tasks-team");
+
+		for(const auto& task: my_tasks | std::views::filter(in_team))
+		{
+			auto* row = addNew<Wt::WAnchor>(
+			  Wt::WLink{Wt::LinkType::InternalPath, paths::task_edit(task.id)});
+			row->setStyleClass("org-task-row");
+			row->addNew<Wt::WText>(task.title, Wt::TextFormat::Plain)
+			  ->setStyleClass("org-task-title");
+
+			const std::string due =
+			  task.end_date.isValid() ? task.end_date.toString("yyyy-MM-dd").toUTF8() : "No end date";
+			row->addNew<Wt::WText>(due, Wt::TextFormat::Plain)
+			  ->setStyleClass("org-task-due");
+		}
 	}
 }
 

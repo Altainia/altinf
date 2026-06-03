@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "auth/session_data.hpp"
 #include "org/kanban_db.hpp"
@@ -30,5 +31,7 @@ private:
 	std::shared_ptr<bool> m_alive{std::make_shared<bool>(true)};
 
 	void render();
+	void render_assigned_tasks(const std::vector<team_entry>& all_teams,
+	                           const std::string&             username);
 	void refresh();
 };
